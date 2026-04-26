@@ -28,5 +28,8 @@ pnpm-debug.log*
 .claude/
 .superpowers/
 
+# Git worktrees
+.worktrees/
+
 # Local planning docs
 docs/
