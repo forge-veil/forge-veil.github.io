@@ -1,0 +1,433 @@
+---
+interface Props {
+  theta?: number;
+  phi?: number;
+}
+const { theta = 0, phi = 0 } = Astro.props;
+---
+
+<div class="bloch-sphere" data-theta={theta} data-phi={phi}>
+  <div class="bloch-scene"></div>
+  <div class="bloch-controls">
+    <div class="bloch-state-eq">|ψ⟩ = |0⟩</div>
+    <div class="bloch-probs">
+      <div class="bloch-prob-cell">
+        <div class="bloch-prob-lbl">P(|0⟩) = cos²(θ/2)</div>
+        <div class="bloch-prob-val bloch-p0v">1.000</div>
+        <div class="bloch-prob-bar-bg">
+          <div class="bloch-prob-bar bloch-p0b" style="width:100%"></div>
+        </div>
+      </div>
+      <div class="bloch-prob-cell">
+        <div class="bloch-prob-lbl">P(|1⟩) = sin²(θ/2)</div>
+        <div class="bloch-prob-val bloch-p1v">0.000</div>
+        <div class="bloch-prob-bar-bg">
+          <div class="bloch-prob-bar bloch-p1b" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+    <div class="bloch-sliders">
+      <div class="bloch-sl-row">
+        <span class="bloch-sl-name">θ</span>
+        <input type="range" class="bloch-theta-sl" min="0" max="180" value="0" step="1" />
+        <span class="bloch-sl-val bloch-theta-val">0°</span>
+      </div>
+      <div class="bloch-sl-row">
+        <span class="bloch-sl-name">φ</span>
+        <input type="range" class="bloch-phi-sl" min="0" max="360" value="0" step="1" />
+        <span class="bloch-sl-val bloch-phi-val">0°</span>
+      </div>
+    </div>
+    <p class="bloch-hint">drag to orbit · sliders to move state</p>
+  </div>
+</div>
+
+<style>
+  .bloch-sphere {
+    border: 0.5px solid var(--color-border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 2rem 0;
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+  }
+  .bloch-scene {
+    width: 100%;
+    height: 440px;
+    background: var(--color-surface);
+    position: relative;
+    cursor: grab;
+  }
+  .bloch-scene:active { cursor: grabbing; }
+  .bloch-scene canvas,
+  .bloch-scene > div {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+  .bloch-controls {
+    background: var(--color-panel);
+    padding: 16px 20px 18px;
+    border-top: 0.5px solid var(--color-border);
+  }
+  .bloch-state-eq {
+    font-family: var(--font-display);
+    font-size: 12px;
+    color: var(--color-ink-4);
+    text-align: center;
+    padding: 7px 12px;
+    background: var(--color-surface);
+    border-radius: 6px;
+    margin-bottom: 14px;
+    letter-spacing: 0.01em;
+  }
+  .bloch-probs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .bloch-prob-cell {
+    flex: 1;
+    background: var(--color-surface);
+    border-radius: 7px;
+    padding: 10px 14px;
+  }
+  .bloch-prob-lbl {
+    font-size: 9.5px;
+    font-weight: 400;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--color-ink-5);
+    margin-bottom: 3px;
+  }
+  .bloch-prob-val {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 400;
+  }
+  .bloch-p0v { color: #c2660a; }
+  .bloch-p1v { color: #0284c7; }
+  .bloch-prob-bar-bg {
+    margin-top: 6px;
+    height: 2px;
+    background: var(--color-tag-bg);
+    border-radius: 1px;
+    overflow: hidden;
+  }
+  .bloch-prob-bar {
+    height: 100%;
+    border-radius: 1px;
+    transition: width 0.04s linear;
+  }
+  .bloch-p0b { background: #d97706; }
+  .bloch-p1b { background: #0ea5e9; }
+  .bloch-sl-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .bloch-sl-row:last-child { margin-bottom: 0; }
+  .bloch-sl-name {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--color-ink-4);
+    width: 12px;
+    flex-shrink: 0;
+  }
+  .bloch-sl-val {
+    font-size: 11px;
+    font-weight: 300;
+    color: var(--color-ink-2);
+    width: 34px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  input[type='range'].bloch-theta-sl,
+  input[type='range'].bloch-phi-sl {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 3px;
+    background: var(--color-tag-bg);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+  input[type='range'].bloch-theta-sl::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: #d97706;
+    cursor: pointer;
+    border: none;
+  }
+  input[type='range'].bloch-phi-sl::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: #0ea5e9;
+    cursor: pointer;
+    border: none;
+  }
+  .bloch-hint {
+    font-size: 10px;
+    font-weight: 300;
+    color: var(--color-ink-6);
+    text-align: center;
+    margin-top: 10px;
+    letter-spacing: 0.01em;
+  }
+  .bloch-ket-lbl {
+    font-family: var(--font-display);
+    font-size: 13px;
+    color: var(--color-ink-2);
+    white-space: nowrap;
+    pointer-events: none;
+    user-select: none;
+  }
+</style>
+
+<script>
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+function initBlochSphere(container: HTMLElement): void {
+  const theta0 = parseFloat(container.dataset.theta ?? '0');
+  const phi0   = parseFloat(container.dataset.phi   ?? '0');
+
+  const sceneEl    = container.querySelector('.bloch-scene')    as HTMLElement;
+  const stateEqEl  = container.querySelector('.bloch-state-eq') as HTMLElement;
+  const p0vEl      = container.querySelector('.bloch-p0v')      as HTMLElement;
+  const p1vEl      = container.querySelector('.bloch-p1v')      as HTMLElement;
+  const p0bEl      = container.querySelector('.bloch-p0b')      as HTMLElement;
+  const p1bEl      = container.querySelector('.bloch-p1b')      as HTMLElement;
+  const thetaSl    = container.querySelector('.bloch-theta-sl') as HTMLInputElement;
+  const phiSl      = container.querySelector('.bloch-phi-sl')   as HTMLInputElement;
+  const thetaValEl = container.querySelector('.bloch-theta-val') as HTMLElement;
+  const phiValEl   = container.querySelector('.bloch-phi-val')   as HTMLElement;
+
+  let theta = theta0;
+  let phi   = phi0;
+
+  thetaSl.value = String(Math.round(theta * 180 / Math.PI));
+  phiSl.value   = String(Math.round(phi   * 180 / Math.PI));
+  thetaValEl.textContent = thetaSl.value + '°';
+  phiValEl.textContent   = phiSl.value   + '°';
+
+  // ── Renderer ──────────────────────────────────────────────────────────────
+  const W = sceneEl.clientWidth;
+  const H = sceneEl.clientHeight;
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(W, H);
+  renderer.setClearColor(0xf7f7f9);
+  sceneEl.appendChild(renderer.domElement);
+
+  const labelRenderer = new CSS2DRenderer();
+  labelRenderer.setSize(W, H);
+  Object.assign(labelRenderer.domElement.style, {
+    position: 'absolute', top: '0', left: '0', pointerEvents: 'none',
+  });
+  sceneEl.appendChild(labelRenderer.domElement);
+
+  // ── Scene ─────────────────────────────────────────────────────────────────
+  const scene  = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(42, W / H, 0.1, 100);
+  camera.position.set(2.6, 1.6, 2.6);
+
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.07;
+  controls.enablePan     = false;
+  controls.minDistance   = 2.2;
+  controls.maxDistance   = 7;
+
+  // ── Sphere ────────────────────────────────────────────────────────────────
+  scene.add(new THREE.LineSegments(
+    new THREE.EdgesGeometry(new THREE.SphereGeometry(1, 28, 18)),
+    new THREE.LineBasicMaterial({ color: 0xd1d1d6, transparent: true, opacity: 0.45 }),
+  ));
+
+  const equatorPts: THREE.Vector3[] = [];
+  for (let i = 0; i <= 128; i++) {
+    const a = (i / 128) * 2 * Math.PI;
+    equatorPts.push(new THREE.Vector3(Math.cos(a), 0, Math.sin(a)));
+  }
+  scene.add(new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints(equatorPts),
+    new THREE.LineBasicMaterial({ color: 0xc7c7cc, transparent: true, opacity: 0.7 }),
+  ));
+
+  scene.add(new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0, -1.4, 0), new THREE.Vector3(0, 1.4, 0),
+    ]),
+    new THREE.LineBasicMaterial({ color: 0xc7c7cc, transparent: true, opacity: 0.55 }),
+  ));
+
+  scene.add(new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(-1.3, 0, 0), new THREE.Vector3(1.3, 0, 0),
+    ]),
+    new THREE.LineBasicMaterial({ color: 0xd1d1d6, transparent: true, opacity: 0.35 }),
+  ));
+
+  // ── Labels ────────────────────────────────────────────────────────────────
+  function addLabel(text: string, pos: THREE.Vector3): void {
+    const div = document.createElement('div');
+    div.className = 'bloch-ket-lbl';
+    div.textContent = text;
+    const lbl = new CSS2DObject(div);
+    lbl.position.copy(pos);
+    scene.add(lbl);
+  }
+  addLabel('|0⟩',  new THREE.Vector3( 0.14,  1.30,  0    ));
+  addLabel('|1⟩',  new THREE.Vector3( 0.14, -1.30,  0    ));
+  addLabel('|+⟩',  new THREE.Vector3( 1.22,  0.05,  0    ));
+  addLabel('|−⟩',  new THREE.Vector3(-1.42,  0.05,  0    ));
+  addLabel('|+i⟩', new THREE.Vector3( 0,     0.05,  1.26 ));
+  addLabel('|−i⟩', new THREE.Vector3( 0,     0.05, -1.44 ));
+
+  // ── State vector ──────────────────────────────────────────────────────────
+  const arrow = new THREE.ArrowHelper(
+    new THREE.Vector3(0, 1, 0),
+    new THREE.Vector3(0, 0, 0),
+    1.0, 0x1c1c1e, 0.13, 0.065,
+  );
+  scene.add(arrow);
+
+  const tipMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(0.038, 16, 16),
+    new THREE.MeshBasicMaterial({ color: 0x1c1c1e }),
+  );
+  scene.add(tipMesh);
+
+  // ── Dynamic line helpers ──────────────────────────────────────────────────
+  function makeDynLine(mat: THREE.Material): [THREE.Line, Float32Array] {
+    const buf = new Float32Array(6);
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(buf, 3));
+    const line = new THREE.Line(geo, mat);
+    scene.add(line);
+    return [line, buf];
+  }
+
+  function setVec3(buf: Float32Array, i: number, x: number, y: number, z: number): void {
+    buf[i * 3] = x; buf[i * 3 + 1] = y; buf[i * 3 + 2] = z;
+  }
+
+  function refreshLine(line: THREE.Line): void {
+    line.geometry.getAttribute('position').needsUpdate = true;
+    line.geometry.computeBoundingSphere();
+    line.computeLineDistances();
+  }
+
+  const [hProjLine, hProjBuf] = makeDynLine(
+    new THREE.LineDashedMaterial({ color: 0xd97706, dashSize: 0.055, gapSize: 0.038 }),
+  );
+  const [zSegLine, zSegBuf] = makeDynLine(
+    new THREE.LineBasicMaterial({ color: 0xd97706, transparent: true, opacity: 0.55 }),
+  );
+  const zDotMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(0.030, 12, 12),
+    new THREE.MeshBasicMaterial({ color: 0xd97706 }),
+  );
+  scene.add(zDotMesh);
+
+  const [eqProjLine, eqProjBuf] = makeDynLine(
+    new THREE.LineDashedMaterial({ color: 0x0ea5e9, dashSize: 0.055, gapSize: 0.038 }),
+  );
+  const [dropLine, dropBuf] = makeDynLine(
+    new THREE.LineDashedMaterial({
+      color: 0x0ea5e9, dashSize: 0.04, gapSize: 0.03, transparent: true, opacity: 0.45,
+    }),
+  );
+
+  // ── State update ──────────────────────────────────────────────────────────
+  function updateState(): void {
+    const x = Math.sin(theta) * Math.cos(phi);
+    const y = Math.cos(theta);
+    const z = Math.sin(theta) * Math.sin(phi);
+
+    arrow.setDirection(new THREE.Vector3(x, y, z).normalize());
+    tipMesh.position.set(x, y, z);
+
+    setVec3(hProjBuf, 0, x, y, z);
+    setVec3(hProjBuf, 1, 0, y, 0);
+    refreshLine(hProjLine);
+
+    setVec3(zSegBuf, 0, 0, 0, 0);
+    setVec3(zSegBuf, 1, 0, y, 0);
+    refreshLine(zSegLine);
+    zDotMesh.position.set(0, y, 0);
+
+    setVec3(eqProjBuf, 0, 0, 0, 0);
+    setVec3(eqProjBuf, 1, x, 0, z);
+    refreshLine(eqProjLine);
+
+    setVec3(dropBuf, 0, x, 0, z);
+    setVec3(dropBuf, 1, x, y, z);
+    refreshLine(dropLine);
+
+    const p0 = Math.cos(theta / 2) ** 2;
+    const p1 = 1 - p0;
+    p0vEl.textContent = p0.toFixed(3);
+    p1vEl.textContent = p1.toFixed(3);
+    p0bEl.style.width = (p0 * 100).toFixed(1) + '%';
+    p1bEl.style.width = (p1 * 100).toFixed(1) + '%';
+
+    const cosH = Math.cos(theta / 2).toFixed(3);
+    const sinH = Math.sin(theta / 2).toFixed(3);
+    const pDeg = Math.round(phi * 180 / Math.PI);
+    let eq = `|ψ⟩ = ${cosH}|0⟩`;
+    if (parseFloat(sinH) > 0.001) {
+      const ePhi = pDeg === 0 ? '' : `e^(i·${pDeg}°)·`;
+      eq += ` + ${ePhi}${sinH}|1⟩`;
+    }
+    stateEqEl.textContent = eq;
+  }
+
+  // ── Sliders ───────────────────────────────────────────────────────────────
+  thetaSl.addEventListener('input', () => {
+    theta = parseInt(thetaSl.value) * Math.PI / 180;
+    thetaValEl.textContent = thetaSl.value + '°';
+    updateState();
+  });
+  phiSl.addEventListener('input', () => {
+    phi = parseInt(phiSl.value) * Math.PI / 180;
+    phiValEl.textContent = phiSl.value + '°';
+    updateState();
+  });
+
+  // ── Resize ────────────────────────────────────────────────────────────────
+  new ResizeObserver(() => {
+    const w = sceneEl.clientWidth;
+    const h = sceneEl.clientHeight;
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h);
+    labelRenderer.setSize(w, h);
+  }).observe(sceneEl);
+
+  // ── Animate ───────────────────────────────────────────────────────────────
+  updateState();
+  (function animate(): void {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+    labelRenderer.render(scene, camera);
+  })();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll<HTMLElement>('.bloch-sphere:not([data-initialized])').forEach(el => {
+    initBlochSphere(el);
+    el.setAttribute('data-initialized', 'true');
+  });
+});
+</script>
