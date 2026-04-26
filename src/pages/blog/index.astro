@@ -106,8 +106,6 @@ function formatDate(date: Date) {
                       <p class="series-post-desc">{post.data.description}</p>
                       <div class="series-post-meta">
                         <span>{formatDate(post.data.publishedAt)}</span>
-                        <span class="meta-dot"></span>
-                        <span>{readTime(post.body)}</span>
                       </div>
                     </a>
                   ))}
@@ -118,15 +116,10 @@ function formatDate(date: Date) {
             <!-- Standalone posts -->
             {group.standalonePosts.map(post => (
               <a href={`/blog/${post.id.replace(/\.(md|mdx)$/, '')}`} class="post-item">
-                <div class="post-top">
-                  <span class="post-topic">{group.topicName}</span>
-                </div>
                 <div class="post-title">{post.data.title}</div>
                 <p class="post-desc">{post.data.description}</p>
                 <div class="post-meta">
                   <span>{formatDate(post.data.publishedAt)}</span>
-                  <span class="meta-dot"></span>
-                  <span>{readTime(post.body)}</span>
                 </div>
               </a>
             ))}
