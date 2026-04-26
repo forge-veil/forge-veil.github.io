@@ -25,6 +25,7 @@ describe('firstDigit', () => {
   it('returns null for NaN', () => expect(firstDigit(NaN)).toBeNull())
   it('extracts 1 from 1e-7', () => expect(firstDigit(1e-7)).toBe(1))
   it('extracts 1 from 1e21', () => expect(firstDigit(1e21)).toBe(1))
+  it('handles decade-boundary imprecision (e.g. 999999999999999)', () => expect(firstDigit(999999999999999)).toBe(9))
 })
 
 describe('distribution', () => {

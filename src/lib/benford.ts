@@ -7,7 +7,10 @@ export function firstDigit(n: number): 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | null 
   const abs = Math.abs(n)
   const exp = Math.floor(Math.log10(abs))
   const d = Math.floor(abs / Math.pow(10, exp))
-  return d >= 1 && d <= 9 ? (d as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9) : null
+  if (d >= 1 && d <= 9) return d as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
+  // Fallback: floating-point imprecision at decade boundaries (e.g. 999999999999999)
+  const fallback = parseInt(abs.toExponential()[0])
+  return fallback >= 1 && fallback <= 9 ? (fallback as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9) : null
 }
 
 export function distribution(nums: number[]): number[] {
