@@ -27,6 +27,7 @@
 html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
 }
 
 body {
@@ -785,7 +786,8 @@ body {
   padding: 8px 32px 0;
 }
 
-#klein-canvas {
+#klein-canvas,
+#gabriel-canvas {
   width: 100%;
   height: min(65vh, 480px);
   display: block;
@@ -804,7 +806,7 @@ body {
   font-style: italic;
   color: var(--color-ink-3);
   line-height: 1.8;
-  white-space: pre;
+  white-space: pre-wrap;
   margin: 0;
   background: none;
   border: none;
@@ -819,6 +821,16 @@ body {
   font-family: var(--font-display);
   font-style: normal;
   display: block;
+}
+
+.shape-caption-note {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 300;
+  font-style: italic;
+  color: var(--color-ink-4);
+  line-height: 1.6;
+  margin: 6px 0 4px;
 }
 
 .klein-verse a {
@@ -1590,6 +1602,129 @@ body {
 .concept-map-list li strong {
   color: var(--color-ink);
   font-weight: 500;
+}
+
+/* ── Top-of-post TOC card ── */
+
+.toc-card {
+  border: 0.5px solid var(--color-border);
+  border-radius: 9px;
+  background: var(--color-surface);
+  padding: 16px 18px 18px;
+  margin: 0 0 36px;
+}
+
+.toc-card-heading {
+  font-family: var(--font-sans);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-ink-5);
+  margin: 0 0 12px;
+}
+
+.toc-card-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.toc-card-item {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--color-ink-3);
+  text-decoration: none;
+  line-height: 1.45;
+  transition: color 0.12s;
+}
+
+.toc-card-item:hover { color: var(--color-ink); }
+
+.toc-n {
+  font-size: 9.5px;
+  font-weight: 500;
+  color: var(--color-ink-6);
+  flex-shrink: 0;
+  width: 14px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  padding-top: 1px;
+}
+
+/* ── Floating TOC panel ── */
+
+.toc-float {
+  position: fixed;
+  right: 24px;
+  top: 180px;
+  width: 168px;
+  background: var(--color-panel);
+  border: 0.5px solid var(--color-border);
+  border-radius: 9px;
+  padding: 12px 14px;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.07);
+  z-index: 20;
+}
+
+.toc-float-heading {
+  font-family: var(--font-sans);
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-ink-6);
+  margin: 0 0 9px;
+}
+
+.toc-float-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin-bottom: 7px;
+}
+
+.toc-float-item:last-child { margin-bottom: 0; }
+
+.toc-float-marker {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: transparent;
+  flex-shrink: 0;
+  margin-top: 6px;
+  transition: background 0.18s;
+}
+
+.toc-float-item.is-active .toc-float-marker {
+  background: var(--color-ink);
+}
+
+.toc-float-link {
+  font-size: 10.5px;
+  font-weight: 300;
+  color: var(--color-ink-5);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  transition: color 0.18s;
+}
+
+.toc-float-item.is-active .toc-float-link {
+  color: var(--color-ink);
+  font-weight: 400;
+}
+
+@media (max-width: 1279px) {
+  .toc-float { display: none; }
 }
 
 /* ── Sphere section (grid: prose left, widget right) ── */
