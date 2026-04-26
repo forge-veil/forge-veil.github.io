@@ -18,29 +18,42 @@ import KleinBottle from './KleinBottle.astro';
            <button class="carousel-dot" data-index="1" aria-label="Shape 2"></button>
     -->
   </div>
-  <div class="carousel-dots" aria-hidden="true">
-    <button class="carousel-dot" data-index="0" aria-label="Shape 1"></button>
+  <div class="carousel-controls">
+    <button class="carousel-prev" aria-label="Previous shape">‹</button>
+    <div class="carousel-dots" aria-hidden="true">
+      <button class="carousel-dot" data-index="0" aria-label="Shape 1"></button>
+    </div>
+    <button class="carousel-next" aria-label="Next shape">›</button>
   </div>
 </div>
 
 <script>
-const slides = document.querySelectorAll<HTMLElement>('.carousel-slide');
-const dots   = document.querySelectorAll<HTMLButtonElement>('.carousel-dot');
-let current  = 0;
+const slides  = document.querySelectorAll<HTMLElement>('.carousel-slide');
+const dots    = document.querySelectorAll<HTMLButtonElement>('.carousel-dot');
+const prevBtn = document.querySelector<HTMLButtonElement>('.carousel-prev');
+const nextBtn = document.querySelector<HTMLButtonElement>('.carousel-next');
+let current   = 0;
+let timer: ReturnType<typeof setInterval> | null = null;
 
 function goTo(i: number) {
   slides[current].removeAttribute('data-active');
   dots[current].removeAttribute('data-active');
-  current = i;
+  current = (i + slides.length) % slides.length;
   slides[current].setAttribute('data-active', '');
   dots[current].setAttribute('data-active', '');
 }
 
-goTo(0);
-
-if (slides.length > 1) {
-  setInterval(() => goTo((current + 1) % slides.length), 6000);
+function resetTimer() {
+  if (timer) clearInterval(timer);
+  if (slides.length > 1) {
+    timer = setInterval(() => goTo(current + 1), 6000);
+  }
 }
 
-dots.forEach((dot, i) => dot.addEventListener('click', () => goTo(i)));
+goTo(0);
+resetTimer();
+
+prevBtn?.addEventListener('click', () => { goTo(current - 1); resetTimer(); });
+nextBtn?.addEventListener('click', () => { goTo(current + 1); resetTimer(); });
+dots.forEach((dot, i) => dot.addEventListener('click', () => { goTo(i); resetTimer(); }));
 </script>

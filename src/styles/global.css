@@ -729,15 +729,38 @@ body {
   pointer-events: auto;
 }
 
-.carousel-dots {
+.carousel-controls {
   display: flex;
+  align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 10px;
   padding: 10px 0 0;
 }
 
-.carousel-dots:has(:only-child) {
+.carousel-controls:has(.carousel-dot:only-child) {
   display: none;
+}
+
+.carousel-prev,
+.carousel-next {
+  background: none;
+  border: none;
+  padding: 0 2px;
+  font-size: 15px;
+  color: var(--color-ink-5);
+  cursor: pointer;
+  transition: color 0.12s;
+  line-height: 1;
+  font-family: var(--font-sans);
+}
+
+.carousel-prev:hover,
+.carousel-next:hover { color: var(--color-ink-2); }
+
+.carousel-dots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .carousel-dot {
