@@ -38,9 +38,12 @@
     border-bottom: 0.5px solid var(--color-border);
     padding: 10px 14px 0;
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    overflow-x: auto;
     gap: 4px;
+    scrollbar-width: none;
   }
+  .bf-exp-tabs::-webkit-scrollbar { display: none; }
   .bf-exp-tab {
     font-size: 10.5px;
     padding: 5px 10px 8px;
@@ -53,6 +56,7 @@
     font-family: var(--font-sans);
     letter-spacing: 0.01em;
     transition: color 0.1s;
+    white-space: nowrap;
   }
   .bf-exp-tab:hover { color: var(--color-ink-2); }
   .bf-exp-tab[aria-selected='true'] {
@@ -60,8 +64,7 @@
     border-bottom-color: var(--color-ink);
     font-weight: 500;
   }
-  .bf-exp-scene { height: 280px; background: var(--color-surface); position: relative; }
-  .bf-exp-scene canvas { position: absolute; top: 0; left: 0; }
+  .bf-exp-scene { background: var(--color-surface); }
   .bf-exp-stats {
     display: flex;
     background: var(--color-panel);
@@ -104,8 +107,62 @@
 </style>
 
 <script>
-  import * as THREE from 'three'
-  import { DATASETS, expectedFreq, madScore, fitLabel } from '../lib/benford'
+  import * as Plot from '@observablehq/plot'
+  import { DATASETS, madScore, fitLabel } from '../lib/benford'
+
+  const BAR   = '#aeaeb2'
+  const CURVE = '#5856d6'
+  const BG    = '#f7f7fa'
+  const LABEL = '#8e8e9a'
+
+  const CURVE_PTS = Array.from({ length: 100 }, (_, i) => {
+    const d = 1 + 8 * i / 99
+    return { d, freq: Math.log10(1 + 1 / d) }
+  })
+
+  function renderChart(container: HTMLElement, freqs: number[], height: number): void {
+    const w = container.clientWidth || 480
+    const rects = freqs.map((freq, i) => ({ x1: i + 1 - 0.38, x2: i + 1 + 0.38, freq }))
+    const dots  = freqs.map((freq, i) => ({ digit: i + 1, freq }))
+
+    const svg = Plot.plot({
+      width: w,
+      height,
+      marginLeft: 44,
+      marginBottom: 28,
+      marginTop: 14,
+      marginRight: 12,
+      style: {
+        background: BG,
+        fontSize: '11px',
+        fontFamily: 'var(--font-sans, system-ui)',
+        overflow: 'visible',
+      },
+      x: {
+        label: null,
+        domain: [0.5, 9.5],
+        ticks: [1, 2, 3, 4, 5, 6, 7, 8, 9],
+        tickFormat: (d: number) => String(d),
+        tickSize: 3,
+      },
+      y: {
+        label: null,
+        domain: [0, 0.34],
+        tickFormat: (d: number) => (d * 100).toFixed(0) + '%',
+        grid: true,
+        tickSize: 0,
+      },
+      marks: [
+        Plot.rectY(rects, { x1: 'x1', x2: 'x2', y: 'freq', fill: BAR }),
+        Plot.line(CURVE_PTS, { x: 'd', y: 'freq', stroke: CURVE, strokeWidth: 1.25, strokeDasharray: '5,4' }),
+        Plot.dot(dots, { x: 'digit', y: 'freq', fill: CURVE, r: 3 }),
+      ],
+    })
+
+    svg.querySelectorAll('text').forEach(el => { (el as HTMLElement).style.fill = LABEL })
+    container.innerHTML = ''
+    container.appendChild(svg)
+  }
 
   function initExplorer(container: HTMLElement): void {
     const tabsEl  = container.querySelector('.bf-exp-tabs')  as HTMLElement
@@ -116,7 +173,6 @@
     const fitEl   = container.querySelector('.bf-exp-fit')   as HTMLElement
     const descEl  = container.querySelector('.bf-exp-desc')  as HTMLElement
 
-    // Build tab strip from DATASETS
     DATASETS.forEach((ds, i) => {
       const btn = document.createElement('button')
       btn.className = 'bf-exp-tab'
@@ -128,78 +184,21 @@
     })
     const tabs = Array.from(tabsEl.querySelectorAll<HTMLButtonElement>('.bf-exp-tab'))
 
-    // Three.js setup
-    const renderer = new THREE.WebGLRenderer({ antialias: true })
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-    renderer.setSize(sceneEl.clientWidth, sceneEl.clientHeight)
-    renderer.setClearColor(0xf7f7f9)
-    sceneEl.appendChild(renderer.domElement)
-
-    const scene  = new THREE.Scene()
-    const camera = new THREE.OrthographicCamera(-5, 5, 3.8, -0.3, 0.1, 10)
-    camera.position.z = 5
-
-    const MAX_FREQ = expectedFreq(1)
-    const freqToH  = (f: number) => (f / MAX_FREQ) * 3.5
-    const BAR_X    = [-4, -3, -2, -1, 0, 1, 2, 3, 4]
-
-    // Bars
-    const barMat = new THREE.MeshBasicMaterial({ color: 0x1c1c1e })
-    const bars: THREE.Mesh[] = BAR_X.map(x => {
-      const m = new THREE.Mesh(new THREE.BoxGeometry(0.72, 1, 0), barMat)
-      m.position.set(x, 0, 0); m.scale.y = 0.001; scene.add(m); return m
-    })
-
-    // Benford overlay
-    const bPts = BAR_X.map((x, i) =>
-      new THREE.Vector2(x, freqToH(expectedFreq((i + 1) as 1|2|3|4|5|6|7|8|9))))
-    const bLine = new THREE.Line(
-      new THREE.BufferGeometry().setFromPoints(bPts),
-      new THREE.LineDashedMaterial({ color: 0xff3b30, dashSize: 0.12, gapSize: 0.06 }),
-    )
-    bLine.computeLineDistances()
-    scene.add(bLine)
-
-    // Dot markers
-    const dotMat = new THREE.MeshBasicMaterial({ color: 0xff3b30 })
-    bPts.forEach(pt => {
-      const dot = new THREE.Mesh(new THREE.CircleGeometry(0.055, 12), dotMat)
-      dot.position.set(pt.x, pt.y, 0)
-      scene.add(dot)
-    })
-
-    const currentH = new Array(9).fill(0)
-    const targetH  = new Array(9).fill(0)
-
-    ;(function animate(): void {
-      requestAnimationFrame(animate)
-      for (let i = 0; i < 9; i++) {
-        currentH[i] += (targetH[i] - currentH[i]) * 0.12
-        bars[i].scale.y = currentH[i]
-        bars[i].position.y = currentH[i] / 2
-      }
-      renderer.render(scene, camera)
-    })()
-
     function selectDataset(idx: number): void {
       const ds  = DATASETS[idx]
       const mad = madScore(ds.digits)
       const fit = fitLabel(mad)
 
       tabs.forEach((t, i) => t.setAttribute('aria-selected', i === idx ? 'true' : 'false'))
-      for (let i = 0; i < 9; i++) targetH[i] = Math.max(freqToH(ds.digits[i]), 0.02)
+      renderChart(sceneEl, ds.digits, 280)
 
-      d1El.textContent  = (ds.digits[0] * 100).toFixed(1) + '%'
-      nEl.textContent   = ds.n.toLocaleString()
-      madEl.textContent = mad.toFixed(4)
-      fitEl.textContent = fit
-      fitEl.className   = 'bf-exp-stat-val bf-exp-fit fit-' + fit.toLowerCase()
+      d1El.textContent   = (ds.digits[0] * 100).toFixed(1) + '%'
+      nEl.textContent    = ds.n.toLocaleString()
+      madEl.textContent  = mad.toFixed(4)
+      fitEl.textContent  = fit
+      fitEl.className    = 'bf-exp-stat-val bf-exp-fit fit-' + fit.toLowerCase()
       descEl.textContent = ds.description
     }
-
-    new ResizeObserver(() => {
-      renderer.setSize(sceneEl.clientWidth, sceneEl.clientHeight)
-    }).observe(sceneEl)
 
     selectDataset(0)
   }
