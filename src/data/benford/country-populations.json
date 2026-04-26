@@ -1,0 +1,31 @@
+{
+  "name": "Country Populations",
+  "description": "World Bank population estimates, 2022 — all countries and territories",
+  "source": "https://data.worldbank.org/indicator/SP.POP.TOTL",
+  "unit": "persons",
+  "fetchedAt": "2026-04-26T22:19:07.731Z",
+  "queryCode": "GET https://api.worldbank.org/v2/country/all/indicator/SP.POP.TOTL\n    ?format=json&date=2022&per_page=300&mrv=1\n\nIndicator: SP.POP.TOTL (total population)\nFilter: value != null && value > 0 && countryiso3code present",
+  "counts": [
+    81,
+    42,
+    32,
+    23,
+    28,
+    22,
+    11,
+    10,
+    12
+  ],
+  "n": 261,
+  "digits": [
+    0.3103448275862069,
+    0.16091954022988506,
+    0.12260536398467432,
+    0.08812260536398467,
+    0.10727969348659004,
+    0.0842911877394636,
+    0.0421455938697318,
+    0.038314176245210725,
+    0.04597701149425287
+  ]
+}

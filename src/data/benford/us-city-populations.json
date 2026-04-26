@@ -1,0 +1,31 @@
+{
+  "name": "US City Populations",
+  "description": "All 31,000+ incorporated US cities, towns, and villages — US Census Bureau 2020 Decennial Census",
+  "source": "https://api.census.gov/data/2020/dec/pl",
+  "unit": "persons",
+  "fetchedAt": "2026-04-26T22:19:07.731Z",
+  "queryCode": "GET https://api.census.gov/data/2020/dec/pl\n    ?get=P1_001N&for=place:*\n\nP1_001N — total population, all incorporated places\nFilter: P1_001N > 0",
+  "counts": [
+    9616,
+    5666,
+    3924,
+    3051,
+    2434,
+    2067,
+    1925,
+    1612,
+    1566
+  ],
+  "n": 31861,
+  "digits": [
+    0.3018109914943034,
+    0.17783497065377735,
+    0.12315997614638587,
+    0.09575970622391011,
+    0.07639433790527604,
+    0.06487555318414362,
+    0.060418693700762686,
+    0.050594771036690626,
+    0.049150999654750324
+  ]
+}

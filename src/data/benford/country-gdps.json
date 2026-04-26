@@ -1,0 +1,31 @@
+{
+  "name": "Country GDPs",
+  "description": "World Bank GDP (current USD), 2022 — all countries with available data",
+  "source": "https://data.worldbank.org/indicator/NY.GDP.MKTP.CD",
+  "unit": "USD",
+  "fetchedAt": "2026-04-26T22:19:07.731Z",
+  "queryCode": "GET https://api.worldbank.org/v2/country/all/indicator/NY.GDP.MKTP.CD\n    ?format=json&date=2022&per_page=300&mrv=1\n\nIndicator: NY.GDP.MKTP.CD (GDP, current USD)\nFilter: value != null && value > 0 && countryiso3code present",
+  "counts": [
+    74,
+    50,
+    26,
+    34,
+    13,
+    12,
+    10,
+    8,
+    9
+  ],
+  "n": 236,
+  "digits": [
+    0.3135593220338983,
+    0.211864406779661,
+    0.11016949152542373,
+    0.1440677966101695,
+    0.05508474576271186,
+    0.05084745762711865,
+    0.0423728813559322,
+    0.03389830508474576,
+    0.038135593220338986
+  ]
+}

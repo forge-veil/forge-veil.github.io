@@ -1,0 +1,31 @@
+{
+  "name": "Country Land Areas",
+  "description": "World Bank land area (km²), 2021 — all countries and territories",
+  "source": "https://data.worldbank.org/indicator/AG.LND.TOTL.K2",
+  "unit": "km²",
+  "fetchedAt": "2026-04-26T22:19:07.731Z",
+  "queryCode": "GET https://api.worldbank.org/v2/country/all/indicator/AG.LND.TOTL.K2\n    ?format=json&date=2021&per_page=300&mrv=1\n\nIndicator: AG.LND.TOTL.K2 (land area, km²)\nFilter: value != null && value > 0 && countryiso3code present",
+  "counts": [
+    58,
+    42,
+    26,
+    21,
+    17,
+    13,
+    14,
+    12,
+    12
+  ],
+  "n": 215,
+  "digits": [
+    0.26976744186046514,
+    0.19534883720930232,
+    0.12093023255813953,
+    0.09767441860465116,
+    0.07906976744186046,
+    0.06046511627906977,
+    0.06511627906976744,
+    0.05581395348837209,
+    0.05581395348837209
+  ]
+}

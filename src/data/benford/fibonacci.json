@@ -1,0 +1,31 @@
+{
+  "name": "Fibonacci Numbers",
+  "description": "First 1,000 Fibonacci numbers — mathematically computed, not sampled",
+  "source": "https://en.wikipedia.org/wiki/Fibonacci_sequence",
+  "unit": "integer",
+  "fetchedAt": "2026-04-26T22:19:07.731Z",
+  "queryCode": "// Computed with arbitrary-precision arithmetic (BigInt)\nlet a = 1n, b = 1n\nfor (let i = 0; i < 1000; i++) {\n  values.push(a)  // record exact integer\n  ;[a, b] = [b, a + b]\n}",
+  "counts": [
+    301,
+    177,
+    125,
+    96,
+    80,
+    67,
+    56,
+    53,
+    45
+  ],
+  "n": 1000,
+  "digits": [
+    0.301,
+    0.177,
+    0.125,
+    0.096,
+    0.08,
+    0.067,
+    0.056,
+    0.053,
+    0.045
+  ]
+}

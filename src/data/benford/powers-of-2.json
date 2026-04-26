@@ -1,0 +1,31 @@
+{
+  "name": "Powers of 2",
+  "description": "First 10,000 powers of 2 (2⁰ through 2⁹⁹⁹⁹) — mathematically computed",
+  "source": "https://en.wikipedia.org/wiki/Power_of_two",
+  "unit": "integer",
+  "fetchedAt": "2026-04-26T22:19:07.731Z",
+  "queryCode": "// Computed with arbitrary-precision arithmetic (BigInt)\nlet v = 1n\nfor (let i = 0; i < 10000; i++) {\n  values.push(v)  // record exact integer (2^i)\n  v *= 2n\n}",
+  "counts": [
+    3010,
+    1761,
+    1249,
+    970,
+    791,
+    670,
+    579,
+    512,
+    458
+  ],
+  "n": 10000,
+  "digits": [
+    0.301,
+    0.1761,
+    0.1249,
+    0.097,
+    0.0791,
+    0.067,
+    0.0579,
+    0.0512,
+    0.0458
+  ]
+}

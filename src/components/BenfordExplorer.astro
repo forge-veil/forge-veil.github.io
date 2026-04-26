@@ -25,6 +25,18 @@
   <div class="bf-exp-desc"></div>
 </div>
 
+<dialog class="bf-exp-modal">
+  <div class="bf-exp-modal-header">
+    <span class="bf-exp-modal-title">Data collection</span>
+    <button class="bf-exp-modal-close" aria-label="Close">✕</button>
+  </div>
+  <div class="bf-exp-modal-meta">
+    <span class="bf-exp-modal-fetched"></span>
+    <a class="bf-exp-modal-src" href="#" target="_blank" rel="noopener noreferrer">source ↗</a>
+  </div>
+  <pre class="bf-exp-modal-code"></pre>
+</dialog>
+
 <style>
   .bf-exp {
     border: 0.5px solid var(--color-border);
@@ -107,6 +119,109 @@
     font-family: var(--font-display);
     text-align: center;
     min-height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  :global(.bf-exp-desc-text) {
+    display: contents;
+  }
+  :global(.bf-exp-desc a) {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  :global(.bf-exp-code-btn) {
+    font-size: 10px;
+    font-family: var(--font-sans);
+    font-style: normal;
+    color: var(--color-ink-5);
+    background: var(--color-tag-bg);
+    border: none;
+    border-radius: 4px;
+    padding: 2px 7px;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+    flex-shrink: 0;
+    transition: background 0.12s, color 0.12s;
+  }
+  :global(.bf-exp-code-btn:hover) {
+    background: var(--color-border);
+    color: var(--color-ink-2);
+  }
+
+  /* ── modal ── */
+  .bf-exp-modal {
+    border: 0.5px solid var(--color-border);
+    border-radius: 12px;
+    padding: 0;
+    max-width: min(640px, 92vw);
+    width: 100%;
+    background: var(--color-surface);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+    font-family: var(--font-sans);
+  }
+  .bf-exp-modal::backdrop {
+    background: rgba(0,0,0,0.35);
+    backdrop-filter: blur(2px);
+  }
+  .bf-exp-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px 12px;
+    border-bottom: 0.5px solid var(--color-border);
+  }
+  .bf-exp-modal-title {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    color: var(--color-ink-2);
+    text-transform: uppercase;
+  }
+  .bf-exp-modal-close {
+    font-size: 13px;
+    line-height: 1;
+    color: var(--color-ink-4);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 4px;
+  }
+  .bf-exp-modal-close:hover { background: var(--color-tag-bg); color: var(--color-ink-2); }
+  .bf-exp-modal-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 18px;
+    border-bottom: 0.5px solid var(--color-border-soft);
+    background: var(--color-panel);
+  }
+  .bf-exp-modal-fetched {
+    font-size: 10.5px;
+    color: var(--color-ink-4);
+    font-variant-numeric: tabular-nums;
+  }
+  .bf-exp-modal-src {
+    font-size: 10.5px;
+    color: var(--color-ink-4);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .bf-exp-modal-code {
+    margin: 0;
+    padding: 16px 18px;
+    font-family: var(--font-mono, 'SF Mono', 'Fira Mono', monospace);
+    font-size: 11.5px;
+    line-height: 1.65;
+    color: var(--color-ink-2);
+    white-space: pre;
+    overflow-x: auto;
+    background: var(--color-surface);
+    border-radius: 0 0 12px 12px;
   }
 </style>
 
@@ -168,14 +283,31 @@
     container.appendChild(svg)
   }
 
+  function formatDate(iso: string): string {
+    return new Date(iso).toLocaleString('en-GB', {
+      day: 'numeric', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', timeZone: 'UTC', timeZoneName: 'short',
+    })
+  }
+
   function initExplorer(container: HTMLElement): void {
-    const tabsEl  = container.querySelector('.bf-exp-tabs')  as HTMLElement
-    const sceneEl = container.querySelector('.bf-exp-scene') as HTMLElement
-    const d1El    = container.querySelector('.bf-exp-d1')    as HTMLElement
-    const nEl     = container.querySelector('.bf-exp-n')     as HTMLElement
-    const madEl   = container.querySelector('.bf-exp-mad')   as HTMLElement
-    const fitEl   = container.querySelector('.bf-exp-fit')   as HTMLElement
-    const descEl  = container.querySelector('.bf-exp-desc')  as HTMLElement
+    const tabsEl   = container.querySelector('.bf-exp-tabs')   as HTMLElement
+    const sceneEl  = container.querySelector('.bf-exp-scene')  as HTMLElement
+    const d1El     = container.querySelector('.bf-exp-d1')     as HTMLElement
+    const nEl      = container.querySelector('.bf-exp-n')      as HTMLElement
+    const madEl    = container.querySelector('.bf-exp-mad')    as HTMLElement
+    const fitEl    = container.querySelector('.bf-exp-fit')    as HTMLElement
+    const descEl   = container.querySelector('.bf-exp-desc')   as HTMLElement
+
+    // modal elements (shared, outside the widget)
+    const modal     = document.querySelector('.bf-exp-modal')      as HTMLDialogElement
+    const modalCode = modal.querySelector('.bf-exp-modal-code')    as HTMLElement
+    const modalFetched = modal.querySelector('.bf-exp-modal-fetched') as HTMLElement
+    const modalSrc  = modal.querySelector('.bf-exp-modal-src')     as HTMLAnchorElement
+    const modalClose = modal.querySelector('.bf-exp-modal-close')  as HTMLButtonElement
+
+    modalClose.addEventListener('click', () => modal.close())
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.close() })
 
     DATASETS.forEach((ds, i) => {
       const btn = document.createElement('button')
@@ -196,12 +328,28 @@
       tabs.forEach((t, i) => t.setAttribute('aria-selected', i === idx ? 'true' : 'false'))
       renderChart(sceneEl, ds.digits, 280)
 
-      d1El.textContent   = (ds.digits[0] * 100).toFixed(1) + '%'
-      nEl.textContent    = ds.n.toLocaleString()
-      madEl.textContent  = mad.toFixed(4)
-      fitEl.textContent  = fit
-      fitEl.className    = 'bf-exp-stat-val bf-exp-fit fit-' + fit.toLowerCase()
-      descEl.innerHTML = `${ds.description} — <a href="${ds.source}" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:underline;text-underline-offset:2px;">source ↗</a>`
+      d1El.textContent  = (ds.digits[0] * 100).toFixed(1) + '%'
+      nEl.textContent   = ds.n.toLocaleString()
+      madEl.textContent = mad.toFixed(4)
+      fitEl.textContent = fit
+      fitEl.className   = 'bf-exp-stat-val bf-exp-fit fit-' + fit.toLowerCase()
+
+      const codeBtn = document.createElement('button')
+      codeBtn.className = 'bf-exp-code-btn'
+      codeBtn.textContent = '{ } how collected'
+      codeBtn.addEventListener('click', () => {
+        modalCode.textContent  = ds.queryCode
+        modalFetched.textContent = 'Fetched ' + formatDate(ds.fetchedAt)
+        modalSrc.href = ds.source
+        modal.showModal()
+      })
+
+      descEl.innerHTML = ''
+      const text = document.createElement('span')
+      text.className = 'bf-exp-desc-text'
+      text.innerHTML = `${ds.description} — <a href="${ds.source}" target="_blank" rel="noopener noreferrer">source ↗</a>`
+      descEl.appendChild(text)
+      descEl.appendChild(codeBtn)
     }
 
     selectDataset(0)

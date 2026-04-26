@@ -1,0 +1,31 @@
+{
+  "name": "US County Populations",
+  "description": "US Census Bureau 2020 Decennial Census — all counties and county-equivalents",
+  "source": "https://www.census.gov/programs-surveys/decennial-census/decade/2020/2020-census-results.html",
+  "unit": "persons",
+  "fetchedAt": "2026-04-26T22:19:07.731Z",
+  "queryCode": "GET https://api.census.gov/data/2020/dec/pl\n    ?get=P1_001N,NAME&for=county:*\n\nP1_001N — total population, all counties and county-equivalents\nFilter: P1_001N > 0",
+  "counts": [
+    979,
+    600,
+    401,
+    305,
+    237,
+    205,
+    175,
+    167,
+    152
+  ],
+  "n": 3221,
+  "digits": [
+    0.3039428748835765,
+    0.18627755355479664,
+    0.12449549829245576,
+    0.0946910897236883,
+    0.07357963365414467,
+    0.06364483079788885,
+    0.054330953120149024,
+    0.051847252406085065,
+    0.04719031356721515
+  ]
+}

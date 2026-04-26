@@ -1,0 +1,31 @@
+{
+  "name": "Mountain Peak Heights",
+  "description": "Elevations (m) of mountain and volcanic peaks 500–9,000 m — Wikidata (P2044), sourced from Wikipedia contributors",
+  "source": "https://query.wikidata.org/#SELECT%20%3Felev%20WHERE%20%7B%0A%20%20%7B%20%3Fmountain%20wdt%3AP31%20wd%3AQ8502%20%7D%20UNION%20%7B%20%3Fmountain%20wdt%3AP31%20wd%3AQ597%20%7D%0A%20%20%3Fmountain%20wdt%3AP2044%20%3Felev%20.%0A%20%20FILTER(%3Felev%20%3E%20500%20%26%26%20%3Felev%20%3C%209000)%0A%7D%0ALIMIT%2020000",
+  "unit": "m",
+  "fetchedAt": "2026-04-26T22:19:07.731Z",
+  "queryCode": "SELECT ?elev WHERE {\n  { ?mountain wdt:P31 wd:Q8502 } UNION { ?mountain wdt:P31 wd:Q597 }\n  ?mountain wdt:P2044 ?elev .\n  FILTER(?elev > 500 && ?elev < 9000)\n}\nLIMIT 20000",
+  "counts": [
+    6005,
+    4991,
+    2482,
+    583,
+    1403,
+    1430,
+    1219,
+    1073,
+    814
+  ],
+  "n": 20000,
+  "digits": [
+    0.30025,
+    0.24955,
+    0.1241,
+    0.02915,
+    0.07015,
+    0.0715,
+    0.06095,
+    0.05365,
+    0.0407
+  ]
+}

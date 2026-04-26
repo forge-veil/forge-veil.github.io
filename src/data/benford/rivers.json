@@ -1,0 +1,29 @@
+{
+  "name": "World River Lengths",
+  "description": "River lengths (km) for rivers and watercourses > 50 km — Wikidata (P2043), sourced from Wikipedia contributors",
+  "source": "https://query.wikidata.org/#SELECT%20%3Flength%20WHERE%20%7B%0A%20%20%7B%20%3Fr%20wdt%3AP31%20wd%3AQ4022%20%7D%20UNION%20%7B%20%3Fr%20wdt%3AP31%20wd%3AQ47521%20%7D%20UNION%20%7B%20%3Fr%20wdt%3AP31%20wd%3AQ1437299%20%7D%0A%20%20%3Fr%20wdt%3AP2043%20%3Flength%20.%0A%20%20FILTER(%3Flength%20%3E%2050)%0A%7D%0ALIMIT%2010000",
+  "unit": "km",
+  "counts": [
+    3138,
+    0,
+    0,
+    0,
+    1987,
+    1644,
+    1337,
+    1040,
+    854
+  ],
+  "n": 10000,
+  "digits": [
+    0.3138,
+    0,
+    0,
+    0,
+    0.1987,
+    0.1644,
+    0.1337,
+    0.104,
+    0.0854
+  ]
+}
