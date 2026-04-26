@@ -34,34 +34,38 @@
     font-family: var(--font-sans);
   }
   .bf-exp-tabs {
-    background: var(--color-surface);
+    background: var(--color-panel);
     border-bottom: 0.5px solid var(--color-border);
-    padding: 10px 14px 0;
+    padding: 10px 14px;
     display: flex;
     flex-wrap: nowrap;
     overflow-x: auto;
     gap: 4px;
     scrollbar-width: none;
+    align-items: center;
   }
   .bf-exp-tabs::-webkit-scrollbar { display: none; }
   .bf-exp-tab {
     font-size: 10.5px;
-    padding: 5px 10px 8px;
-    border-radius: 5px 5px 0 0;
+    padding: 4px 11px;
+    border-radius: 20px;
     background: transparent;
     border: none;
-    border-bottom: 2px solid transparent;
     color: var(--color-ink-4);
     cursor: pointer;
     font-family: var(--font-sans);
     letter-spacing: 0.01em;
-    transition: color 0.1s;
+    transition: background 0.12s, color 0.12s;
     white-space: nowrap;
+    line-height: 1.6;
   }
-  .bf-exp-tab:hover { color: var(--color-ink-2); }
+  .bf-exp-tab:hover {
+    background: var(--color-tag-bg);
+    color: var(--color-ink-2);
+  }
   .bf-exp-tab[aria-selected='true'] {
-    color: var(--color-ink);
-    border-bottom-color: var(--color-ink);
+    background: var(--color-ink);
+    color: var(--color-surface);
     font-weight: 500;
   }
   .bf-exp-scene { background: var(--color-surface); }
