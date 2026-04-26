@@ -1,0 +1,47 @@
+---
+interface Props {
+  headings: { depth: number; slug: string; text: string }[];
+}
+
+const { headings } = Astro.props;
+const h2s = headings.filter(h => h.depth === 2);
+---
+
+{h2s.length > 1 && (
+  <nav class="toc-float" aria-label="On this page">
+    <p class="toc-float-heading">On this page</p>
+    {h2s.map(h => (
+      <div class="toc-float-item" data-toc-slug={h.slug}>
+        <div class="toc-float-marker"></div>
+        <span class="toc-float-link">{h.text}</span>
+      </div>
+    ))}
+  </nav>
+)}
+
+<script>
+  const tocItems = document.querySelectorAll<HTMLElement>('[data-toc-slug]');
+  const headings = Array.from(
+    document.querySelectorAll<HTMLElement>('.prose h2')
+  );
+
+  if (tocItems.length && headings.length) {
+    function updateActive() {
+      const threshold = window.innerHeight * 0.35;
+      let activeSlug = headings[0].id;
+
+      for (const h of headings) {
+        if (h.getBoundingClientRect().top <= threshold) {
+          activeSlug = h.id;
+        }
+      }
+
+      tocItems.forEach(item => {
+        item.classList.toggle('is-active', item.dataset.tocSlug === activeSlug);
+      });
+    }
+
+    window.addEventListener('scroll', updateActive, { passive: true });
+    updateActive();
+  }
+</script>
