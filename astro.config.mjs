@@ -8,7 +8,6 @@ import rehypeExternalLinks from 'rehype-external-links';
 
 export default defineConfig({
   site: 'https://forge-veil.github.io',
-  base: '/vatsal-bakshi.github.io',
   vite: {
     plugins: [tailwindcss()],
   },
