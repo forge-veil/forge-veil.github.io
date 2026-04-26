@@ -41,7 +41,7 @@ function readTime(body: string | undefined) {
     <Sidebar activeTopic={post.data.topic} />
 
     <main class="feed">
-      <div class={`article-wrap${post.data.layout === 'longform' ? ' article-wrap--wide' : ''}`}>
+      <div class={`article-wrap${post.data.postLayout === 'longform' ? ' article-wrap--wide' : ''}`}>
         <a href="/blog" class="article-back">← Writing</a>
 
         <header class="article-header">

@@ -33,7 +33,7 @@ export const collections = {
       tags: z.array(z.string()).default([]),
       publishedAt: z.coerce.date(),
       published: z.boolean().default(false),
-      layout: z.enum(['longform']).optional(),
+      postLayout: z.enum(['longform']).optional(),
     }),
   }),
 };
