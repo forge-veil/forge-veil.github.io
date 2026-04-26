@@ -1,4 +1,56 @@
 ---
+const eqText = `  r(u) = 2 · (1 − cos(u) / 2)
+
+  u < π:
+    x = 3 cos(u) (1 + sin(u)) + r(u) · cos(u) · cos(v)
+    y = 8 sin(u)               + r(u) · sin(u) · cos(v)
+    z =                          r(u) · sin(v)
+
+  u ≥ π:
+    x = 3 cos(u) (1 + sin(u)) + r(u) · cos(v + π)
+    y = 8 sin(u)
+    z =            r(u) · sin(v)
+
+The liquid fill uses the same surface evaluated at r(u) × 0.72,
+rendered as an opaque inner shell visible through the glass.`;
+
+const codeText = `function makeKlein(tubeScale, v, u, target) {
+  u *= Math.PI; v *= 2 * Math.PI; u *= 2;
+  const r = 2 * (1 - Math.cos(u) / 2) * tubeScale;
+  if (u < Math.PI) {
+    target.set(
+      3*Math.cos(u)*(1+Math.sin(u)) + r*Math.cos(u)*Math.cos(v),
+      8*Math.sin(u)                 + r*Math.sin(u)*Math.cos(v),
+      r * Math.sin(v)
+    );
+  } else {
+    target.set(
+      3*Math.cos(u)*(1+Math.sin(u)) + r*Math.cos(v + Math.PI),
+      8*Math.sin(u),
+      r * Math.sin(v)
+    );
+  }
+}
+
+// Glass shell — tubeScale 1.0
+new MeshPhysicalMaterial({
+  color:           0xe8f0ff,
+  transmission:    0.88,    // high transparency
+  thickness:       2.5,
+  ior:             1.52,    // borosilicate glass
+  reflectivity:    0.65,
+  roughness:       0.0,
+  envMapIntensity: 2.5,
+  side:            DoubleSide,
+});
+
+// Liquid fill — same surface at 72% tube radius
+new MeshStandardMaterial({
+  color:     0x07070f,  // near-black ink
+  metalness: 0.2,
+  roughness: 0.6,
+  side:      FrontSide,
+});`;
 ---
 <div class="klein-aside">
   <canvas id="klein-canvas"></canvas>
@@ -14,8 +66,27 @@ You'll get a weird bottle like mine."</pre>
       target="_blank"
       rel="noopener noreferrer"
     >Klein bottle ↗</a>
+    <button id="klein-source-btn" class="klein-source-btn">equations &amp; code</button>
   </figure>
 </div>
+
+<dialog id="klein-source-dialog" class="klein-dialog">
+  <div class="klein-dialog-inner">
+    <button id="klein-dialog-close" class="klein-dialog-close" aria-label="Close">×</button>
+
+    <section class="klein-dialog-section">
+      <h3 class="klein-dialog-label">Parametrization</h3>
+      <p class="klein-dialog-desc">Figure-8 immersion (Apéry, 1984) — u ∈ [0, 2π], v ∈ [0, 2π]</p>
+      <pre class="klein-dialog-eq" set:text={eqText}></pre>
+    </section>
+
+    <section class="klein-dialog-section">
+      <h3 class="klein-dialog-label">Three.js</h3>
+      <p class="klein-dialog-desc">Glass shell + concentric liquid geometry, both from the same parametric function.</p>
+      <pre class="klein-dialog-code" set:text={codeText}></pre>
+    </section>
+  </div>
+</dialog>
 
 <script>
 import * as THREE from 'three';
@@ -143,4 +214,9 @@ const observer = new IntersectionObserver(([entry]) => {
 
 observer.observe(canvas);
 window.addEventListener('resize', resize);
+
+const dialog = document.getElementById('klein-source-dialog') as HTMLDialogElement;
+document.getElementById('klein-source-btn')!.addEventListener('click', () => dialog.showModal());
+document.getElementById('klein-dialog-close')!.addEventListener('click', () => dialog.close());
+dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });
 </script>
