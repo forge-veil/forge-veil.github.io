@@ -1,0 +1,82 @@
+---
+title: "The Bloch Sphere"
+description: "A qubit state has two complex amplitudes — four real degrees of freedom. Two constraints reduce this to something you can draw on a sphere."
+topic: quantum-computing
+series:
+  slug: quantum-first-principles
+  name: Quantum Computing from First Principles
+  part: 2
+tags: [quantum, bloch-sphere, visualization, phase]
+publishedAt: 2026-04-25
+published: true
+---
+
+We have a precise description of a qubit: a unit vector |ψ⟩ = α|0⟩ + β|1⟩ in a two-dimensional complex vector space. Two complex numbers. Four real degrees of freedom.
+
+Four dimensions is too many to picture directly. But two constraints reduce this to something you can actually visualize — and the result turns out to be the surface of a sphere.
+
+## Counting Degrees of Freedom
+
+Start with four real numbers: Re(α), Im(α), Re(β), Im(β).
+
+**Constraint 1: normalization.** The state must satisfy |α|² + |β|² = 1. This removes one degree of freedom, leaving three.
+
+**Constraint 2: global phase.** This one is subtler. Quantum mechanics has a structural property: multiplying an entire state by e^(iθ) for any real θ produces a state that is physically indistinguishable from the original. No measurement, now or ever, can tell the difference between |ψ⟩ and e^(iθ)|ψ⟩.
+
+This is not an approximation. It is exact, and it follows from how probabilities are computed. Measurement outcomes depend on |amplitude|², and |e^(iθ) · α|² = |α|² — the global phase factor cancels.
+
+Global phase is physically meaningless, so we can always choose a convention that removes it. By convention, we choose α to be a real, non-negative number. This removes another degree of freedom.
+
+We are left with **two real degrees of freedom** to describe any physically distinct single-qubit state.
+
+Two degrees of freedom. One constraint (normalization still holds). The natural geometric object is a **surface** — and with the remaining normalization, specifically a sphere.
+
+## The Parametrization
+
+Write the state in a form that makes the two degrees of freedom explicit:
+
+|ψ⟩ = cos(θ/2)|0⟩ + e^(iφ) sin(θ/2)|1⟩
+
+where θ ∈ [0, π] and φ ∈ [0, 2π).
+
+The factor of θ/2 is deliberate. At θ = 0: cos(0) = 1, sin(0) = 0, so |ψ⟩ = |0⟩. At θ = π: cos(π/2) = 0, sin(π/2) = 1, so |ψ⟩ = e^(iφ)|1⟩, which is physically |1⟩ (global phase). The factor of 2 maps the full range of qubit states onto a complete sphere without wrapping around twice.
+
+Interpret θ as the polar angle from the north pole, and φ as the azimuthal angle. Every qubit state is now a point on a unit sphere. This is the **Bloch sphere**.
+
+## Reading the Sphere
+
+**North pole (θ = 0):** |ψ⟩ = |0⟩. Probability of measuring 0 is cos²(0) = 1. Certainty.
+
+**South pole (θ = π):** |ψ⟩ = |1⟩. Probability of measuring 1 is sin²(π/2) = 1. Certainty.
+
+**Equator (θ = π/2):** |ψ⟩ = (|0⟩ + e^(iφ)|1⟩)/√2. Equal probability of measuring 0 or 1, for any φ. The four cardinal points on the equator are named:
+
+- |+⟩ = (|0⟩ + |1⟩)/√2 — positive x-axis (φ = 0)
+- |−⟩ = (|0⟩ − |1⟩)/√2 — negative x-axis (φ = π)
+- |i⟩ = (|0⟩ + i|1⟩)/√2 — positive y-axis (φ = π/2)
+- |−i⟩ = (|0⟩ − i|1⟩)/√2 — negative y-axis (φ = 3π/2)
+
+These four states all produce a 50/50 measurement outcome. They are nonetheless distinct physical states that behave differently under operations.
+
+## Measurement as Projection
+
+When you measure a qubit in the standard basis — the z-axis of the Bloch sphere — the state collapses to one of the two poles. The probabilities follow directly from the parametrization:
+
+- Probability of measuring 0 (north pole): cos²(θ/2)
+- Probability of measuring 1 (south pole): sin²(θ/2)
+
+A state close to the north pole has small θ, so cos²(θ/2) is close to 1. The closer a state is to a pole, the more certain the corresponding measurement outcome. Distance from the pole is geometric uncertainty.
+
+After measurement, the state is no longer |ψ⟩. It is either |0⟩ or |1⟩, collapsed to the corresponding pole. The original superposition is gone. This is why you cannot extract both α and β from a single measurement — you only ever see which pole the state fell to.
+
+## Phase Is Invisible — For Now
+
+Notice that φ does not appear anywhere in the measurement probabilities. The azimuthal angle — the longitude of the Bloch sphere — has no effect on what you observe when you measure.
+
+This might suggest that phase is unimportant. It is not.
+
+Phase becomes observable the moment you apply a gate before measuring. A gate is a rotation of the Bloch sphere. A rotation that moves φ can change θ — and changing θ changes the measurement probabilities. Two states that are indistinguishable by direct measurement can become distinguishable after a rotation, because the rotation treats different φ values differently.
+
+This is quantum interference. It is the mechanism behind every quantum algorithm, and it is entirely a consequence of phase. We will explore it carefully in post 4, after we have a concrete gate to work with.
+
+In the next post, we'll look at the Hadamard gate — the most important single-qubit gate. Seen on the Bloch sphere, it is a 180° rotation that maps the north pole to the equator.
