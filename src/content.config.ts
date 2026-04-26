@@ -3,13 +3,13 @@ import { glob } from 'astro/loaders';
 
 export const TOPICS = [
   {
-    slug: 'quantum-crypto',
-    name: 'Quantum Cryptography',
+    slug: 'quantum-computing',
+    name: 'Quantum Computing',
     description: '',
   },
   {
-    slug: 'quantum-computing',
-    name: 'Quantum Computing',
+    slug: 'golf',
+    name: 'Golf',
     description: '',
   },
 ] as const;
