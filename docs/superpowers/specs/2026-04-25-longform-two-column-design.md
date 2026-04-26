@@ -9,6 +9,35 @@ Combine the two quantum computing posts into one longform article and render it 
 
 ---
 
+## Section 0: Writing Voice
+
+This post is a **conversation with the reader**, not a technical thesis. The audience is a software engineer who knows how to code and maybe remembers some calculus — but has never touched quantum mechanics.
+
+The goal is **building intuition first, then precision**. Every concept should click as a mental image before the math arrives to make it exact.
+
+### Rules
+
+**Intuition before notation.** Introduce every concept as a feeling or picture first. The math is the precise version of the intuition — never the other way around. If a reader can't sketch the idea on a napkin before seeing the equation, the explanation failed.
+
+**Tone: informal and direct.** Write the way a sharp colleague explains something at a whiteboard. First person is fine. Short sentences are fine. Contractions are fine.
+
+**Every new term gets explained on the spot.** When a term is introduced, define it in plain English immediately — in the same sentence or the next one. Never assume the reader already knows it. Examples:
+
+- Bad: "The state is described by a ket."
+- Good: "The state is described using a notation called a **ket** — it's just a compact way of writing a vector that we'll use throughout."
+
+**Use metaphors for superposition.** "Both at once" is wrong and confusing. Use a concrete metaphor instead. The approved metaphor: a **dimmer switch**. A classical bit is a light switch — fully on or fully off. A qubit is a dimmer: before you look, the dial is set to some position between the extremes. When you look (measure), the dimmer snaps to fully on or fully off — but where the dial was sitting before you looked determines *how likely* each outcome is. The dial position is the quantum state. The snap is measurement.
+
+**Equations follow prose, never lead it.** Every equation must be preceded by a plain-English sentence that says what it means. The equation is the precise version of what the prose already said. Never drop an equation without a setup sentence.
+
+**Build on analogies the reader already has.** The reader knows probability, complex numbers, and vectors. Use those as on-ramps. Avoid introducing two new ideas at once.
+
+**Section headings are plain statements, not jargon labels.**
+- Bad: "Bra-Ket Formalism"
+- Good: "A cleaner way to write this" or "Bra-ket notation — the shorthand"
+
+---
+
 ## Section 1: Content Merge
 
 ### Action
