@@ -33,6 +33,7 @@ export const collections = {
           slug: z.string(),
           name: z.string(),
           part: z.number().int().positive(),
+          total: z.number().int().positive().optional(),
         })
         .optional(),
       tags: z.array(z.string()).default([]),

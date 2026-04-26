@@ -13,20 +13,6 @@ import BenfordScaleInvariance from '../../components/BenfordScaleInvariance.astr
 import BenfordFraud from '../../components/BenfordFraud.astro'
 import BenfordExplorer from '../../components/BenfordExplorer.astro'
 
-<div class="toc-card">
-  <p class="toc-card-heading">In this post</p>
-  <ol class="toc-card-list">
-    <li><a class="toc-card-item" href="#see-it-live"><span class="toc-n">1</span>See it live — the Fibonacci sequence demonstrates the law in real time</a></li>
-    <li><a class="toc-card-item" href="#origins"><span class="toc-n">2</span>Origins — from worn logarithm tables to 20,000 data points</a></li>
-    <li><a class="toc-card-item" href="#the-mathematics"><span class="toc-n">3</span>The mathematics — the formula, and why scale invariance explains it</a></li>
-    <li><a class="toc-card-item" href="#applications"><span class="toc-n">4</span>Applications — fraud detection, real-world cases, and popular culture</a></li>
-    <li><a class="toc-card-item" href="#the-dataset-explorer"><span class="toc-n">5</span>The dataset explorer — testing the law ourselves across eight real datasets</a></li>
-    <li><a class="toc-card-item" href="#verify-it-yourself"><span class="toc-n">6</span>Verify it yourself — raw data, collection scripts, and replication instructions</a></li>
-  </ol>
-</div>
-
----
-
 What is the probability that a number, picked at random from the real world, begins with the digit 1?
 
 The instinctive answer is one in nine — roughly 11%. There are nine non-zero digits. If they are equally likely, each gets an equal share. This is the classical probability argument, and it feels airtight.
@@ -39,6 +25,20 @@ It gets stranger. The law applies to the Fibonacci sequence — a string of inte
 
 This is Benford's Law. The classical probability intuition fails because real-world numbers do not come from a uniform distribution over the digits — they come from processes that span many orders of magnitude, and on a logarithmic scale, the space between 1 and 2 is much larger than the space between 8 and 9.
 
+---
+
+<div class="toc-card">
+  <p class="toc-card-heading">In this post</p>
+  <ol class="toc-card-list">
+    <li><a class="toc-card-item" href="#see-it-live"><span class="toc-n">1</span>See it live — the Fibonacci sequence demonstrates the law in real time</a></li>
+    <li><a class="toc-card-item" href="#origins"><span class="toc-n">2</span>Origins — from worn logarithm tables to 20,000 data points</a></li>
+    <li><a class="toc-card-item" href="#the-mathematics"><span class="toc-n">3</span>The mathematics — the formula, and why scale invariance explains it</a></li>
+    <li><a class="toc-card-item" href="#applications"><span class="toc-n">4</span>Applications — fraud detection, real-world cases, and popular culture</a></li>
+    <li><a class="toc-card-item" href="#the-dataset-explorer"><span class="toc-n">5</span>The dataset explorer — testing the law ourselves across eight real datasets</a></li>
+    <li><a class="toc-card-item" href="#verify-it-yourself"><span class="toc-n">6</span>Verify it yourself — raw data, collection scripts, and replication instructions</a></li>
+  </ol>
+</div>
+
 ## See it live
 
 <BenfordHook />
@@ -46,6 +46,8 @@ This is Benford's Law. The classical probability intuition fails because real-wo
 The histogram is filling in from the Fibonacci sequence in real time. Watch where the bars settle: digit 1 claims about 30% of the total, digit 9 barely registers. The dashed curve is the theoretical prediction. The data follows it almost exactly.
 
 That this holds for a pure mathematical sequence — with no real-world data involved — is the first hint that something deeper than empirical coincidence is going on.
+
+
 
 ## Origins
 
