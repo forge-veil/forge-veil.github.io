@@ -1,0 +1,160 @@
+---
+---
+
+<div class="bf-fraud">
+  <div class="bf-fraud-scenes">
+    <div class="bf-fraud-panel">
+      <div class="bf-fraud-lbl">
+        <span class="bf-fraud-dot" style="background:#34c759"></span>Real accounting data
+      </div>
+      <div class="bf-fraud-scene bf-fraud-left"></div>
+      <div class="bf-fraud-stats">
+        <span>MAD <strong class="bf-fraud-mad-l">—</strong></span>
+        <span class="bf-fraud-fit" style="color:#34c759">Good fit ✓</span>
+      </div>
+    </div>
+    <div class="bf-fraud-divider"></div>
+    <div class="bf-fraud-panel">
+      <div class="bf-fraud-lbl">
+        <span class="bf-fraud-dot" style="background:#ff3b30"></span>Fabricated numbers
+      </div>
+      <div class="bf-fraud-scene bf-fraud-right"></div>
+      <div class="bf-fraud-stats">
+        <span>MAD <strong class="bf-fraud-mad-r">—</strong></span>
+        <span class="bf-fraud-fit" style="color:#ff3b30">Suspicious ✗</span>
+      </div>
+    </div>
+  </div>
+  <div class="bf-fraud-caption">
+    Humans invent "random" numbers with a strong bias toward mid-range digits (3, 5, 7) and actively avoid 1. Benford's Law catches the pattern.
+  </div>
+</div>
+
+<style>
+  .bf-fraud {
+    border: 0.5px solid var(--color-border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 2rem 0;
+    font-family: var(--font-sans);
+  }
+  .bf-fraud-scenes {
+    display: flex;
+    background: var(--color-surface);
+    padding: 20px 20px 12px;
+    gap: 0;
+    align-items: flex-start;
+  }
+  .bf-fraud-panel { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+  .bf-fraud-divider {
+    width: 0.5px;
+    background: var(--color-border);
+    margin: 0 20px;
+    align-self: stretch;
+  }
+  .bf-fraud-lbl {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--color-ink-3);
+  }
+  .bf-fraud-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+  .bf-fraud-scene { height: 180px; position: relative; }
+  .bf-fraud-scene canvas { position: absolute; top: 0; left: 0; }
+  .bf-fraud-stats {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 10.5px;
+    color: var(--color-ink-4);
+  }
+  .bf-fraud-stats strong { color: var(--color-ink-2); }
+  .bf-fraud-fit { font-weight: 500; font-size: 10px; }
+  .bf-fraud-caption {
+    background: var(--color-panel);
+    border-top: 0.5px solid var(--color-border);
+    padding: 12px 20px;
+    font-size: 12px;
+    font-family: var(--font-display);
+    font-style: italic;
+    color: var(--color-ink-4);
+    text-align: center;
+  }
+</style>
+
+<script>
+  import * as THREE from 'three'
+  import { expectedFreq, madScore } from '../lib/benford'
+
+  // Real accounting-like distribution — closely follows Benford
+  const REAL_DIST  = [0.296, 0.179, 0.127, 0.099, 0.080, 0.068, 0.059, 0.050, 0.043]
+  // Human-fabricated — people avoid 1, cluster around 3–7
+  const FAKED_DIST = [0.048, 0.085, 0.183, 0.202, 0.191, 0.138, 0.085, 0.042, 0.026]
+
+  function initFraud(container: HTMLElement): void {
+    const madLEl  = container.querySelector('.bf-fraud-mad-l') as HTMLElement
+    const madREl  = container.querySelector('.bf-fraud-mad-r') as HTMLElement
+    const leftEl  = container.querySelector('.bf-fraud-left')  as HTMLElement
+    const rightEl = container.querySelector('.bf-fraud-right') as HTMLElement
+
+    const MAX_FREQ = expectedFreq(1)
+    const freqToH  = (f: number) => (f / MAX_FREQ) * 3.5
+    const BAR_X    = [-4, -3, -2, -1, 0, 1, 2, 3, 4]
+
+    function makePanel(el: HTMLElement, dist: number[]): void {
+      const renderer = new THREE.WebGLRenderer({ antialias: true })
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+      renderer.setSize(el.clientWidth || 200, el.clientHeight)
+      renderer.setClearColor(0xf7f7f9)
+      el.appendChild(renderer.domElement)
+
+      const scene  = new THREE.Scene()
+      const camera = new THREE.OrthographicCamera(-5, 5, 3.8, -0.3, 0.1, 10)
+      camera.position.z = 5
+
+      const barMat = new THREE.MeshBasicMaterial({ color: 0x1c1c1e })
+      dist.forEach((f, i) => {
+        const h    = Math.max(freqToH(f), 0.02)
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.72, h, 0), barMat)
+        mesh.position.set(BAR_X[i], h / 2, 0)
+        scene.add(mesh)
+      })
+
+      const bLine = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(
+          BAR_X.map((x, i) => new THREE.Vector2(x, freqToH(expectedFreq((i + 1) as 1|2|3|4|5|6|7|8|9))))),
+        new THREE.LineDashedMaterial({ color: 0xff3b30, dashSize: 0.12, gapSize: 0.06 }),
+      )
+      bLine.computeLineDistances()
+      scene.add(bLine)
+
+      renderer.render(scene, camera)
+      new ResizeObserver(() => {
+        renderer.setSize(el.clientWidth, el.clientHeight)
+        renderer.render(scene, camera)
+      }).observe(el)
+    }
+
+    makePanel(leftEl,  REAL_DIST)
+    makePanel(rightEl, FAKED_DIST)
+
+    madLEl.textContent = madScore(REAL_DIST).toFixed(4)
+    madREl.textContent = madScore(FAKED_DIST).toFixed(4)
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll<HTMLElement>('.bf-fraud:not([data-initialized])').forEach(el => {
+      initFraud(el)
+      el.setAttribute('data-initialized', 'true')
+    })
+  })
+</script>
