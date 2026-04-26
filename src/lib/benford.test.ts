@@ -58,6 +58,9 @@ describe('madScore', () => {
   it('returns a positive value for a uniform distribution', () => {
     expect(madScore(new Array(9).fill(1 / 9))).toBeGreaterThan(0)
   })
+  it('throws RangeError for wrong-length input', () => {
+    expect(() => madScore([0.1, 0.2])).toThrow(RangeError)
+  })
 })
 
 describe('fitLabel', () => {

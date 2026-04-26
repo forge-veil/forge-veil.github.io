@@ -24,6 +24,7 @@ export function distribution(nums: number[]): number[] {
 }
 
 export function madScore(actual: number[]): number {
+  if (actual.length !== 9) throw new RangeError(`madScore expects 9 values, got ${actual.length}`)
   let sum = 0
   for (let i = 0; i < 9; i++) {
     sum += Math.abs(actual[i] - expectedFreq((i + 1) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9))
