@@ -3,7 +3,6 @@ import { getCollection, render, type CollectionEntry } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import Sidebar from '../../components/Sidebar.astro';
 import BlochSphere from '../../components/BlochSphere.astro';
-import TableOfContents from '../../components/TableOfContents.astro';
 
 export async function getStaticPaths() {
   const posts = await getCollection('posts');
@@ -40,10 +39,11 @@ function readTime(body: string | undefined) {
   description={post.data.description}
 >
   <div class="layout">
-    <Sidebar activeTopic={post.data.topic} />
+    <Sidebar activeTopic={post.data.topic} headings={headings} />
 
     <main class="feed">
       <div class={`article-wrap${post.data.postLayout === 'longform' ? ' article-wrap--wide' : ''}`}>
+        <div class="article-top">
         <a href="/blog" class="article-back">← Writing</a>
 
         <header class="article-header">
@@ -57,13 +57,13 @@ function readTime(body: string | undefined) {
             <span>{formatDate(post.data.publishedAt)}</span>
           </div>
         </header>
+        </div>
 
         <article class="prose">
           <Content />
         </article>
       </div>
     </main>
-    <TableOfContents headings={headings} />
   </div>
 
   <!-- Popover sphere: visible when page sphere is out of view -->

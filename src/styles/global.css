@@ -84,7 +84,11 @@ body {
   letter-spacing: -0.3px;
   line-height: 1.1;
   margin-bottom: 5px;
+  text-decoration: none;
+  transition: color 0.15s;
 }
+
+.sb-name:hover { color: var(--color-ink-3); }
 
 .sb-role {
   font-size: 11.5px;
@@ -190,6 +194,58 @@ body {
 .sb-tag[data-active="true"] {
   background: var(--color-ink);
   color: #ffffff;
+}
+
+.sb-toc-section {
+  margin-top: 4px;
+}
+
+.sb-toc {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sb-toc-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+}
+
+.sb-toc-marker {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: transparent;
+  flex-shrink: 0;
+  margin-top: 6px;
+  transition: background 0.18s;
+}
+
+.sb-toc-item.is-active .sb-toc-marker {
+  background: var(--color-ink);
+}
+
+.sb-toc-link {
+  font-size: 10.5px;
+  font-weight: 300;
+  color: var(--color-ink-5);
+  line-height: 1.4;
+  text-decoration: none;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  transition: color 0.18s;
+}
+
+.sb-toc-link:hover {
+  color: var(--color-ink-3);
+}
+
+.sb-toc-item.is-active .sb-toc-link {
+  color: var(--color-ink);
+  font-weight: 400;
 }
 
 /* ── Feed ── */
@@ -358,6 +414,14 @@ body {
 
 /* ── Article page ── */
 
+.article-top {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--color-panel);
+  padding-bottom: 4px;
+}
+
 .article-back {
   display: inline-flex;
   align-items: center;
@@ -367,6 +431,8 @@ body {
   color: var(--color-ink-4);
   text-decoration: none;
   transition: color 0.15s;
+  padding-top: 4px;
+  margin-bottom: 24px;
 }
 
 .article-back:hover { color: var(--color-ink); }
@@ -386,10 +452,12 @@ body {
 }
 
 .article-header {
-  margin-bottom: 52px;
+  margin-bottom: 0;
   padding-bottom: 36px;
   border-bottom: 0.5px solid var(--color-border);
 }
+
+.article-top + .prose { margin-top: 52px; }
 
 .article-series {
   font-size: 10.5px;
@@ -470,8 +538,9 @@ body {
 
 .prose a:hover { text-decoration-color: var(--color-ink); }
 
-.prose a.external-link::after {
+a.external-link::after {
   content: '↗';
+  font-family: var(--font-sans);
   font-size: 0.7em;
   vertical-align: super;
   margin-left: 2px;
@@ -1758,73 +1827,6 @@ body {
 
 /* ── Floating TOC panel ── */
 
-.toc-float {
-  position: fixed;
-  right: 24px;
-  top: 180px;
-  width: 168px;
-  background: var(--color-panel);
-  border: 0.5px solid var(--color-border);
-  border-radius: 9px;
-  padding: 12px 14px;
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.07);
-  z-index: 20;
-}
-
-.toc-float-heading {
-  font-family: var(--font-sans);
-  font-size: 8.5px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--color-ink-6);
-  margin: 0 0 9px;
-}
-
-.toc-float-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 7px;
-  margin-bottom: 7px;
-}
-
-.toc-float-item:last-child { margin-bottom: 0; }
-
-.toc-float-marker {
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: transparent;
-  flex-shrink: 0;
-  margin-top: 6px;
-  transition: background 0.18s;
-}
-
-.toc-float-item.is-active .toc-float-marker {
-  background: var(--color-ink);
-}
-
-.toc-float-link {
-  font-size: 10.5px;
-  font-weight: 300;
-  color: var(--color-ink-5);
-  line-height: 1.4;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  transition: color 0.18s;
-}
-
-.toc-float-item.is-active .toc-float-link {
-  color: var(--color-ink);
-  font-weight: 400;
-}
-
-@media (max-width: 1279px) {
-  .toc-float { display: none; }
-}
-
 /* ── Sphere section (grid: prose left, widget right) ── */
 
 .sphere-section {
@@ -1904,6 +1906,8 @@ body {
     display: none; /* hide bio on mobile — saves ~4 lines of vertical space */
   }
 
+  .sb-toc-section { display: none; }
+
   .sb-divider { margin-bottom: 14px; }
 
   .sb-links {
@@ -1932,6 +1936,8 @@ body {
   /* Article */
   .article-title  { font-size: 26px; letter-spacing: -0.4px; }
   .article-header { margin-bottom: 36px; padding-bottom: 28px; }
+  .article-top    { position: static; padding-bottom: 0; }
+  .article-top + .prose { margin-top: 36px; }
 
   .feed .article-back { margin-bottom: 24px; }
 

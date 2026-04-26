@@ -1,5 +1,15 @@
 ---
+interface Props {
+  activeTopic?: string;
+  headings?: { depth: number; slug: string; text: string }[];
+}
+
+const { headings = [] } = Astro.props;
+const tocH2s = headings.filter(h => h.depth === 2);
+const showToc = tocH2s.length > 1;
+
 const links = [
+  { label: 'Home',     icon: '⌂',  href: '/',       external: false },
   { label: 'Resume',   icon: 'cv', href: '/resume', external: false },
   { label: 'Writing',  icon: '✦',  href: '/blog',   external: false },
   { label: 'GitHub',   icon: '↗',  href: 'https://github.com/forge-veil', external: true },
@@ -9,8 +19,8 @@ const links = [
 ---
 
 <aside class="sidebar">
-  <div class="sb-name">Vatsal Bakshi</div>
-  <div class="sb-role">Engineering Manager · Apple</div>
+  <a href="/" class="sb-name">Vatsal Bakshi</a>
+  <div class="sb-role">Engineer · Apple</div>
   <div class="sb-divider"></div>
 
   <nav class="sb-links">
@@ -26,6 +36,21 @@ const links = [
       </a>
     ))}
   </nav>
+
+  {showToc && (
+    <div class="sb-toc-section">
+      <div class="sb-divider"></div>
+      <p class="sb-section-label">On this page</p>
+      <nav class="sb-toc" aria-label="On this page">
+        {tocH2s.map(h => (
+          <div class="sb-toc-item" data-toc-slug={h.slug}>
+            <div class="sb-toc-marker"></div>
+            <a class="sb-toc-link" href={`#${h.slug}`}>{h.text}</a>
+          </div>
+        ))}
+      </nav>
+    </div>
+  )}
 </aside>
 
 <script>
@@ -33,4 +58,22 @@ const links = [
   const years = Math.floor((Date.now() - start.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
   const el = document.getElementById('apple-tenure');
   if (el) el.textContent = String(years);
+
+  const tocItems = document.querySelectorAll<HTMLElement>('[data-toc-slug]');
+  const headingEls = Array.from(document.querySelectorAll<HTMLElement>('.prose h2'));
+
+  if (tocItems.length && headingEls.length) {
+    const updateActive = () => {
+      const threshold = window.innerHeight * 0.35;
+      let activeSlug = headingEls[0].id;
+      for (const h of headingEls) {
+        if (h.getBoundingClientRect().top <= threshold) activeSlug = h.id;
+      }
+      tocItems.forEach(item => {
+        item.classList.toggle('is-active', item.dataset.tocSlug === activeSlug);
+      });
+    };
+    window.addEventListener('scroll', updateActive, { passive: true });
+    updateActive();
+  }
 </script>
