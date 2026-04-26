@@ -1,0 +1,46 @@
+---
+import KleinBottle from './KleinBottle.astro';
+---
+<div class="shape-carousel">
+  <div class="carousel-slides">
+    <div class="carousel-slide" data-index="0">
+      <KleinBottle />
+    </div>
+    <!--
+      To add a new shape:
+      1. Create src/components/YourShape.astro (same structure as KleinBottle.astro)
+      2. Import it above in the frontmatter
+      3. Add a slide div:
+           <div class="carousel-slide" data-index="1">
+             <YourShape />
+           </div>
+      4. Add a dot:
+           <button class="carousel-dot" data-index="1" aria-label="Shape 2"></button>
+    -->
+  </div>
+  <div class="carousel-dots" aria-hidden="true">
+    <button class="carousel-dot" data-index="0" aria-label="Shape 1"></button>
+  </div>
+</div>
+
+<script>
+const slides = document.querySelectorAll<HTMLElement>('.carousel-slide');
+const dots   = document.querySelectorAll<HTMLButtonElement>('.carousel-dot');
+let current  = 0;
+
+function goTo(i: number) {
+  slides[current].removeAttribute('data-active');
+  dots[current].removeAttribute('data-active');
+  current = i;
+  slides[current].setAttribute('data-active', '');
+  dots[current].setAttribute('data-active', '');
+}
+
+goTo(0);
+
+if (slides.length > 1) {
+  setInterval(() => goTo((current + 1) % slides.length), 6000);
+}
+
+dots.forEach((dot, i) => dot.addEventListener('click', () => goTo(i)));
+</script>
