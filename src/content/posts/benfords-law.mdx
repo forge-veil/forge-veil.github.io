@@ -5,7 +5,7 @@ topic: mathematics
 postLayout: longform
 tags: [benford, mathematics, statistics, fraud-detection, data]
 publishedAt: 2026-04-26
-published: false
+published: true
 ---
 
 import BenfordHook from '../../components/BenfordHook.astro'
@@ -36,7 +36,7 @@ Most people, asked to guess, say the leading digit of a random number is about e
 
 <BenfordHook />
 
-The histogram above is filling in live from the Fibonacci sequence. Watch where the bars settle. Digit 1 ends up claiming about 30% of the total. Digit 9 barely registers. The dashed red curve shows the theoretical prediction — and the data follows it almost exactly.
+The histogram above is filling in live from the Fibonacci sequence. Watch where the bars settle. Digit 1 ends up claiming about 30% of the total. Digit 9 barely registers. The dashed curve shows the theoretical prediction — and the data follows it almost exactly.
 
 This is Benford's Law, and the fact that a pure mathematical sequence like Fibonacci obeys it is the first hint that something deep is going on.
 
@@ -44,15 +44,15 @@ This is Benford's Law, and the fact that a pure mathematical sequence like Fibon
 
 The law has an unusual history — discovered twice, named after the second discoverer, and eventually proven rigorously only sixty years after the first observation.
 
-**1881.** Simon Newcomb, a Canadian-American astronomer and mathematician, notices something odd about his book of logarithm tables. The first pages — covering numbers beginning with 1 — are noticeably more worn and soiled than the later pages. People are looking up numbers starting with 1 far more often than numbers starting with 9. He publishes a short paper in the *American Journal of Mathematics* titled "Note on the Frequency of Use of the Different Digits in Natural Numbers." In it he states the probability rule:
+**1881.** Simon Newcomb, a Canadian-American astronomer and mathematician, notices something odd about his book of logarithm tables. The first pages — covering numbers beginning with 1 — are noticeably more worn and soiled than the later pages. People are looking up numbers starting with 1 far more often than numbers starting with 9. He publishes a short paper in the *American Journal of Mathematics* titled ["Note on the Frequency of Use of the Different Digits in Natural Numbers."](https://www.jstor.org/stable/2369148) In it he states the probability rule:
 
 > "The law of probability of the occurrence of numbers is such that the mantissae of their logarithms are equally probable."
 
 This is the insight. On a logarithmic scale, the space between 1.0 and 2.0 is the same size as the space between 4.0 and 8.0. So a uniformly distributed random variable on the log scale produces exactly this first-digit distribution. Newcomb's paper is essentially ignored.
 
-**1938.** Frank Benford, a physicist at General Electric, independently notices the same phenomenon in logarithm tables and runs a systematic study. He collects 20,229 data points spanning 20 different categories: river surface areas, population counts, physical constants, street addresses, molecular weights, newspaper front pages. In category after category, the leading-digit distribution matches the same curve. He publishes in the *Proceedings of the American Philosophical Society*. The law takes his name — despite Newcomb's priority by 57 years.
+**1938.** Frank Benford, a physicist at General Electric, independently notices the same phenomenon in logarithm tables and runs a systematic study. He collects 20,229 data points spanning 20 different categories: river surface areas, population counts, physical constants, street addresses, molecular weights, newspaper front pages. In category after category, the leading-digit distribution matches the same curve. He publishes ["The Law of Anomalous Numbers"](https://www.jstor.org/stable/984802) in the *Proceedings of the American Philosophical Society*. The law takes his name — despite Newcomb's priority by 57 years.
 
-**1995.** Theodore Hill proves the result rigorously. He shows that if you repeatedly sample from a variety of different distributions and pool the results, the aggregate first-digit distribution converges to Benford's Law. This "random samples from random distributions" theorem explains why the law applies so broadly: real-world datasets are mixtures of many different underlying processes, and that mixture converges to Benford regardless of the individual components.
+**1995.** Theodore Hill proves the result rigorously. He shows that if you repeatedly sample from a variety of different distributions and pool the results, the aggregate first-digit distribution converges to Benford's Law. This "random samples from random distributions" theorem explains why the law applies so broadly: real-world datasets are mixtures of many different underlying processes, and that mixture converges to Benford regardless of the individual components. The paper, ["A Statistical Derivation of the Significant-Digit Law,"](https://projecteuclid.org/journals/statistical-science/volume-10/issue-4/A-Statistical-Derivation-of-the-Significant-Digit-Law/10.1214/ss/1177009869.full) appeared in *Statistical Science*.
 
 ## The mathematics
 
@@ -100,30 +100,42 @@ The result is a characteristic signature: the first-digit distribution of fabric
 
 <BenfordFraud />
 
-The left panel shows a distribution that follows Benford's Law closely — the kind you would expect from real accounting records. The right panel shows what human-invented "random" numbers actually look like. The Benford curve (dashed red) is identical in both panels. The gap on the right is not subtle.
+The left panel shows a distribution that follows Benford's Law closely — the kind you would expect from real accounting records. The right panel shows what human-invented "random" numbers actually look like. The Benford curve (dashed) is identical in both panels. The gap on the right is not subtle.
 
 Forensic accountants use this as a screening tool. A Benford-deviant dataset is not proof of fraud — there are legitimate reasons a dataset might not follow the law — but it is a signal worth investigating.
 
 ### In the wild
 
-**2009 Iranian presidential election.** Following the disputed re-election of Mahmoud Ahmadinejad, several researchers applied Benford's Law to the officially reported vote totals by province. Berger & Hill and, independently, Walter Mebane of the University of Michigan found that the second-digit distribution of reported vote counts deviated significantly from Benford's prediction. The analysis was widely cited in coverage of the controversy. Benford analysis is suggestive, not conclusive — but it added statistical weight to the concerns raised by opposition groups.
+**2009 Iranian presidential election.** Following the disputed re-election of Mahmoud Ahmadinejad, Walter Mebane, a political scientist at the University of Michigan, applied Benford's Law to the officially reported vote totals. His analysis found that the second-digit distribution of reported vote counts deviated significantly from Benford's prediction. The [published article](https://link.springer.com/article/10.1007/s00144-010-0003-4) appeared in *CHANCE* in 2010; a [working paper](https://websites.umich.edu/~wmebane/note29jun2009.pdf) circulated in June 2009. A [separate analysis by Roukema (2014)](https://arxiv.org/abs/0906.2789) in the *Journal of Applied Statistics* found a first-digit anomaly in the same data. Benford analysis is suggestive, not conclusive — but it added statistical weight to the concerns raised by opposition groups.
 
-**Enron.** Following the company's 2001 bankruptcy and the subsequent forensic audit, researchers found that Enron's internal transaction records showed measurable deviation from Benford's Law. The deviation was not the primary evidence of fraud — the accounting irregularities were far more direct — but Benford analysis of the records was consistent with the manipulation that was later documented.
+**Enron.** Following the company's 2001 bankruptcy, forensic accountants applied Benford analysis to Enron's reported financial data. Mark Nigrini, whose work on Benford's Law and financial fraud is collected in [*Forensic Analytics*](https://www.wiley.com/en-us/Forensic+Analytics%3A+Methods+and+Techniques+for+Forensic+Accounting+Investigations%2C+2nd+Edition-p-9781119585763) (Wiley, 2012), discusses the use of this technique in the context of accounting fraud investigation. Benford deviation is not proof of manipulation — the accounting irregularities at Enron were far more direct — but the approach illustrates how the law functions as a screening filter in forensic practice.
 
-**Greek national statistics.** A 2011 paper by Rauch, Göttsche, Brähler, and Engel analysed macroeconomic data submitted by Eurozone members to Eurostat. Greek data showed the highest deviation from Benford's Law of any member state, particularly in the years leading up to the 2009 revelation of Greece's true deficit figures. The authors noted that Benford deviation is not proof of falsification, but the finding contributed to ongoing discussions of data integrity in European fiscal reporting.
+**Greek national statistics.** A [2011 paper by Rauch, Göttsche, Brähler, and Engel](https://www.degruyterbrill.com/document/doi/10.1111/j.1468-0475.2011.00542.x/html) in the *German Economic Review* analysed macroeconomic data submitted by Eurozone members to Eurostat. Greek data showed the highest deviation from Benford's Law of any member state, particularly in the years leading up to the 2009 revelation of Greece's true deficit figures. The authors noted that Benford deviation is not proof of falsification, but the finding contributed to ongoing discussions of data integrity in European fiscal reporting.
 
 ### In popular culture
 
 **Designated Survivor (Season 2, 2017–2018).** The character Emily uses Benford's Law to analyse reported election returns, identifying a deviation from the expected first-digit distribution as evidence that results were fabricated. The show's depiction is accurate in its essentials: the method, the deviation, and the statistical argument are all presented correctly.
 
-**Numberphile.** The YouTube channel has produced a widely-viewed episode on Benford's Law, covering the formula and several real-world applications. It is one of the primary ways the broader public first encounters the concept.
+**[Numberphile](https://www.youtube.com/watch?v=XXjlR2OK1kM).** The YouTube channel produced a widely-viewed episode on Benford's Law in 2013, covering the formula and several real-world applications. It remains one of the primary ways the broader public first encounters the concept.
 
-**Connected (Netflix, 2020).** The documentary episode "Digits" covers Benford's Law in full — its history, its mathematics, and its applications in fraud detection and election analysis. It remains the most accessible long-form treatment available.
+**[Connected (Netflix, 2020)](https://www.imdb.com/title/tt12816822/).** The documentary episode "Digits" covers Benford's Law in full — its history, its mathematics, and its applications in fraud detection and election analysis. It remains the most accessible long-form treatment available.
 
 ## The dataset explorer
 
 <BenfordExplorer />
 
-Eight real datasets drawn from accounting records, natural phenomena, and mathematical sequences. Every one conforms to Benford's Law. The Fibonacci dataset — a pure mathematical sequence with no real-world data — shows the closest fit of the eight. The law is not a statistical curiosity of messy empirical data. It is a mathematical truth that messy data happens to reflect.
+Eight datasets drawn from accounting records, natural phenomena, and mathematical sequences. Every one conforms to Benford's Law. The Fibonacci dataset — a pure mathematical sequence with no real-world data — shows the closest fit of the eight. The law is not a statistical curiosity of messy empirical data. It is a mathematical truth that messy data happens to reflect.
 
 The MAD score (mean absolute deviation) measures how far the actual distribution is from the Benford prediction. A score below 0.006 is a close fit. The Fibonacci set comes in below 0.001. Rivers and mountains, sampled from the physical world across a wide span of magnitudes, land in the same territory.
+
+---
+
+## Sources
+
+- Newcomb, S. (1881). "Note on the Frequency of Use of the Different Digits in Natural Numbers." *American Journal of Mathematics*, 4(1), 39–40. [JSTOR](https://www.jstor.org/stable/2369148)
+- Benford, F. (1938). "The Law of Anomalous Numbers." *Proceedings of the American Philosophical Society*, 78(4), 551–572. [JSTOR](https://www.jstor.org/stable/984802)
+- Hill, T. P. (1995). "A Statistical Derivation of the Significant-Digit Law." *Statistical Science*, 10(4), 354–363. [Project Euclid](https://projecteuclid.org/journals/statistical-science/volume-10/issue-4/A-Statistical-Derivation-of-the-Significant-Digit-Law/10.1214/ss/1177009869.full)
+- Mebane, W. R. Jr. (2010). "Fraud in the 2009 presidential election in Iran?" *CHANCE*, 23(1), 6–15. [Springer](https://link.springer.com/article/10.1007/s00144-010-0003-4) · [Working paper (June 2009)](https://websites.umich.edu/~wmebane/note29jun2009.pdf)
+- Roukema, B. F. (2014). "A first-digit anomaly in the 2009 Iranian presidential election." *Journal of Applied Statistics*, 41(1), 164–177. [arXiv](https://arxiv.org/abs/0906.2789)
+- Rauch, B., Göttsche, M., Brähler, G., & Engel, S. (2011). "Fact and Fiction in EU-Governmental Economic Data." *German Economic Review*, 12(3), 243–255. [De Gruyter](https://www.degruyterbrill.com/document/doi/10.1111/j.1468-0475.2011.00542.x/html)
+- Nigrini, M. J. (2012). *Forensic Analytics: Methods and Techniques for Forensic Accounting Investigations*. Wiley. [Wiley](https://www.wiley.com/en-us/Forensic+Analytics%3A+Methods+and+Techniques+for+Forensic+Accounting+Investigations%2C+2nd+Edition-p-9781119585763)

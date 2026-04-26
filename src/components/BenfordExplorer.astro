@@ -201,7 +201,7 @@
       madEl.textContent  = mad.toFixed(4)
       fitEl.textContent  = fit
       fitEl.className    = 'bf-exp-stat-val bf-exp-fit fit-' + fit.toLowerCase()
-      descEl.textContent = ds.description
+      descEl.innerHTML = `${ds.description} — <a href="${ds.source}" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:underline;text-underline-offset:2px;">source ↗</a>`
     }
 
     selectDataset(0)
