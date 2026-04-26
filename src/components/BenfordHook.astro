@@ -1,0 +1,198 @@
+---
+---
+
+<div class="bf-hook">
+  <div class="bf-hook-scene"></div>
+  <div class="bf-hook-footer">
+    <div class="bf-hook-counter">
+      <span class="bf-hook-n">0</span> Fibonacci numbers streamed
+    </div>
+    <button class="bf-hook-replay">replay</button>
+  </div>
+</div>
+
+<style>
+  .bf-hook {
+    border: 0.5px solid var(--color-border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 2rem 0;
+    font-family: var(--font-sans);
+  }
+  .bf-hook-scene {
+    width: 100%;
+    height: 300px;
+    background: #1c1c1e;
+    position: relative;
+  }
+  .bf-hook-scene canvas { position: absolute; top: 0; left: 0; }
+  .bf-hook-footer {
+    background: var(--color-panel);
+    border-top: 0.5px solid var(--color-border);
+    padding: 12px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .bf-hook-counter {
+    font-size: 12px;
+    color: var(--color-ink-4);
+    font-variant-numeric: tabular-nums;
+  }
+  .bf-hook-n {
+    font-family: var(--font-display);
+    font-size: 15px;
+    color: var(--color-ink-2);
+    font-variant-numeric: tabular-nums;
+    min-width: 3ch;
+    display: inline-block;
+    text-align: right;
+  }
+  .bf-hook-replay {
+    font-size: 11px;
+    font-family: var(--font-sans);
+    color: var(--color-ink-4);
+    background: var(--color-tag-bg);
+    border: none;
+    border-radius: 5px;
+    padding: 4px 10px;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+  }
+  .bf-hook-replay:hover { background: var(--color-border); }
+</style>
+
+<script>
+  import * as THREE from 'three'
+  import { expectedFreq } from '../lib/benford'
+
+  function initHook(container: HTMLElement): void {
+    const sceneEl   = container.querySelector('.bf-hook-scene')   as HTMLElement
+    const nEl       = container.querySelector('.bf-hook-n')       as HTMLElement
+    const replayBtn = container.querySelector('.bf-hook-replay')  as HTMLButtonElement
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true })
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    renderer.setSize(sceneEl.clientWidth, sceneEl.clientHeight)
+    renderer.setClearColor(0x1c1c1e)
+    sceneEl.appendChild(renderer.domElement)
+
+    const scene  = new THREE.Scene()
+    const camera = new THREE.OrthographicCamera(-5, 5, 3.8, -0.3, 0.1, 10)
+    camera.position.z = 5
+
+    const BAR_X    = [-4, -3, -2, -1, 0, 1, 2, 3, 4]
+    const MAX_FREQ = expectedFreq(1)
+    const freqToH  = (f: number) => (f / MAX_FREQ) * 3.5
+
+    // Bars (light on dark background)
+    const barMat   = new THREE.MeshBasicMaterial({ color: 0xaeaeb2 })
+    const bars: THREE.Mesh[] = []
+    for (let i = 0; i < 9; i++) {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.72, 1, 0), barMat)
+      mesh.position.set(BAR_X[i], 0, 0)
+      mesh.scale.y = 0.001
+      scene.add(mesh)
+      bars.push(mesh)
+    }
+
+    // Benford overlay — hidden until n >= 100
+    const bPts = BAR_X.map((x, i) =>
+      new THREE.Vector2(x, freqToH(expectedFreq((i + 1) as 1|2|3|4|5|6|7|8|9))))
+    const bLine = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(bPts),
+      new THREE.LineDashedMaterial({ color: 0xff3b30, dashSize: 0.12, gapSize: 0.06 }),
+    )
+    bLine.computeLineDistances()
+    bLine.visible = false
+    scene.add(bLine)
+
+    // Dot markers on Benford line
+    const dotGeo = new THREE.CircleGeometry(0.06, 12)
+    const dotMat = new THREE.MeshBasicMaterial({ color: 0xff3b30 })
+    const dots: THREE.Mesh[] = bPts.map(pt => {
+      const dot = new THREE.Mesh(dotGeo, dotMat)
+      dot.position.set(pt.x, pt.y, 0)
+      dot.visible = false
+      scene.add(dot)
+      return dot
+    })
+
+    // Pre-compute first 500 Fibonacci first digits using BigInt (safe for large values)
+    function fibFirstDigits(count: number): number[] {
+      const result: number[] = []
+      let a = 1n, b = 1n
+      for (let i = 0; i < count; i++) {
+        result.push(parseInt(a.toString()[0]))
+        ;[a, b] = [b, a + b]
+      }
+      return result
+    }
+    const FIB_DIGITS = fibFirstDigits(500)
+
+    const counts   = new Array(9).fill(0)
+    const currentH = new Array(9).fill(0)
+    const targetH  = new Array(9).fill(0)
+    let idx      = 0
+    let lastTime = 0
+    let animId   = 0
+
+    function setTargets(): void {
+      const total = counts.reduce((a: number, b: number) => a + b, 0)
+      if (total === 0) return
+      for (let i = 0; i < 9; i++) {
+        targetH[i] = Math.max(freqToH(counts[i] / total), 0.02)
+      }
+    }
+
+    function tick(time: number): void {
+      animId = requestAnimationFrame(tick)
+      if (time - lastTime > 33 && idx < FIB_DIGITS.length) {
+        const batch = Math.min(4, FIB_DIGITS.length - idx)
+        for (let k = 0; k < batch; k++) { counts[FIB_DIGITS[idx] - 1]++; idx++ }
+        nEl.textContent = String(idx)
+        setTargets()
+        if (idx >= 100 && !bLine.visible) {
+          bLine.visible = true
+          dots.forEach(d => { d.visible = true })
+        }
+        lastTime = time
+      }
+      for (let i = 0; i < 9; i++) {
+        currentH[i] += (targetH[i] - currentH[i]) * 0.10
+        bars[i].scale.y = currentH[i]
+        bars[i].position.y = currentH[i] / 2
+      }
+      renderer.render(scene, camera)
+    }
+
+    function start(): void {
+      cancelAnimationFrame(animId)
+      counts.fill(0); currentH.fill(0); targetH.fill(0)
+      idx = 0; lastTime = 0
+      nEl.textContent = '0'
+      bLine.visible = false
+      dots.forEach(d => { d.visible = false })
+      bars.forEach(m => { m.scale.y = 0.001; m.position.y = 0 })
+      animId = requestAnimationFrame(tick)
+    }
+
+    replayBtn.addEventListener('click', start)
+
+    new ResizeObserver(() => {
+      renderer.setSize(sceneEl.clientWidth, sceneEl.clientHeight)
+    }).observe(sceneEl)
+
+    const io = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) { start(); io.disconnect() }
+    }, { threshold: 0.3 })
+    io.observe(container)
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll<HTMLElement>('.bf-hook:not([data-initialized])').forEach(el => {
+      initHook(el)
+      el.setAttribute('data-initialized', 'true')
+    })
+  })
+</script>

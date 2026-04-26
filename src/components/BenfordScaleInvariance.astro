@@ -1,0 +1,209 @@
+---
+---
+
+<div class="bf-scale">
+  <div class="bf-scale-scenes">
+    <div class="bf-scale-panel">
+      <div class="bf-scale-label">original</div>
+      <div class="bf-scale-scene bf-scale-left"></div>
+    </div>
+    <div class="bf-scale-mid">
+      <div class="bf-scale-factor">× <span class="bf-scale-val">1.0</span></div>
+      <input type="range" class="bf-scale-sl" min="0" max="100" value="50" />
+      <div class="bf-scale-hint">drag</div>
+    </div>
+    <div class="bf-scale-panel">
+      <div class="bf-scale-label bf-scale-right-lbl">scaled → same!</div>
+      <div class="bf-scale-scene bf-scale-right"></div>
+    </div>
+  </div>
+  <div class="bf-scale-footer">
+    <p class="bf-scale-caption">
+      P(d) = log₁₀(1 + 1/d) is scale-invariant: multiplying every number by any constant leaves the first-digit distribution unchanged.
+    </p>
+  </div>
+</div>
+
+<style>
+  .bf-scale {
+    border: 0.5px solid var(--color-border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 2rem 0;
+    font-family: var(--font-sans);
+  }
+  .bf-scale-scenes {
+    display: flex;
+    align-items: stretch;
+    background: var(--color-surface);
+    padding: 20px 16px 12px;
+  }
+  .bf-scale-panel { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+  .bf-scale-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--color-ink-5);
+    text-align: center;
+  }
+  .bf-scale-right-lbl { color: #34c759; }
+  .bf-scale-scene { height: 200px; position: relative; }
+  .bf-scale-scene canvas { position: absolute; top: 0; left: 0; }
+  .bf-scale-mid {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 12px;
+    min-width: 80px;
+  }
+  .bf-scale-factor {
+    font-family: var(--font-display);
+    font-size: 14px;
+    color: var(--color-ink-2);
+    white-space: nowrap;
+  }
+  .bf-scale-val { font-variant-numeric: tabular-nums; min-width: 5ch; display: inline-block; }
+  input[type='range'].bf-scale-sl {
+    writing-mode: vertical-lr;
+    direction: rtl;
+    height: 100px;
+    -webkit-appearance: none;
+    width: 4px;
+    background: var(--color-tag-bg);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+  input[type='range'].bf-scale-sl::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--color-ink-2);
+    cursor: pointer;
+  }
+  .bf-scale-hint { font-size: 9px; color: var(--color-ink-6); letter-spacing: 0.04em; }
+  .bf-scale-footer {
+    background: var(--color-panel);
+    border-top: 0.5px solid var(--color-border);
+    padding: 12px 18px;
+  }
+  .bf-scale-caption {
+    font-size: 12px;
+    color: var(--color-ink-4);
+    margin: 0;
+    font-family: var(--font-display);
+    font-style: italic;
+    text-align: center;
+  }
+</style>
+
+<script>
+  import * as THREE from 'three'
+  import { expectedFreq, distribution } from '../lib/benford'
+
+  function initScale(container: HTMLElement): void {
+    const leftEl  = container.querySelector('.bf-scale-left')  as HTMLElement
+    const rightEl = container.querySelector('.bf-scale-right') as HTMLElement
+    const slider  = container.querySelector('.bf-scale-sl')    as HTMLInputElement
+    const valEl   = container.querySelector('.bf-scale-val')   as HTMLElement
+
+    // First 200 Fibonacci numbers (standard JS numbers, accurate enough for first-digit extraction)
+    function fibNums(count: number): number[] {
+      const nums: number[] = []
+      let a = 1, b = 1
+      for (let i = 0; i < count; i++) { nums.push(a); [a, b] = [b, a + b] }
+      return nums
+    }
+    const FIB = fibNums(200)
+
+    // Slider: 0→0.001, 50→1.0, 100→1000 (log scale)
+    function sliderToScale(v: number): number {
+      return Math.pow(10, (v - 50) / 16.667)
+    }
+
+    const MAX_FREQ = expectedFreq(1)
+    const freqToH  = (f: number) => (f / MAX_FREQ) * 3.5
+    const BAR_X    = [-4, -3, -2, -1, 0, 1, 2, 3, 4]
+
+    function makeChart(el: HTMLElement): { update: (dist: number[]) => void } {
+      const renderer = new THREE.WebGLRenderer({ antialias: true })
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+      renderer.setSize(el.clientWidth || 200, el.clientHeight)
+      renderer.setClearColor(0xf7f7f9)
+      el.appendChild(renderer.domElement)
+
+      const scene  = new THREE.Scene()
+      const camera = new THREE.OrthographicCamera(-5, 5, 3.8, -0.3, 0.1, 10)
+      camera.position.z = 5
+
+      const barMat = new THREE.MeshBasicMaterial({ color: 0x1c1c1e })
+      const bars: THREE.Mesh[] = BAR_X.map(x => {
+        const m = new THREE.Mesh(new THREE.BoxGeometry(0.72, 1, 0), barMat)
+        m.position.set(x, 0, 0); m.scale.y = 0.001; scene.add(m); return m
+      })
+
+      const bLine = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(
+          BAR_X.map((x, i) => new THREE.Vector2(x, freqToH(expectedFreq((i + 1) as 1|2|3|4|5|6|7|8|9))))),
+        new THREE.LineDashedMaterial({ color: 0xff3b30, dashSize: 0.12, gapSize: 0.06 }),
+      )
+      bLine.computeLineDistances()
+      scene.add(bLine)
+
+      const currentH = new Array(9).fill(0)
+      const targetH  = new Array(9).fill(0)
+
+      ;(function animate(): void {
+        requestAnimationFrame(animate)
+        let dirty = false
+        for (let i = 0; i < 9; i++) {
+          if (Math.abs(currentH[i] - targetH[i]) > 0.001) {
+            currentH[i] += (targetH[i] - currentH[i]) * 0.15
+            bars[i].scale.y = currentH[i]
+            bars[i].position.y = currentH[i] / 2
+            dirty = true
+          }
+        }
+        if (dirty) renderer.render(scene, camera)
+      })()
+
+      new ResizeObserver(() => {
+        renderer.setSize(el.clientWidth, el.clientHeight)
+        renderer.render(scene, camera)
+      }).observe(el)
+
+      return {
+        update(dist: number[]): void {
+          for (let i = 0; i < 9; i++) targetH[i] = Math.max(freqToH(dist[i]), 0.02)
+        },
+      }
+    }
+
+    const leftChart  = makeChart(leftEl)
+    const rightChart = makeChart(rightEl)
+
+    const origDist = distribution(FIB)
+    leftChart.update(origDist)
+    rightChart.update(origDist)
+
+    slider.addEventListener('input', () => {
+      const scale = sliderToScale(parseFloat(slider.value))
+      valEl.textContent = scale >= 100 ? scale.toFixed(0)
+        : scale >= 10 ? scale.toFixed(1)
+        : scale >= 1  ? scale.toFixed(2)
+        : scale >= 0.1 ? scale.toFixed(3)
+        : scale.toFixed(4)
+      rightChart.update(distribution(FIB.map(n => n * scale)))
+    })
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll<HTMLElement>('.bf-scale:not([data-initialized])').forEach(el => {
+      initScale(el)
+      el.setAttribute('data-initialized', 'true')
+    })
+  })
+</script>

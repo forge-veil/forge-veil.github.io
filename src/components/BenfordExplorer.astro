@@ -1,0 +1,213 @@
+---
+---
+
+<div class="bf-exp">
+  <div class="bf-exp-tabs" role="tablist"></div>
+  <div class="bf-exp-scene"></div>
+  <div class="bf-exp-stats">
+    <div class="bf-exp-stat">
+      <div class="bf-exp-stat-lbl">digit 1</div>
+      <div class="bf-exp-stat-val bf-exp-d1">—</div>
+    </div>
+    <div class="bf-exp-stat">
+      <div class="bf-exp-stat-lbl">n</div>
+      <div class="bf-exp-stat-val bf-exp-n">—</div>
+    </div>
+    <div class="bf-exp-stat">
+      <div class="bf-exp-stat-lbl">MAD</div>
+      <div class="bf-exp-stat-val bf-exp-mad">—</div>
+    </div>
+    <div class="bf-exp-stat">
+      <div class="bf-exp-stat-lbl">fit</div>
+      <div class="bf-exp-stat-val bf-exp-fit">—</div>
+    </div>
+  </div>
+  <div class="bf-exp-desc"></div>
+</div>
+
+<style>
+  .bf-exp {
+    border: 0.5px solid var(--color-border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 2rem 0;
+    font-family: var(--font-sans);
+  }
+  .bf-exp-tabs {
+    background: var(--color-surface);
+    border-bottom: 0.5px solid var(--color-border);
+    padding: 10px 14px 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .bf-exp-tab {
+    font-size: 10.5px;
+    padding: 5px 10px 8px;
+    border-radius: 5px 5px 0 0;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--color-ink-4);
+    cursor: pointer;
+    font-family: var(--font-sans);
+    letter-spacing: 0.01em;
+    transition: color 0.1s;
+  }
+  .bf-exp-tab:hover { color: var(--color-ink-2); }
+  .bf-exp-tab[aria-selected='true'] {
+    color: var(--color-ink);
+    border-bottom-color: var(--color-ink);
+    font-weight: 500;
+  }
+  .bf-exp-scene { height: 280px; background: var(--color-surface); position: relative; }
+  .bf-exp-scene canvas { position: absolute; top: 0; left: 0; }
+  .bf-exp-stats {
+    display: flex;
+    background: var(--color-panel);
+    border-top: 0.5px solid var(--color-border);
+  }
+  .bf-exp-stat {
+    flex: 1;
+    padding: 10px 14px;
+    border-right: 0.5px solid var(--color-border);
+    text-align: center;
+  }
+  .bf-exp-stat:last-child { border-right: none; }
+  .bf-exp-stat-lbl {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-ink-5);
+    margin-bottom: 3px;
+  }
+  .bf-exp-stat-val {
+    font-family: var(--font-display);
+    font-size: 16px;
+    color: var(--color-ink-2);
+    font-variant-numeric: tabular-nums;
+  }
+  .fit-good       { color: #34c759; }
+  .fit-close      { color: #ff9500; }
+  .fit-suspicious { color: #ff3b30; }
+  .bf-exp-desc {
+    background: var(--color-surface);
+    border-top: 0.5px solid var(--color-border-soft);
+    padding: 9px 16px;
+    font-size: 11px;
+    color: var(--color-ink-5);
+    font-style: italic;
+    font-family: var(--font-display);
+    text-align: center;
+    min-height: 32px;
+  }
+</style>
+
+<script>
+  import * as THREE from 'three'
+  import { DATASETS, expectedFreq, madScore, fitLabel } from '../lib/benford'
+
+  function initExplorer(container: HTMLElement): void {
+    const tabsEl  = container.querySelector('.bf-exp-tabs')  as HTMLElement
+    const sceneEl = container.querySelector('.bf-exp-scene') as HTMLElement
+    const d1El    = container.querySelector('.bf-exp-d1')    as HTMLElement
+    const nEl     = container.querySelector('.bf-exp-n')     as HTMLElement
+    const madEl   = container.querySelector('.bf-exp-mad')   as HTMLElement
+    const fitEl   = container.querySelector('.bf-exp-fit')   as HTMLElement
+    const descEl  = container.querySelector('.bf-exp-desc')  as HTMLElement
+
+    // Build tab strip from DATASETS
+    DATASETS.forEach((ds, i) => {
+      const btn = document.createElement('button')
+      btn.className = 'bf-exp-tab'
+      btn.textContent = ds.name
+      btn.setAttribute('role', 'tab')
+      btn.setAttribute('aria-selected', i === 0 ? 'true' : 'false')
+      btn.addEventListener('click', () => selectDataset(i))
+      tabsEl.appendChild(btn)
+    })
+    const tabs = Array.from(tabsEl.querySelectorAll<HTMLButtonElement>('.bf-exp-tab'))
+
+    // Three.js setup
+    const renderer = new THREE.WebGLRenderer({ antialias: true })
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    renderer.setSize(sceneEl.clientWidth, sceneEl.clientHeight)
+    renderer.setClearColor(0xf7f7f9)
+    sceneEl.appendChild(renderer.domElement)
+
+    const scene  = new THREE.Scene()
+    const camera = new THREE.OrthographicCamera(-5, 5, 3.8, -0.3, 0.1, 10)
+    camera.position.z = 5
+
+    const MAX_FREQ = expectedFreq(1)
+    const freqToH  = (f: number) => (f / MAX_FREQ) * 3.5
+    const BAR_X    = [-4, -3, -2, -1, 0, 1, 2, 3, 4]
+
+    // Bars
+    const barMat = new THREE.MeshBasicMaterial({ color: 0x1c1c1e })
+    const bars: THREE.Mesh[] = BAR_X.map(x => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(0.72, 1, 0), barMat)
+      m.position.set(x, 0, 0); m.scale.y = 0.001; scene.add(m); return m
+    })
+
+    // Benford overlay
+    const bPts = BAR_X.map((x, i) =>
+      new THREE.Vector2(x, freqToH(expectedFreq((i + 1) as 1|2|3|4|5|6|7|8|9))))
+    const bLine = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(bPts),
+      new THREE.LineDashedMaterial({ color: 0xff3b30, dashSize: 0.12, gapSize: 0.06 }),
+    )
+    bLine.computeLineDistances()
+    scene.add(bLine)
+
+    // Dot markers
+    const dotMat = new THREE.MeshBasicMaterial({ color: 0xff3b30 })
+    bPts.forEach(pt => {
+      const dot = new THREE.Mesh(new THREE.CircleGeometry(0.055, 12), dotMat)
+      dot.position.set(pt.x, pt.y, 0)
+      scene.add(dot)
+    })
+
+    const currentH = new Array(9).fill(0)
+    const targetH  = new Array(9).fill(0)
+
+    ;(function animate(): void {
+      requestAnimationFrame(animate)
+      for (let i = 0; i < 9; i++) {
+        currentH[i] += (targetH[i] - currentH[i]) * 0.12
+        bars[i].scale.y = currentH[i]
+        bars[i].position.y = currentH[i] / 2
+      }
+      renderer.render(scene, camera)
+    })()
+
+    function selectDataset(idx: number): void {
+      const ds  = DATASETS[idx]
+      const mad = madScore(ds.digits)
+      const fit = fitLabel(mad)
+
+      tabs.forEach((t, i) => t.setAttribute('aria-selected', i === idx ? 'true' : 'false'))
+      for (let i = 0; i < 9; i++) targetH[i] = Math.max(freqToH(ds.digits[i]), 0.02)
+
+      d1El.textContent  = (ds.digits[0] * 100).toFixed(1) + '%'
+      nEl.textContent   = ds.n.toLocaleString()
+      madEl.textContent = mad.toFixed(4)
+      fitEl.textContent = fit
+      fitEl.className   = 'bf-exp-stat-val bf-exp-fit fit-' + fit.toLowerCase()
+      descEl.textContent = ds.description
+    }
+
+    new ResizeObserver(() => {
+      renderer.setSize(sceneEl.clientWidth, sceneEl.clientHeight)
+    }).observe(sceneEl)
+
+    selectDataset(0)
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll<HTMLElement>('.bf-exp:not([data-initialized])').forEach(el => {
+      initExplorer(el)
+      el.setAttribute('data-initialized', 'true')
+    })
+  })
+</script>
