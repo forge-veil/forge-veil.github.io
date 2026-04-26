@@ -1,0 +1,73 @@
+---
+title: "Bits, Amplitudes, and Bra-Ket Notation"
+description: "A classical bit is either 0 or 1. A qubit is something more precise — and more interesting — than 'both at once'."
+topic: quantum-computing
+series:
+  slug: quantum-first-principles
+  name: Quantum Computing from First Principles
+  part: 1
+tags: [quantum, bra-ket, linear-algebra, superposition]
+publishedAt: 2026-04-25
+published: true
+---
+
+A classical bit is a choice made. In a transistor, the choice is permanent until you change it: high voltage is 1, low voltage is 0. There is no ambiguity. The bit doesn't wonder which it is — it knows.
+
+You've probably heard that a qubit can be "both 0 and 1 at the same time." This is technically wrong in a way that matters. It creates a mental model that collapses the moment you try to reason carefully about quantum algorithms.
+
+Here is a better frame: a qubit is not in a definite state until you measure it. Before measurement, it exists in a **superposition** — a precise mathematical description of the possible outcomes and their weights. When you measure, the superposition resolves to a definite outcome, with probabilities determined by those weights.
+
+Those weights are called **amplitudes**. And amplitudes are the central concept of quantum computing.
+
+## Amplitudes Are Not Probabilities
+
+This distinction is the first thing to get right.
+
+In classical probability, you might say a coin has a 50% chance of heads. That probability is a real number between 0 and 1. Probabilities can never be negative. They can never be complex.
+
+Quantum amplitudes are different. They are **complex numbers**. They can be positive, negative, real, imaginary, or anywhere in the complex plane. Only their squared magnitude gives you a probability.
+
+Specifically: if a qubit has amplitude α for |0⟩ and amplitude β for |1⟩, then:
+
+- Probability of measuring 0: |α|²
+- Probability of measuring 1: |β|²
+
+The constraint is that |α|² + |β|² = 1 — the probabilities must sum to 1.
+
+Why complex numbers, rather than just signed reals? The imaginary part encodes **phase** — a quantity invisible at measurement but critical when qubits interact with each other. We'll return to phase in a later post. For now: complex amplitudes are not arbitrary. They are the minimum structure needed to make quantum mechanics work.
+
+## Basis States and Bra-Ket Notation
+
+We need a clean notation for all of this. The standard is called **bra-ket notation**, introduced by Paul Dirac.
+
+The two pure states of a qubit — the analogs of classical 0 and 1 — are written:
+
+|0⟩ and |1⟩
+
+These are called **kets**. The vertical bar and angle bracket are part of the notation, not decoration. These are the **basis states**: the simplest, most definite states a qubit can be in. Measuring |0⟩ always gives 0; measuring |1⟩ always gives 1.
+
+A general single-qubit state is a **linear combination** of the basis states:
+
+|ψ⟩ = α|0⟩ + β|1⟩
+
+where α and β are complex numbers satisfying |α|² + |β|² = 1. This is superposition — not "being both at once," but occupying a precise mathematical combination of the two basis states.
+
+As a column vector, this is equivalent to writing:
+
+|ψ⟩ = [α, β]ᵀ
+
+where |0⟩ = [1, 0]ᵀ and |1⟩ = [0, 1]ᵀ. The ket is just a vector; the notation is a more expressive way to write it.
+
+The **bra** is the conjugate transpose of the ket: ⟨ψ| = [α*, β*]. This lets us write inner products cleanly: ⟨φ|ψ⟩ is the inner product of state φ with state ψ — a bra on the left, a ket on the right, forming a "bracket." That is where the name comes from.
+
+The normalization constraint, in bra-ket form, is just ⟨ψ|ψ⟩ = 1.
+
+## What a Qubit Is
+
+We now have a precise answer to the question.
+
+A qubit is a unit vector in a two-dimensional complex vector space. Its two components are amplitudes. Measuring it collapses it to one of the basis states, with probabilities given by the squared magnitudes of the corresponding amplitudes. The state before measurement is not vague or undefined — it is exactly |ψ⟩ = α|0⟩ + β|1⟩. The uncertainty is in the outcome of measurement, not in the state itself.
+
+This is the foundation everything else builds on. Gates are transformations that act on these vectors. Entanglement is a property of multi-qubit vectors. Quantum algorithms are sequences of transformations designed to steer probability toward the right answer.
+
+In the next post, we'll figure out how to visualize a qubit's state geometrically — and discover that every single-qubit state corresponds to a point on the surface of a sphere.
