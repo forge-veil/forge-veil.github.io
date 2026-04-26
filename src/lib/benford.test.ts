@@ -23,6 +23,8 @@ describe('firstDigit', () => {
   it('returns null for 0', () => expect(firstDigit(0)).toBeNull())
   it('returns null for Infinity', () => expect(firstDigit(Infinity)).toBeNull())
   it('returns null for NaN', () => expect(firstDigit(NaN)).toBeNull())
+  it('extracts 1 from 1e-7', () => expect(firstDigit(1e-7)).toBe(1))
+  it('extracts 1 from 1e21', () => expect(firstDigit(1e21)).toBe(1))
 })
 
 describe('distribution', () => {
@@ -43,6 +45,9 @@ describe('distribution', () => {
   it('returns all-zeros for empty input', () => {
     expect(distribution([])).toEqual(new Array(9).fill(0))
   })
+  it('returns all-zeros when all values are filtered', () => {
+    expect(distribution([0, 0, 0])).toEqual(new Array(9).fill(0))
+  })
 })
 
 describe('madScore', () => {
@@ -60,6 +65,7 @@ describe('fitLabel', () => {
   it('returns Good for mad < 0.006', () => expect(fitLabel(0.005)).toBe('Good'))
   it('returns Close for mad = 0.006', () => expect(fitLabel(0.006)).toBe('Close'))
   it('returns Close for 0.006 ≤ mad < 0.012', () => expect(fitLabel(0.009)).toBe('Close'))
+  it('returns Close for mad just below 0.012', () => expect(fitLabel(0.0119)).toBe('Close'))
   it('returns Suspicious for mad = 0.012', () => expect(fitLabel(0.012)).toBe('Suspicious'))
   it('returns Suspicious for mad > 0.012', () => expect(fitLabel(0.015)).toBe('Suspicious'))
 })
