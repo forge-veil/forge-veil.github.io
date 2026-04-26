@@ -1,6 +1,6 @@
 ---
 title: "Bits, Amplitudes, and the Bloch Sphere"
-description: "A qubit is not 'both 0 and 1 at once.' It is a precise mathematical object — and its geometry fits on the surface of a sphere."
+description: "A qubit is not 'both 0 and 1 at once.' It is a precise mathematical object, and its geometry fits on the surface of a sphere."
 topic: quantum-computing
 postLayout: longform
 series:
@@ -13,22 +13,65 @@ published: true
 ---
 
 import BlochSphere from '../../components/BlochSphere.astro';
+import QubitState from '../../components/QubitState.astro';
 
-Think about a light switch. It's either on or off — no in between. A classical bit works the same way: it's a 1 or a 0, and it knows which one it is at all times.
+A classical computer works by doing things one at a time. Very fast, billions of operations per second, but always one at a time. Even modern parallel processors are just many sequential workers running side by side. The model, at its core, is sequential.
 
-Now imagine a dimmer switch. Before you walk into the room, the dial is sitting at some position between fully off and fully on. When you flip the light on to check, it instantly snaps to either fully on or fully off — but *where the dial was sitting* determined how likely each outcome was. The closer to "on," the more likely you get light. The dial position is not uncertainty about what's there — it's a precise description of the system before you look.
+Quantum computers operate on a fundamentally different model. Not faster sequential. Structurally different.
 
-A qubit works like that dimmer. Before you measure it, it's not secretly a 0 or secretly a 1. It's in a **superposition** — a specific, mathematically precise state that encodes how likely each outcome is. When you measure, the superposition snaps to either 0 or 1. The state *before* measurement was real and well-defined. Just not a classical value.
+Here is a concrete way to see it. Suppose you need to retrieve a piece of information from each of ten books scattered across a large library. The classical approach is what you would expect: walk to section A, find the book, read the relevant passage, return it. Walk to section B. Repeat. Ten trips, one after another. The time required scales with the number of books.
+
+The quantum approach looks like cheating. You stand at the library gate and announce, all at once, every question you have. An ether of superposed information assembles, carrying simultaneous echoes of all ten answers. But you cannot simply reach in and read them. Any direct measurement collapses the whole thing down to a single value, chosen probabilistically. The answers are there; you just cannot extract them directly.
+
+The trick, and the part that takes real work to understand, is what happens *before* you measure. You apply a lens: a carefully designed sequence of quantum operations that reshapes the superposition. The lens uses interference to amplify the answer you want and cancel out the rest. Then you measure. One clean result, reflecting a computation that engaged all ten possibilities at once.
+
+That lens is a quantum algorithm. The Quantum Fourier Transform is one of the sharpest. The mechanism underneath is phase interference, the same physics that makes light waves reinforce or cancel. Understanding it requires understanding the mathematical structure of superposition itself: what it actually is, what it can encode, and why the numbers involved are complex.
+
+This series builds toward those algorithms from the ground up, with mathematical rigor but a lot of intuition along the way. We start here, with a single qubit. It is not the interesting part by itself. But it is the foundation everything else is built from.
+
+---
+
+Think about a light switch. It's either on or off. No in between. A classical bit works the same way: it's a 1 or a 0, and it knows which one it is at all times.
+
+Now imagine a dimmer switch. Before you walk into the room, the dial is sitting at some position between fully off and fully on. When you flip the light on to check, it instantly snaps to either fully on or fully off, but *where the dial was sitting* determined how likely each outcome was. The closer to "on," the more likely you get light. The dial position is not uncertainty about what's there. It's a precise description of the system before you look.
+
+A qubit works like that dimmer. Before you measure it, it's not secretly a 0 or secretly a 1. It's in a **superposition**, a specific, mathematically precise state that encodes how likely each outcome is. When you measure, the superposition snaps to either 0 or 1. The state *before* measurement was real and well-defined. Just not a classical value.
 
 The numbers that describe "where the dial is set" are called **amplitudes**. They're the central concept of everything that follows.
 
-<div class="prose-2col">
+The diagram below shows a qubit state as a point on a vertical circle. The two poles are the classical outcomes: |0⟩ at the top, |1⟩ at the bottom. Any point in between is a superposition. The probabilities shown are exactly what you would observe if you measured: drag the arrow or move the slider to explore how they change with the angle.
 
-## Amplitudes aren't probabilities — they're stranger
+<QubitState />
+
+The angle θ here is the same one that will appear in the Bloch sphere parametrization — it encodes the relative weight between |0⟩ and |1⟩. The full picture adds a second angle φ for phase, which lives on a dimension the circle above cannot show. That is the Bloch sphere.
+
+<div class="concept-map">
+  <p class="concept-map-heading">What this post formalizes</p>
+  <ul class="concept-map-list">
+    <li><strong>Amplitudes:</strong> the complex numbers that encode a qubit's state, and why they aren't ordinary probabilities</li>
+    <li><strong>Superposition:</strong> what it precisely means for a qubit to be "between" 0 and 1</li>
+    <li><strong>Bra-ket notation:</strong> the compact shorthand physicists use for quantum states and inner products</li>
+    <li><strong>The Bloch sphere:</strong> the geometry that maps every possible qubit state to a point on a sphere</li>
+    <li><strong>Phase:</strong> the hidden coordinate invisible at measurement, which quantum algorithms exploit through interference</li>
+  </ul>
+</div>
+
+<div class="toc-card">
+  <p class="toc-card-heading">In this post</p>
+  <ol class="toc-card-list">
+    <li><a class="toc-card-item" href="#amplitudes-arent-probabilities-theyre-stranger"><span class="toc-n">1</span>Amplitudes — the complex numbers that describe a qubit's state, and why they aren't ordinary probabilities</a></li>
+    <li><a class="toc-card-item" href="#a-shorthand-worth-learning-bra-ket-notation"><span class="toc-n">2</span>Bra-ket notation — the compact shorthand physicists use for quantum states and inner products</a></li>
+    <li><a class="toc-card-item" href="#what-a-qubit-is-precisely"><span class="toc-n">3</span>What a qubit is, precisely — the exact parameters that fully specify a qubit state</a></li>
+    <li><a class="toc-card-item" href="#putting-the-qubit-on-a-sphere"><span class="toc-n">4</span>The Bloch sphere — how two angles map every qubit state onto the surface of a sphere</a></li>
+    <li><a class="toc-card-item" href="#phase-the-coordinate-that-hides-until-you-need-it"><span class="toc-n">5</span>Phase — the hidden coordinate invisible at measurement, which quantum algorithms exploit through interference</a></li>
+  </ol>
+</div>
+
+## Amplitudes aren't probabilities. They're stranger.
 
 You already know probabilities. A fair coin lands heads 50% of the time. Probabilities are real numbers between 0 and 1. They're never negative.
 
-Amplitudes are stranger. They're **complex numbers** — numbers that live in the complex plane, with both a real and an imaginary part. An amplitude is not a probability. It becomes one when you square its magnitude.
+Amplitudes are stranger. They're **complex numbers**, numbers that live in the complex plane, with both a real and an imaginary part. An amplitude is not a probability. It becomes one when you square its magnitude.
 
 Concretely: if a qubit has amplitude $\alpha$ for the outcome 0 and amplitude $\beta$ for the outcome 1, the probabilities are $|\alpha|^2$ and $|\beta|^2$. Since probabilities must add to 1, the amplitudes must satisfy:
 
@@ -36,19 +79,19 @@ $$|\alpha|^2 + |\beta|^2 = 1$$
 
 That's the only constraint. As long as this holds, $\alpha$ and $\beta$ can be any complex numbers whatsoever.
 
-Why complex? Because the imaginary part encodes something called **phase** — a quantity that's invisible at measurement but becomes crucial when qubits interact. We'll come back to phase. For now: complex amplitudes aren't arbitrary complexity for its own sake. They're the minimum structure that makes quantum mechanics work.
+Why complex? Because the imaginary part encodes something called **phase**, a quantity that's invisible at measurement but becomes crucial when qubits interact. We'll come back to phase. For now: complex amplitudes aren't arbitrary complexity for its own sake. They're the minimum structure that makes quantum mechanics work.
 
-## A shorthand worth learning — bra-ket notation
+## A shorthand worth learning: bra-ket notation
 
-Writing "the state with amplitude $\alpha$ for 0 and amplitude $\beta$ for 1" every time is exhausting. Physicists use a compact notation invented by Paul Dirac, called **bra-ket notation** — named after the word "bracket."
+Writing "the state with amplitude $\alpha$ for 0 and amplitude $\beta$ for 1" every time is exhausting. Physicists use a compact notation invented by Paul Dirac, called **bra-ket notation**, named after the word "bracket."
 
-The two most definite qubit states — the analogs of classical 0 and 1 — are written:
+The two most definite qubit states, the analogs of classical 0 and 1, are written:
 
 $$|0\rangle \quad \text{and} \quad |1\rangle$$
 
 These are called **kets**. They're just vectors, written in a distinctive way. Measuring $|0\rangle$ always gives 0. Measuring $|1\rangle$ always gives 1. No probability involved.
 
-A superposition — any state in between — is a **linear combination** of these two. The general qubit state is:
+A superposition, any state in between, is a **linear combination** of these two. The general qubit state is:
 
 $$|\psi\rangle = \alpha|0\rangle + \beta|1\rangle$$
 
@@ -60,7 +103,7 @@ $$|\psi\rangle = [\alpha,\,\beta]^\top$$
 
 with $|0\rangle = [1,\,0]^\top$ and $|1\rangle = [0,\,1]^\top$. The ket notation is just a more descriptive wrapper.
 
-The other half: the **bra**, written $\langle\psi|$, is the conjugate transpose of the ket — $[\alpha^*,\,\beta^*]$. It lets you write inner products as $\langle\varphi|\psi\rangle$ — bra on the left, ket on the right, forming a "bracket." The normalization constraint in this form is:
+The other half: the **bra**, written $\langle\psi|$, is the conjugate transpose of the ket, $[\alpha^*,\,\beta^*]$. It lets you write inner products as $\langle\varphi|\psi\rangle$, bra on the left, ket on the right, forming a "bracket." The normalization constraint in this form is:
 
 $$\langle\psi|\psi\rangle = 1$$
 
@@ -68,19 +111,19 @@ $$\langle\psi|\psi\rangle = 1$$
 
 A qubit is a unit vector in a two-dimensional complex vector space. Its two components are amplitudes. Measuring it collapses it to one of the two basis states, with probabilities equal to the squared magnitudes of the amplitudes.
 
-The state before measurement is not vague — it's exactly $|\psi\rangle = \alpha|0\rangle + \beta|1\rangle$. The uncertainty is in the *outcome* of measurement, not in the state itself. The dimmer is in a precise position before you flip the light on. You just can't know what it snaps to until you look.
+The state before measurement is not vague. It's exactly $|\psi\rangle = \alpha|0\rangle + \beta|1\rangle$. The uncertainty is in the *outcome* of measurement, not in the state itself. The dimmer is in a precise position before you flip the light on. You just can't know what it snaps to until you look.
 
 Everything in quantum computing builds on this. Gates are transformations on these vectors. Entanglement is a property of multi-qubit vectors. Quantum algorithms steer the amplitudes so that the right answer comes out with high probability.
 
 ## How many knobs does a qubit have?
 
-Before we can visualize a qubit's state, we need to count how many independent things can vary about it — the **degrees of freedom**.
+Before we can visualize a qubit's state, we need to count how many independent things can vary about it: the **degrees of freedom**.
 
 Start with the full description: two complex numbers, $\alpha$ and $\beta$. That's four real numbers: $\text{Re}(\alpha)$, $\text{Im}(\alpha)$, $\text{Re}(\beta)$, $\text{Im}(\beta)$.
 
-**Constraint 1 — normalization.** The rule $|\alpha|^2 + |\beta|^2 = 1$ fixes one of the four numbers given the others. Down to three.
+**Constraint 1: normalization.** The rule $|\alpha|^2 + |\beta|^2 = 1$ fixes one of the four numbers given the others. Down to three.
 
-**Constraint 2 — global phase.** If you multiply the entire state by any complex number of magnitude 1 — say $e^{i\theta}$ for some real angle $\theta$ — you get a state that is physically *indistinguishable* from the original. Every measurement gives the same result. The reason: probabilities depend on $|\text{amplitude}|^2$, and $|e^{i\theta}\alpha|^2 = |\alpha|^2$. The global factor cancels.
+**Constraint 2: global phase.** If you multiply the entire state by any complex number of magnitude 1, say $e^{i\theta}$ for some real angle $\theta$, you get a state that is physically *indistinguishable* from the original. Every measurement gives the same result. The reason: probabilities depend on $|\text{amplitude}|^2$, and $|e^{i\theta}\alpha|^2 = |\alpha|^2$. The global factor cancels.
 
 Since states that differ only by global phase are physically identical, we can always fix a convention to remove it. By convention, we require $\alpha$ to be real and non-negative. That removes another degree of freedom.
 
@@ -96,29 +139,27 @@ where $\theta \in [0, \pi]$ and $\varphi \in [0, 2\pi)$.
 
 The $\theta/2$ is deliberate: it ensures that as $\theta$ sweeps from 0 to $\pi$, the state sweeps from $|0\rangle$ to $|1\rangle$ exactly once, covering the full sphere without doubling back.
 
-Check the poles: at $\theta = 0$, we get $|\psi\rangle = |0\rangle$. At $\theta = \pi$, we get $e^{i\varphi}|1\rangle$ — which is physically $|1\rangle$ (global phase). Every qubit state is a point on this sphere. This is the **Bloch sphere**.
-
-</div>
+Check the poles: at $\theta = 0$, we get $|\psi\rangle = |0\rangle$. At $\theta = \pi$, we get $e^{i\varphi}|1\rangle$, which is physically $|1\rangle$ (global phase). Every qubit state is a point on this sphere. This is the **Bloch sphere**.
 
 <div class="sphere-section">
 <div class="sphere-section-prose">
 
-## Reading the sphere — qubit states as geography
+## Reading the sphere: qubit states as geography
 
 The Bloch sphere turns qubit states into geography. The poles are the classical states; everything else is a superposition.
 
-**North pole ($\theta = 0$) — the state $|0\rangle$.** Measuring this gives 0 with certainty. $\cos^2(0) = 1$.
+**North pole ($\theta = 0$): the state $|0\rangle$.** Measuring this gives 0 with certainty. $\cos^2(0) = 1$.
 
-**South pole ($\theta = \pi$) — the state $|1\rangle$.** Measuring this gives 1 with certainty. $\sin^2(\pi/2) = 1$.
+**South pole ($\theta = \pi$): the state $|1\rangle$.** Measuring this gives 1 with certainty. $\sin^2(\pi/2) = 1$.
 
-**The equator ($\theta = \pi/2$)** — a ring of states that each give a 50/50 outcome. The four named equatorial states are:
+**The equator ($\theta = \pi/2$)** is a ring of states that each give a 50/50 outcome. The four named equatorial states are:
 
-- $|{+}\rangle = (|0\rangle + |1\rangle)/\sqrt{2}$ — positive x-axis ($\varphi = 0$)
-- $|{-}\rangle = (|0\rangle - |1\rangle)/\sqrt{2}$ — negative x-axis ($\varphi = \pi$)
-- $|{+i}\rangle = (|0\rangle + i|1\rangle)/\sqrt{2}$ — positive y-axis ($\varphi = \pi/2$)
-- $|{-i}\rangle = (|0\rangle - i|1\rangle)/\sqrt{2}$ — negative y-axis ($\varphi = 3\pi/2$)
+- $|{+}\rangle = (|0\rangle + |1\rangle)/\sqrt{2}$, positive x-axis ($\varphi = 0$)
+- $|{-}\rangle = (|0\rangle - |1\rangle)/\sqrt{2}$, negative x-axis ($\varphi = \pi$)
+- $|{+i}\rangle = (|0\rangle + i|1\rangle)/\sqrt{2}$, positive y-axis ($\varphi = \pi/2$)
+- $|{-i}\rangle = (|0\rangle - i|1\rangle)/\sqrt{2}$, negative y-axis ($\varphi = 3\pi/2$)
 
-All four give 50/50 at measurement. But they're four distinct physical states — drag the sphere and you'll see them sitting 90° apart around the equator. They respond differently to gates.
+All four give 50/50 at measurement. But they're four distinct physical states; drag the sphere and you'll see them sitting 90° apart around the equator. They respond differently to gates.
 
 </div>
 <div class="sphere-section-widget">
@@ -128,26 +169,22 @@ All four give 50/50 at measurement. But they're four distinct physical states �
 </div>
 </div>
 
-<div class="prose-2col">
-
 ## What happens when you measure
 
-Measurement collapses the qubit to one of the two poles — $|0\rangle$ or $|1\rangle$. The probabilities come directly from the parametrization. For a state at polar angle $\theta$:
+Measurement collapses the qubit to one of the two poles, $|0\rangle$ or $|1\rangle$. The probabilities come directly from the parametrization. For a state at polar angle $\theta$:
 
 $$P(0) = \cos^2\!\tfrac{\theta}{2} \qquad P(1) = \sin^2\!\tfrac{\theta}{2}$$
 
 The latitude of the state tells you how certain the outcome is. A state near the north pole has small $\theta$, so $P(0)$ is close to 1. The equator is maximum uncertainty. Distance from a pole is geometric probability.
 
-After measurement, the superposition is gone. The state is now $|0\rangle$ or $|1\rangle$, snapped to the pole. This is why you can't extract both $\alpha$ and $\beta$ from a single measurement — you only see which pole the state fell to.
+After measurement, the superposition is gone. The state is now $|0\rangle$ or $|1\rangle$, snapped to the pole. This is why you can't extract both $\alpha$ and $\beta$ from a single measurement. You only see which pole the state fell to.
 
-## Phase — the coordinate that hides until you need it
+## Phase: the coordinate that hides until you need it
 
 The longitude $\varphi$ doesn't appear anywhere in the measurement probabilities. The azimuthal angle of the Bloch sphere has no effect on what you observe when you measure directly.
 
 This might look like phase doesn't matter. It does.
 
-Phase becomes visible the moment you rotate the state before measuring. A gate — a quantum operation — is a rotation of the Bloch sphere. A rotation that shifts the longitude $\varphi$ can change the latitude $\theta$. And changing $\theta$ changes the measurement probabilities. Two states that look identical under direct measurement can become distinguishable after a rotation, because the rotation treats different longitudes differently.
+Phase becomes visible the moment you rotate the state before measuring. A gate, a quantum operation, is a rotation of the Bloch sphere. A rotation that shifts the longitude $\varphi$ can change the latitude $\theta$. And changing $\theta$ changes the measurement probabilities. Two states that look identical under direct measurement can become distinguishable after a rotation, because the rotation treats different longitudes differently.
 
-This is **quantum interference** — the mechanism behind every quantum algorithm. It's entirely a consequence of phase. We'll dig into it in the next post, when we have a concrete gate to work with. For now: phase is the hidden coordinate. Invisible at measurement, but present in the state vector, waiting to matter.
-
-</div>
+This is **quantum interference**, the mechanism behind every quantum algorithm. It's entirely a consequence of phase. We'll dig into it in the next post, when we have a concrete gate to work with. For now: phase is the hidden coordinate. Invisible at measurement, but present in the state vector, waiting to matter.
