@@ -753,8 +753,7 @@ body {
 }
 
 .klein-verse a {
-  display: block;
-  margin-top: 10px;
+  margin-top: 0;
   font-size: 11px;
   font-weight: 300;
   color: var(--color-ink-5);
@@ -769,9 +768,21 @@ body {
   text-decoration-color: var(--color-ink-3);
 }
 
+.klein-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.klein-meta-sep {
+  font-size: 11px;
+  color: var(--color-ink-6);
+  user-select: none;
+}
+
 .klein-source-btn {
-  display: block;
-  margin-top: 8px;
+  margin-top: 0;
   font-size: 11px;
   font-weight: 300;
   color: var(--color-ink-5);

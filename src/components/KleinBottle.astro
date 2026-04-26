@@ -61,12 +61,15 @@ Thought the Möbius band was divine.
      The edges of two,
 You'll get a weird bottle like mine."</pre>
     <figcaption class="klein-attr">— Leo Moser</figcaption>
-    <a
-      href="https://en.wikipedia.org/wiki/Klein_bottle"
-      target="_blank"
-      rel="noopener noreferrer"
-    >Klein bottle ↗</a>
-    <button id="klein-source-btn" class="klein-source-btn">equations &amp; code</button>
+    <div class="klein-meta-row">
+      <a
+        href="https://en.wikipedia.org/wiki/Klein_bottle"
+        target="_blank"
+        rel="noopener noreferrer"
+      >Klein bottle ↗</a>
+      <span class="klein-meta-sep">·</span>
+      <button id="klein-source-btn" class="klein-source-btn">equations &amp; code</button>
+    </div>
   </figure>
 </div>
 
@@ -128,7 +131,7 @@ function makeKlein(tubeScale: number, v: number, u: number, target: THREE.Vector
 
 // ParametricGeometry calls fn(u, v, target) — swap to (v, u) to match the
 // Three.js figure-8 Klein convention from the approved prototype.
-const glassGeo = new ParametricGeometry((v, u, t) => makeKlein(1.0, v, u, t), 100, 50);
+const glassGeo = new ParametricGeometry((v: number, u: number, t: THREE.Vector3) => makeKlein(1.0, v, u, t), 100, 50);
 glassGeo.computeBoundingBox();
 const center = new THREE.Vector3();
 glassGeo.boundingBox!.getCenter(center);
