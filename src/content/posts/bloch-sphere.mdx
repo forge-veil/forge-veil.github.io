@@ -29,7 +29,7 @@ Global phase is physically meaningless, so we can always choose a convention tha
 
 We are left with **two real degrees of freedom** to describe any physically distinct single-qubit state.
 
-Two degrees of freedom. One constraint (normalization still holds). The natural geometric object is a **surface** — and with the remaining normalization, specifically a sphere.
+Two free parameters — exactly the number needed to index the surface of a sphere. The parametrization we are about to write bakes normalization in automatically, so the two degrees of freedom correspond directly to angular coordinates: a polar angle θ and an azimuthal angle φ.
 
 ## The Parametrization
 
@@ -53,7 +53,7 @@ Interpret θ as the polar angle from the north pole, and φ as the azimuthal ang
 
 - |+⟩ = (|0⟩ + |1⟩)/√2 — positive x-axis (φ = 0)
 - |−⟩ = (|0⟩ − |1⟩)/√2 — negative x-axis (φ = π)
-- |i⟩ = (|0⟩ + i|1⟩)/√2 — positive y-axis (φ = π/2)
+- |+i⟩ = (|0⟩ + i|1⟩)/√2 — positive y-axis (φ = π/2)
 - |−i⟩ = (|0⟩ − i|1⟩)/√2 — negative y-axis (φ = 3π/2)
 
 These four states all produce a 50/50 measurement outcome. They are nonetheless distinct physical states that behave differently under operations.
