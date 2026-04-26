@@ -2,6 +2,8 @@
 import { getCollection, render, type CollectionEntry } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import Sidebar from '../../components/Sidebar.astro';
+import BlochSphere from '../../components/BlochSphere.astro';
+import TableOfContents from '../../components/TableOfContents.astro';
 
 export async function getStaticPaths() {
   const posts = await getCollection('posts');
@@ -16,7 +18,7 @@ interface Props {
 }
 
 const { post } = Astro.props;
-const { Content } = await render(post);
+const { Content, headings } = await render(post);
 
 function formatDate(date: Date) {
   return date.toLocaleDateString('en-US', {
@@ -63,5 +65,137 @@ function readTime(body: string | undefined) {
         </article>
       </div>
     </main>
+    <TableOfContents headings={headings} />
   </div>
+
+  <!-- Popover sphere: visible when page sphere is out of view -->
+  <div id="bloch-popover">
+    <div class="bloch-popover-header">
+      <span>Bloch Sphere</span>
+      <button id="bloch-popover-close" aria-label="Close">×</button>
+    </div>
+    <BlochSphere />
+  </div>
+
+<style>
+  #bloch-popover {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 50;
+    width: 380px;
+    background: var(--color-panel);
+    border: 0.5px solid var(--color-border);
+    border-radius: 12px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s linear 0.2s;
+  }
+  #bloch-popover.is-visible {
+    visibility: visible;
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+  .bloch-popover-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px 0;
+    font-size: 10px;
+    font-family: var(--font-sans);
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-ink-4);
+  }
+  #bloch-popover-close {
+    background: none;
+    border: none;
+    font-size: 18px;
+    line-height: 1;
+    color: var(--color-ink-4);
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  #bloch-popover-close:hover {
+    background: var(--color-surface);
+    color: var(--color-ink);
+  }
+  /* Scope overrides into the BlochSphere component */
+  #bloch-popover :global(.bloch-sphere) {
+    margin: 8px 0 0;
+    border: none;
+    border-radius: 0 0 12px 12px;
+    border-top: 0.5px solid var(--color-border);
+  }
+  #bloch-popover :global(.bloch-scene) {
+    height: 300px !important;
+  }
+</style>
+
+<script>
+type BlochState = {theta: number; phi: number};
+
+const KET_PREFIXES: Array<{prefix: string; state: BlochState}> = [
+  {prefix: '|{+i}\\rangle', state: {theta: Math.PI / 2, phi: Math.PI / 2}},
+  {prefix: '|{-i}\\rangle', state: {theta: Math.PI / 2, phi: 3 * Math.PI / 2}},
+  {prefix: '|{+}\\rangle',  state: {theta: Math.PI / 2, phi: 0}},
+  {prefix: '|{-}\\rangle',  state: {theta: Math.PI / 2, phi: Math.PI}},
+  {prefix: '|+i\\rangle',   state: {theta: Math.PI / 2, phi: Math.PI / 2}},
+  {prefix: '|-i\\rangle',   state: {theta: Math.PI / 2, phi: 3 * Math.PI / 2}},
+  {prefix: '|+\\rangle',    state: {theta: Math.PI / 2, phi: 0}},
+  {prefix: '|-\\rangle',    state: {theta: Math.PI / 2, phi: Math.PI}},
+  {prefix: '|0\\rangle',    state: {theta: 0,            phi: 0}},
+  {prefix: '|1\\rangle',    state: {theta: Math.PI,      phi: 0}},
+];
+
+document.addEventListener('DOMContentLoaded', () => {
+  const pageSphere    = document.querySelector<HTMLElement>('.sphere-section-widget .bloch-sphere');
+  const popover       = document.getElementById('bloch-popover') as HTMLElement | null;
+  const popoverSphere = popover?.querySelector<HTMLElement>('.bloch-sphere') ?? null;
+  const closeBtn      = document.getElementById('bloch-popover-close') as HTMLElement | null;
+
+  let isSphereVisible = false;
+
+  if (pageSphere) {
+    new IntersectionObserver(
+      ([entry]) => {
+        isSphereVisible = entry.isIntersecting;
+        if (isSphereVisible) popover?.classList.remove('is-visible');
+      },
+      {threshold: 0.3},
+    ).observe(pageSphere);
+  }
+
+  closeBtn?.addEventListener('click', () => popover?.classList.remove('is-visible'));
+
+  // Dismiss on outside click
+  document.addEventListener('click', (e) => {
+    if (popover?.classList.contains('is-visible') && !popover.contains(e.target as Node)) {
+      popover.classList.remove('is-visible');
+    }
+  });
+
+  document.querySelectorAll<HTMLElement>('.prose .katex').forEach(el => {
+    const ann = el.querySelector('annotation[encoding="application/x-tex"]');
+    if (!ann) return;
+    const tex = ann.textContent?.trim() ?? '';
+    const match = KET_PREFIXES.find(({prefix}) => tex.startsWith(prefix));
+    if (!match) return;
+    el.dataset.blochLink = '';
+    el.addEventListener('click', (e) => {
+      e.stopPropagation(); // prevent outside-click handler from immediately closing
+      pageSphere?.dispatchEvent(new CustomEvent('bloch-navigate', {detail: match.state}));
+      if (!isSphereVisible && popoverSphere && popover) {
+        popoverSphere.dispatchEvent(new CustomEvent('bloch-navigate', {detail: match.state}));
+        popover.classList.add('is-visible');
+      }
+    });
+  });
+});
+</script>
 </BaseLayout>
