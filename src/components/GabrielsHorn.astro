@@ -1,0 +1,211 @@
+---
+import katex from 'katex';
+import { codeToHtml } from 'shiki';
+
+const eqHtml = [
+  katex.renderToString(
+    String.raw`y = \frac{1}{x} \text{ revolved about the } x\text{-axis},\quad x \in [1, \infty)`,
+    { displayMode: true, throwOnError: false }
+  ),
+  katex.renderToString(
+    String.raw`u \in [1,\infty),\quad v \in [0, 2\pi] \qquad x(u,v) = u,\quad y(u,v) = \frac{\cos v}{u},\quad z(u,v) = \frac{\sin v}{u}`,
+    { displayMode: true, throwOnError: false }
+  ),
+  katex.renderToString(
+    String.raw`\text{Volume} = \pi \text{ (finite)}, \qquad \text{Surface area} = \infty`,
+    { displayMode: true, throwOnError: false }
+  ),
+].join('');
+
+const codeHtml = await codeToHtml(
+`function makeHorn(u, v, target) {
+  // t ∈ [1, 40] — logarithmic distribution, needle-thin at tip
+  const t = Math.pow(40, u);
+  const r = 1 / t;
+  const angle = v * 2 * Math.PI;
+  target.set(t, r * Math.cos(angle), r * Math.sin(angle));
+}
+
+// Alpha gradient: opaque at opening (u=0), transparent at tip (u=1)
+const ac = document.createElement('canvas');
+ac.width = 256; ac.height = 4;
+const gCtx = ac.getContext('2d');
+const grad = gCtx.createLinearGradient(0, 0, 256, 0);
+grad.addColorStop(0.0, 'white');
+grad.addColorStop(0.5, 'white');
+grad.addColorStop(1.0, 'black');
+gCtx.fillStyle = grad;
+gCtx.fillRect(0, 0, 256, 4);
+
+new MeshStandardMaterial({
+  color:       0xb07d3a,
+  metalness:   0.85,
+  roughness:   0.18,
+  alphaMap:    alphaTex,
+  transparent: true,
+  side:        DoubleSide,
+});`,
+  { lang: 'javascript', theme: 'github-light' }
+);
+---
+<div class="klein-aside">
+  <canvas id="gabriel-canvas"></canvas>
+  <figure class="klein-verse">
+    <pre class="klein-poem">evi opera dedicator meansura vasculie,
+pondere non magni, quod interim helluo nullus ebibat</pre>
+    <p class="shape-caption-note">(I give the measurements of a drinking glass (or vase), that has a small weight, but that even the hardest drinker could not empty.)</p>
+    <figcaption class="klein-attr">— de Sluse in a letter to Huygens, translation Jan A. van Maanen</figcaption>
+    <div class="klein-meta-row">
+      <a href="https://en.wikipedia.org/wiki/Gabriel%27s_horn" target="_blank" rel="noopener noreferrer">Gabriel's horn ↗</a>
+      <span class="klein-meta-sep">·</span>
+      <a href="https://www.youtube.com/watch?v=yZOi9HH5ueU" target="_blank" rel="noopener noreferrer">Numberphile ↗</a>
+      <span class="klein-meta-sep">·</span>
+      <button id="gabriel-source-btn" class="klein-source-btn">equations &amp; code</button>
+    </div>
+  </figure>
+</div>
+
+<dialog id="gabriel-source-dialog" class="klein-dialog">
+  <div class="klein-dialog-inner">
+    <button id="gabriel-dialog-close" class="klein-dialog-close" aria-label="Close">×</button>
+
+    <section class="klein-dialog-section">
+      <h3 class="klein-dialog-label">Parametrization</h3>
+      <p class="klein-dialog-desc">Surface of revolution of y = 1/x about the x-axis (Torricelli, 1643)</p>
+      <div class="klein-dialog-eq" set:html={eqHtml}></div>
+    </section>
+
+    <section class="klein-dialog-section">
+      <h3 class="klein-dialog-label">Three.js</h3>
+      <p class="klein-dialog-desc">Single parametric mesh; logarithmic u-distribution concentrates detail at the opening.</p>
+      <div class="klein-dialog-code" set:html={codeHtml}></div>
+    </section>
+  </div>
+</dialog>
+
+<script>
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { ParametricGeometry } from 'three/addons/geometries/ParametricGeometry.js';
+
+const canvas = document.getElementById('gabriel-canvas') as HTMLCanvasElement;
+
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setClearColor(0x000000, 0);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+const scene = new THREE.Scene();
+
+const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 200);
+camera.position.set(0, 0, 8);
+camera.lookAt(0, 0, 0);
+
+const pmrem = new THREE.PMREMGenerator(renderer);
+pmrem.compileEquirectangularShader();
+scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
+
+function makeHorn(u: number, v: number, target: THREE.Vector3) {
+  const t = Math.pow(40, u);        // t ∈ [1, 40] — extended range, needle-thin tip
+  const r = 1 / t;
+  const angle = v * 2 * Math.PI;
+  target.set(t, r * Math.cos(angle), r * Math.sin(angle));
+}
+
+const geo = new ParametricGeometry(
+  (u: number, v: number, t: THREE.Vector3) => makeHorn(u, v, t),
+  200, 60
+);
+geo.computeBoundingBox();
+const center = new THREE.Vector3();
+geo.boundingBox!.getCenter(center);
+geo.translate(-center.x, -center.y, -center.z);
+geo.computeBoundingBox();
+const sz = new THREE.Vector3();
+geo.boundingBox!.getSize(sz);
+const s = 7.0 / Math.max(sz.x, sz.y, sz.z);
+
+// Alpha gradient: opaque at opening (u=0), dissolves to transparent at tip (u=1)
+const alphaCanvas = document.createElement('canvas');
+alphaCanvas.width = 256;
+alphaCanvas.height = 4;
+const alphaCtx = alphaCanvas.getContext('2d')!;
+const grad = alphaCtx.createLinearGradient(0, 0, 256, 0);
+grad.addColorStop(0.0, 'rgba(255,255,255,1)');
+grad.addColorStop(0.5, 'rgba(255,255,255,1)');
+grad.addColorStop(1.0, 'rgba(0,0,0,1)');
+alphaCtx.fillStyle = grad;
+alphaCtx.fillRect(0, 0, 256, 4);
+const alphaTex = new THREE.CanvasTexture(alphaCanvas);
+
+const mat = new THREE.MeshStandardMaterial({
+  color: 0xb07d3a,
+  metalness: 0.85,
+  roughness: 0.18,
+  side: THREE.DoubleSide,
+  alphaMap: alphaTex,
+  transparent: true,
+});
+
+const horn = new THREE.Mesh(geo, mat);
+horn.scale.setScalar(s);
+
+const group = new THREE.Group();
+group.add(horn);
+group.position.y = 0.6;
+group.rotation.x = 0.25;
+group.rotation.z = 0.48;
+scene.add(group);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+const key = new THREE.DirectionalLight(0xffffff, 4.5);
+key.position.set(5, 10, 8);
+scene.add(key);
+const fill = new THREE.DirectionalLight(0xffd4aa, 1.4);
+fill.position.set(-6, -3, 4);
+scene.add(fill);
+const rim = new THREE.DirectionalLight(0xfff8f0, 0.8);
+rim.position.set(2, -8, -6);
+scene.add(rim);
+
+function resize() {
+  const w = canvas.clientWidth;
+  const h = canvas.clientHeight;
+  if (w === 0 || h === 0) return;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+resize();
+
+let animId: number | null = null;
+let t = 0;
+
+function tick() {
+  animId = requestAnimationFrame(tick);
+  t += 0.004;
+  group.rotation.y = t;
+  renderer.render(scene, camera);
+}
+
+const observer = new IntersectionObserver(([entry]) => {
+  if (entry.isIntersecting) {
+    if (animId === null) tick();
+  } else {
+    if (animId !== null) {
+      cancelAnimationFrame(animId);
+      animId = null;
+    }
+  }
+}, { threshold: 0 });
+
+observer.observe(canvas);
+window.addEventListener('resize', resize);
+
+const dialog = document.getElementById('gabriel-source-dialog') as HTMLDialogElement;
+document.getElementById('gabriel-source-btn')!.addEventListener('click', () => dialog.showModal());
+document.getElementById('gabriel-dialog-close')!.addEventListener('click', () => dialog.close());
+dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });
+</script>

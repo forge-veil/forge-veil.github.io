@@ -38,7 +38,7 @@ const { theta = 0, phi = 0 } = Astro.props;
         <span class="bloch-sl-val bloch-phi-val">0°</span>
       </div>
     </div>
-    <p class="bloch-hint">drag to orbit · sliders to move state</p>
+    <p class="bloch-hint">drag to orbit · sliders to move · click states in text to navigate</p>
   </div>
 </div>
 
@@ -213,6 +213,24 @@ function initBlochSphere(container: HTMLElement): void {
   let theta = theta0;
   let phi   = phi0;
 
+  // Tween for animated navigation
+  type TweenData = {fromTheta: number; fromPhi: number; toTheta: number; toPhi: number; t: number};
+  let tween: TweenData | null = null;
+
+  function shortAnglePath(a: number, b: number): number {
+    const d = ((b - a + Math.PI) % (2 * Math.PI)) - Math.PI;
+    return a + d;
+  }
+
+  function navigateTo(toTheta: number, toPhi: number): void {
+    tween = {fromTheta: theta, fromPhi: phi, toTheta, toPhi: shortAnglePath(phi, toPhi), t: 0};
+  }
+
+  container.addEventListener('bloch-navigate', (e: Event) => {
+    const {theta: t, phi: p} = (e as CustomEvent<{theta: number; phi: number}>).detail;
+    navigateTo(t, p);
+  });
+
   thetaSl.value = String(Math.round(theta * 180 / Math.PI));
   phiSl.value   = String(Math.round(phi   * 180 / Math.PI));
   thetaValEl.textContent = thetaSl.value + '°';
@@ -348,6 +366,30 @@ function initBlochSphere(container: HTMLElement): void {
     }),
   );
 
+  // ── Isometric projection shadows ──────────────────────────────────────────
+  const isoMat = new THREE.LineDashedMaterial({
+    color: 0xa3a3a3, dashSize: 0.05, gapSize: 0.035, transparent: true, opacity: 0.5,
+  });
+  const [xyDropLine,  xyDropBuf]  = makeDynLine(isoMat);
+  const [xyPlaneLine, xyPlaneBuf] = makeDynLine(isoMat);
+  const [yzDropLine,  yzDropBuf]  = makeDynLine(isoMat);
+  const [yzPlaneLine, yzPlaneBuf] = makeDynLine(isoMat);
+  const eqDotMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(0.025, 12, 12),
+    new THREE.MeshBasicMaterial({ color: 0x0ea5e9, transparent: true, opacity: 0.7 }),
+  );
+  scene.add(eqDotMesh);
+  const xyDotMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(0.025, 12, 12),
+    new THREE.MeshBasicMaterial({ color: 0xa3a3a3, transparent: true, opacity: 0.7 }),
+  );
+  scene.add(xyDotMesh);
+  const yzDotMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(0.025, 12, 12),
+    new THREE.MeshBasicMaterial({ color: 0xa3a3a3, transparent: true, opacity: 0.7 }),
+  );
+  scene.add(yzDotMesh);
+
   // ── State update ──────────────────────────────────────────────────────────
   function updateState(): void {
     const x = Math.sin(theta) * Math.cos(phi);
@@ -373,6 +415,25 @@ function initBlochSphere(container: HTMLElement): void {
     setVec3(dropBuf, 0, x, 0, z);
     setVec3(dropBuf, 1, x, y, z);
     refreshLine(dropLine);
+
+    // isometric shadows on all three coordinate planes
+    eqDotMesh.position.set(x, 0, z);
+
+    setVec3(xyDropBuf, 0, x, y, z);
+    setVec3(xyDropBuf, 1, x, y, 0);
+    refreshLine(xyDropLine);
+    setVec3(xyPlaneBuf, 0, 0, 0, 0);
+    setVec3(xyPlaneBuf, 1, x, y, 0);
+    refreshLine(xyPlaneLine);
+    xyDotMesh.position.set(x, y, 0);
+
+    setVec3(yzDropBuf, 0, x, y, z);
+    setVec3(yzDropBuf, 1, 0, y, z);
+    refreshLine(yzDropLine);
+    setVec3(yzPlaneBuf, 0, 0, 0, 0);
+    setVec3(yzPlaneBuf, 1, 0, y, z);
+    refreshLine(yzPlaneLine);
+    yzDotMesh.position.set(0, y, z);
 
     const p0 = Math.cos(theta / 2) ** 2;
     const p1 = 1 - p0;
@@ -418,6 +479,23 @@ function initBlochSphere(container: HTMLElement): void {
   updateState();
   (function animate(): void {
     requestAnimationFrame(animate);
+
+    const tw = tween;
+    if (tw !== null) {
+      tw.t = Math.min(tw.t + 0.04, 1);
+      const ease = 1 - (1 - tw.t) ** 3; // cubic ease-out
+      theta = tw.fromTheta + (tw.toTheta - tw.fromTheta) * ease;
+      phi   = tw.fromPhi   + (tw.toPhi   - tw.fromPhi)   * ease;
+      const tDeg = Math.round(theta * 180 / Math.PI);
+      const pDeg = ((Math.round(phi * 180 / Math.PI)) % 360 + 360) % 360;
+      thetaSl.value = String(tDeg);
+      phiSl.value   = String(pDeg);
+      thetaValEl.textContent = tDeg + '°';
+      phiValEl.textContent   = pDeg + '°';
+      updateState();
+      if (tw.t >= 1) tween = null;
+    }
+
     controls.update();
     renderer.render(scene, camera);
     labelRenderer.render(scene, camera);

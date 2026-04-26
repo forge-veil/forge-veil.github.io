@@ -1,27 +1,21 @@
 ---
 import KleinBottle from './KleinBottle.astro';
+import GabrielsHorn from './GabrielsHorn.astro';
 ---
 <div class="shape-carousel">
   <div class="carousel-slides">
     <div class="carousel-slide" data-index="0">
       <KleinBottle />
     </div>
-    <!--
-      To add a new shape:
-      1. Create src/components/YourShape.astro (same structure as KleinBottle.astro)
-      2. Import it above in the frontmatter
-      3. Add a slide div:
-           <div class="carousel-slide" data-index="1">
-             <YourShape />
-           </div>
-      4. Add a dot:
-           <button class="carousel-dot" data-index="1" aria-label="Shape 2"></button>
-    -->
+    <div class="carousel-slide" data-index="1">
+      <GabrielsHorn />
+    </div>
   </div>
   <div class="carousel-controls">
     <button class="carousel-prev" aria-label="Previous shape">‹</button>
     <div class="carousel-dots" aria-hidden="true">
       <button class="carousel-dot" data-index="0" aria-label="Shape 1"></button>
+      <button class="carousel-dot" data-index="1" aria-label="Shape 2"></button>
     </div>
     <button class="carousel-next" aria-label="Next shape">›</button>
   </div>
@@ -46,7 +40,7 @@ function goTo(i: number) {
 function resetTimer() {
   if (timer) clearInterval(timer);
   if (slides.length > 1) {
-    timer = setInterval(() => goTo(current + 1), 6000);
+    timer = setInterval(() => goTo(current + 1), 60000);
   }
 }
 

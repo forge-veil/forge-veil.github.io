@@ -1,0 +1,170 @@
+---
+import { getCollection, type CollectionEntry } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Sidebar from '../../components/Sidebar.astro';
+import { TOPICS } from '../../content.config';
+
+const allPosts = await getCollection('posts', ({ data }: CollectionEntry<'posts'>) => data.published);
+allPosts.sort((a: CollectionEntry<'posts'>, b: CollectionEntry<'posts'>) =>
+  a.data.publishedAt.valueOf() - b.data.publishedAt.valueOf()
+);
+
+type SeriesGroup = {
+  seriesSlug: string;
+  seriesName: string;
+  posts: CollectionEntry<'posts'>[];
+};
+
+type TopicGroup = {
+  topicSlug: string;
+  topicName: string;
+  seriesGroups: SeriesGroup[];
+  standalonePosts: CollectionEntry<'posts'>[];
+};
+
+const topicGroups: TopicGroup[] = [];
+for (const topic of TOPICS) {
+  const topicPosts = allPosts.filter(
+    (p: CollectionEntry<'posts'>) => p.data.topic === topic.slug
+  );
+  if (topicPosts.length === 0) continue;
+
+  const seriesMap = new Map<string, SeriesGroup>();
+  const standalonePosts: CollectionEntry<'posts'>[] = [];
+
+  for (const post of topicPosts) {
+    if (post.data.series) {
+      const s = post.data.series;
+      if (!seriesMap.has(s.slug)) {
+        seriesMap.set(s.slug, { seriesSlug: s.slug, seriesName: s.name, posts: [] });
+      }
+      seriesMap.get(s.slug)!.posts.push(post);
+    } else {
+      standalonePosts.push(post);
+    }
+  }
+
+  topicGroups.push({
+    topicSlug: topic.slug as string,
+    topicName: topic.name,
+    seriesGroups: [...seriesMap.values()],
+    standalonePosts,
+  });
+}
+
+function readTime(body: string | undefined) {
+  if (!body) return '1 min read';
+  const words = body.trim().split(/\s+/).length;
+  return `${Math.max(1, Math.round(words / 200))} min read`;
+}
+
+function formatDate(date: Date) {
+  return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+}
+---
+
+<BaseLayout title="Writing — Vatsal Bakshi" description="Thoughts on various things. Views are my own.">
+  <div class="layout">
+    <Sidebar />
+
+    <main class="feed">
+
+      <a href="/" class="article-back">← Home</a>
+
+      <!-- Topic tabs -->
+      <nav class="topic-tabs" role="tablist">
+        <button class="topic-tab" data-topic="all" data-active="true" role="tab">
+          All
+        </button>
+        {topicGroups.map(group => (
+          <button class="topic-tab" data-topic={group.topicSlug} data-active="false" role="tab">
+            {group.topicName}
+          </button>
+        ))}
+      </nav>
+
+      <p class="feed-disclaimer">Thoughts on various things. Views are my own.</p>
+
+      <!-- Topic sections -->
+      <div class="topic-sections">
+        {topicGroups.map(group => (
+          <section class="topic-section" data-topic={group.topicSlug} data-hidden="false">
+
+            <div class="topic-section-head">{group.topicName}</div>
+
+            <!-- Series groups -->
+            {group.seriesGroups.map(series => (
+              <div class="series-block">
+                <div class="series-label">{series.seriesName}</div>
+                <div class="series-posts">
+                  {series.posts.map(post => (
+                    <a href={`/blog/${post.id.replace(/\.(md|mdx)$/, '')}`} class="series-post">
+                      <div class="series-post-part">
+                        Part {post.data.series!.part} of {series.posts.length}
+                      </div>
+                      <div class="series-post-title">{post.data.title}</div>
+                      <p class="series-post-desc">{post.data.description}</p>
+                      <div class="series-post-meta">
+                        <span>{formatDate(post.data.publishedAt)}</span>
+                        <span class="meta-dot"></span>
+                        <span>{readTime(post.body)}</span>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            <!-- Standalone posts -->
+            {group.standalonePosts.map(post => (
+              <a href={`/blog/${post.id.replace(/\.(md|mdx)$/, '')}`} class="post-item">
+                <div class="post-top">
+                  <span class="post-topic">{group.topicName}</span>
+                </div>
+                <div class="post-title">{post.data.title}</div>
+                <p class="post-desc">{post.data.description}</p>
+                <div class="post-meta">
+                  <span>{formatDate(post.data.publishedAt)}</span>
+                  <span class="meta-dot"></span>
+                  <span>{readTime(post.body)}</span>
+                </div>
+              </a>
+            ))}
+
+          </section>
+        ))}
+      </div>
+
+    </main>
+  </div>
+</BaseLayout>
+
+<script>
+  const tabs = document.querySelectorAll<HTMLElement>('.topic-tab');
+  const sections = document.querySelectorAll<HTMLElement>('.topic-section');
+
+  function setActive(slug: string | null) {
+    tabs.forEach(tab => {
+      const isAll = tab.dataset.topic === 'all';
+      tab.dataset.active = (!slug && isAll) || tab.dataset.topic === slug ? 'true' : 'false';
+    });
+    sections.forEach(section => {
+      section.dataset.hidden = slug && section.dataset.topic !== slug ? 'true' : 'false';
+    });
+    const url = new URL(window.location.href);
+    if (slug) url.searchParams.set('topic', slug);
+    else url.searchParams.delete('topic');
+    history.replaceState({}, '', url);
+  }
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const topic = tab.dataset.topic === 'all' ? null : tab.dataset.topic ?? null;
+      setActive(topic);
+    });
+  });
+
+  // Restore from URL on load
+  const initial = new URLSearchParams(window.location.search).get('topic');
+  if (initial) setActive(initial);
+</script>

@@ -1,20 +1,24 @@
 ---
-const eqText = `  r(u) = 2 · (1 − cos(u) / 2)
+import katex from 'katex';
+import { codeToHtml } from 'shiki';
 
-  u < π:
-    x = 3 cos(u) (1 + sin(u)) + r(u) · cos(u) · cos(v)
-    y = 8 sin(u)               + r(u) · sin(u) · cos(v)
-    z =                          r(u) · sin(v)
+const eqHtml = [
+  katex.renderToString(
+    String.raw`r(u) = 2\!\left(1 - \dfrac{\cos u}{2}\right), \quad u \in [0,2\pi],\; v \in [0,2\pi]`,
+    { displayMode: true, throwOnError: false }
+  ),
+  katex.renderToString(
+    String.raw`u < \pi:\quad \begin{cases} x = 3\cos u\,(1+\sin u) + r(u)\cos u\cos v \\ y = 8\sin u + r(u)\sin u\cos v \\ z = r(u)\sin v \end{cases}`,
+    { displayMode: true, throwOnError: false }
+  ),
+  katex.renderToString(
+    String.raw`u \ge \pi:\quad \begin{cases} x = 3\cos u\,(1+\sin u) + r(u)\cos(v+\pi) \\ y = 8\sin u \\ z = r(u)\sin v \end{cases}`,
+    { displayMode: true, throwOnError: false }
+  ),
+].join('');
 
-  u ≥ π:
-    x = 3 cos(u) (1 + sin(u)) + r(u) · cos(v + π)
-    y = 8 sin(u)
-    z =            r(u) · sin(v)
-
-The liquid fill uses the same surface evaluated at r(u) × 0.72,
-rendered as an opaque inner shell visible through the glass.`;
-
-const codeText = `function makeKlein(tubeScale, v, u, target) {
+const codeHtml = await codeToHtml(
+`function makeKlein(tubeScale, v, u, target) {
   u *= Math.PI; v *= 2 * Math.PI; u *= 2;
   const r = 2 * (1 - Math.cos(u) / 2) * tubeScale;
   if (u < Math.PI) {
@@ -35,9 +39,9 @@ const codeText = `function makeKlein(tubeScale, v, u, target) {
 // Glass shell — tubeScale 1.0
 new MeshPhysicalMaterial({
   color:           0xe8f0ff,
-  transmission:    0.88,    // high transparency
+  transmission:    0.88,
   thickness:       2.5,
-  ior:             1.52,    // borosilicate glass
+  ior:             1.52,
   reflectivity:    0.65,
   roughness:       0.0,
   envMapIntensity: 2.5,
@@ -46,11 +50,13 @@ new MeshPhysicalMaterial({
 
 // Liquid fill — same surface at 72% tube radius
 new MeshStandardMaterial({
-  color:     0x07070f,  // near-black ink
+  color:     0x07070f,
   metalness: 0.2,
   roughness: 0.6,
   side:      FrontSide,
-});`;
+});`,
+  { lang: 'javascript', theme: 'github-light' }
+);
 ---
 <div class="klein-aside">
   <canvas id="klein-canvas"></canvas>
@@ -62,11 +68,9 @@ Thought the Möbius band was divine.
 You'll get a weird bottle like mine."</pre>
     <figcaption class="klein-attr">— Leo Moser</figcaption>
     <div class="klein-meta-row">
-      <a
-        href="https://en.wikipedia.org/wiki/Klein_bottle"
-        target="_blank"
-        rel="noopener noreferrer"
-      >Klein bottle ↗</a>
+      <a href="https://en.wikipedia.org/wiki/Klein_bottle" target="_blank" rel="noopener noreferrer">Klein bottle ↗</a>
+      <span class="klein-meta-sep">·</span>
+      <a href="https://www.youtube.com/watch?v=IQqtsm-bBRU" target="_blank" rel="noopener noreferrer">3Blue1Brown ↗</a>
       <span class="klein-meta-sep">·</span>
       <button id="klein-source-btn" class="klein-source-btn">equations &amp; code</button>
     </div>
@@ -79,14 +83,14 @@ You'll get a weird bottle like mine."</pre>
 
     <section class="klein-dialog-section">
       <h3 class="klein-dialog-label">Parametrization</h3>
-      <p class="klein-dialog-desc">Figure-8 immersion (Apéry, 1984) — u ∈ [0, 2π], v ∈ [0, 2π]</p>
-      <pre class="klein-dialog-eq" set:text={eqText}></pre>
+      <p class="klein-dialog-desc">Figure-8 immersion (Apéry, 1984)</p>
+      <div class="klein-dialog-eq" set:html={eqHtml}></div>
     </section>
 
     <section class="klein-dialog-section">
       <h3 class="klein-dialog-label">Three.js</h3>
       <p class="klein-dialog-desc">Glass shell + concentric liquid geometry, both from the same parametric function.</p>
-      <pre class="klein-dialog-code" set:text={codeText}></pre>
+      <div class="klein-dialog-code" set:html={codeHtml}></div>
     </section>
   </div>
 </dialog>

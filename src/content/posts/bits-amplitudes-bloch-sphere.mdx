@@ -8,7 +8,7 @@ series:
   name: Quantum Computing from First Principles
   part: 1
 tags: [quantum, bra-ket, bloch-sphere, linear-algebra, superposition, phase]
-publishedAt: 2026-04-25
+publishedAt: 2024-12-18
 published: true
 ---
 
@@ -29,6 +29,17 @@ That lens is a quantum algorithm. The Quantum Fourier Transform is one of the sh
 
 This series builds toward those algorithms from the ground up, with mathematical rigor but a lot of intuition along the way. We start here, with a single qubit. It is not the interesting part by itself. But it is the foundation everything else is built from.
 
+<div class="toc-card">
+  <p class="toc-card-heading">In this post</p>
+  <ol class="toc-card-list">
+    <li><a class="toc-card-item" href="#amplitudes-arent-probabilities-theyre-stranger"><span class="toc-n">1</span>Amplitudes — the complex numbers that describe a qubit's state, and why they aren't ordinary probabilities</a></li>
+    <li><a class="toc-card-item" href="#a-shorthand-worth-learning-bra-ket-notation"><span class="toc-n">2</span>Bra-ket notation — the compact shorthand physicists use for quantum states and inner products</a></li>
+    <li><a class="toc-card-item" href="#what-a-qubit-is-precisely"><span class="toc-n">3</span>What a qubit is, precisely — the exact parameters that fully specify a qubit state</a></li>
+    <li><a class="toc-card-item" href="#putting-the-qubit-on-a-sphere"><span class="toc-n">4</span>The Bloch sphere — how two angles map every qubit state onto the surface of a sphere</a></li>
+    <li><a class="toc-card-item" href="#phase-the-coordinate-that-hides-until-you-need-it"><span class="toc-n">5</span>Phase — the hidden coordinate invisible at measurement, which quantum algorithms exploit through interference</a></li>
+  </ol>
+</div>
+
 ---
 
 Think about a light switch. It's either on or off. No in between. A classical bit works the same way: it's a 1 or a 0, and it knows which one it is at all times.
@@ -41,31 +52,6 @@ The numbers that describe "where the dial is set" are called **amplitudes**. The
 
 The diagram below shows a qubit state as a point on a vertical circle. The two poles are the classical outcomes: |0⟩ at the top, |1⟩ at the bottom. Any point in between is a superposition. The probabilities shown are exactly what you would observe if you measured: drag the arrow or move the slider to explore how they change with the angle.
 
-<QubitState />
-
-The angle θ here is the same one that will appear in the Bloch sphere parametrization — it encodes the relative weight between |0⟩ and |1⟩. The full picture adds a second angle φ for phase, which lives on a dimension the circle above cannot show. That is the Bloch sphere.
-
-<div class="concept-map">
-  <p class="concept-map-heading">What this post formalizes</p>
-  <ul class="concept-map-list">
-    <li><strong>Amplitudes:</strong> the complex numbers that encode a qubit's state, and why they aren't ordinary probabilities</li>
-    <li><strong>Superposition:</strong> what it precisely means for a qubit to be "between" 0 and 1</li>
-    <li><strong>Bra-ket notation:</strong> the compact shorthand physicists use for quantum states and inner products</li>
-    <li><strong>The Bloch sphere:</strong> the geometry that maps every possible qubit state to a point on a sphere</li>
-    <li><strong>Phase:</strong> the hidden coordinate invisible at measurement, which quantum algorithms exploit through interference</li>
-  </ul>
-</div>
-
-<div class="toc-card">
-  <p class="toc-card-heading">In this post</p>
-  <ol class="toc-card-list">
-    <li><a class="toc-card-item" href="#amplitudes-arent-probabilities-theyre-stranger"><span class="toc-n">1</span>Amplitudes — the complex numbers that describe a qubit's state, and why they aren't ordinary probabilities</a></li>
-    <li><a class="toc-card-item" href="#a-shorthand-worth-learning-bra-ket-notation"><span class="toc-n">2</span>Bra-ket notation — the compact shorthand physicists use for quantum states and inner products</a></li>
-    <li><a class="toc-card-item" href="#what-a-qubit-is-precisely"><span class="toc-n">3</span>What a qubit is, precisely — the exact parameters that fully specify a qubit state</a></li>
-    <li><a class="toc-card-item" href="#putting-the-qubit-on-a-sphere"><span class="toc-n">4</span>The Bloch sphere — how two angles map every qubit state onto the surface of a sphere</a></li>
-    <li><a class="toc-card-item" href="#phase-the-coordinate-that-hides-until-you-need-it"><span class="toc-n">5</span>Phase — the hidden coordinate invisible at measurement, which quantum algorithms exploit through interference</a></li>
-  </ol>
-</div>
 
 ## Amplitudes aren't probabilities. They're stranger.
 

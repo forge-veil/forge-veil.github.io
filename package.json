@@ -12,15 +12,18 @@
     "astro": "astro"
   },
   "dependencies": {
+    "@astrojs/check": "^0.9.8",
     "@astrojs/mdx": "^5.0.4",
     "@tailwindcss/vite": "^4.2.4",
     "astro": "^6.1.9",
     "rehype-katex": "^7.0.1",
     "remark-math": "^6.0.0",
     "tailwindcss": "^4.2.4",
-    "three": "^0.158.0"
+    "three": "^0.158.0",
+    "typescript": "^5.9.3"
   },
   "devDependencies": {
-    "@types/three": "^0.158.0"
+    "@types/three": "^0.158.0",
+    "rehype-external-links": "^3.0.0"
   }
 }

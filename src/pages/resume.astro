@@ -1,0 +1,422 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Sidebar from '../components/Sidebar.astro';
+
+const updatedAt = 'April 2026';
+---
+
+<BaseLayout title="Resume — Vatsal Bakshi" description="Work experience, education, and skills.">
+  <div class="layout">
+    <Sidebar />
+
+    <main class="feed">
+      <div class="resume-wrap">
+
+        <div class="resume-topbar">
+          <a href="/" class="article-back">← Home</a>
+          <span class="resume-updated">Updated {updatedAt}</span>
+        </div>
+
+        <!-- Work Experience -->
+        <section class="resume-section">
+          <div class="resume-section-title">Experience</div>
+
+          <div class="experience-wrap">
+
+            <div class="exp-mode-seg">
+              <div class="seg-track">
+                <button class="seg-btn seg-btn--active" data-mode="full">Full</button>
+                <button class="seg-btn" data-mode="technical">Technical</button>
+                <button class="seg-btn" data-mode="leadership">Leadership</button>
+              </div>
+            </div>
+
+            <!-- Apple Inc. -->
+            <div class="company-block">
+              <div class="company-header">
+                <div class="company-icon"><img src="/icons/apple.png" alt="Apple"></div>
+                <div class="company-name">Apple Inc.</div>
+                <span class="company-tenure" id="apple-tenure-resume"></span>
+              </div>
+              <div class="roles-timeline">
+
+                <div class="role role--current">
+                  <div class="role-marker"><div class="role-dot"></div><div class="role-line"></div></div>
+                  <div class="role-content">
+                    <div class="role-header">
+                      <span class="role-title">Senior Engineering Manager<span class="role-dept"> — Architecture &amp; Strategic Initiatives, Crypto Services</span></span>
+                      <span class="role-dates">Mar 2026 – Present</span>
+                      <span class="role-duration">1 mo</span>
+                    </div>
+                    <div class="role-annotation">
+                      <span class="role-annotation-glyph">↗</span>
+                      <span class="role-annotation-text">Domain expertise grown to architectural scale — the technical foundation others build on.</span>
+                    </div>
+                    <div class="exp-bullet" data-mode="both"><span class="exp-dash">—</span><span class="exp-text">Own the architectural direction of Apple's cryptographic infrastructure — PKI, encryption, code signing, and secrets management — establishing the technical standards and multi-year roadmap downstream engineering teams build on</span></div>
+                  </div>
+                </div>
+
+                <div class="role">
+                  <div class="role-marker"><div class="role-dot"></div><div class="role-line"></div></div>
+                  <div class="role-content">
+                    <div class="role-header">
+                      <span class="role-title">Senior Engineering Manager<span class="role-dept"> — IT Governance &amp; Planning, Office of the CIO</span></span>
+                      <span class="role-dates">Jul 2019 – Mar 2026</span>
+                      <span class="role-duration">6 yrs 8 mos</span>
+                    </div>
+                    <div class="role-annotation">
+                      <span class="role-annotation-glyph">↑</span>
+                      <span class="role-annotation-text">First org-level leadership. Grew two teams to 20 engineers over six years.</span>
+                    </div>
+                    <div class="role-team-label">Infrastructure Data Platform</div>
+                    <div class="exp-bullet" data-mode="both"><span class="exp-dash">—</span><span class="exp-text">Led GRC Engineering for Apple's IS&amp;T — building the data platforms and access control systems that security, compliance, and finance teams relied on for audit readiness and incident response</span></div>
+                    <div class="exp-bullet" data-mode="both"><span class="exp-dash">—</span><span class="exp-text">Owned the infrastructure catalog platform covering Apple's on-prem data centers and third-party cloud — providing security, compliance, and finance teams with asset inventory, ownership, and spend data used for PCI and SOX audit scoping and incident response</span></div>
+                    <div class="exp-bullet" data-mode="both"><span class="exp-dash">—</span><span class="exp-text">Shipped Pluggable Authentication Modules (PAM) operationalizing critical SOX access controls on Apple's server fleet</span></div>
+                    <div class="role-team-label">Business Planning</div>
+                    <div class="exp-bullet" data-mode="leadership"><span class="exp-dash">—</span><span class="exp-text">Scaled the budget planning application to 200+ finance stakeholders, supporting annual capex and opex planning cycles and Total Cost of Ownership tracking across Apple's technology portfolio</span></div>
+                  </div>
+                </div>
+
+                <div class="role">
+                  <div class="role-marker"><div class="role-dot"></div><div class="role-line"></div></div>
+                  <div class="role-content">
+                    <div class="role-header">
+                      <span class="role-title">Senior Software Engineer<span class="role-dept"> — IT Governance &amp; Planning, Office of the CIO</span></span>
+                      <span class="role-dates">Apr 2018 – Jul 2019</span>
+                      <span class="role-duration">1 yr 3 mos</span>
+                    </div>
+                    <div class="exp-bullet" data-mode="technical"><span class="exp-dash">—</span><span class="exp-text">Designed and deployed a compliance enforcement component that closed a critical SOX control gap across Apple's server fleet</span></div>
+                  </div>
+                </div>
+
+                <div class="role">
+                  <div class="role-marker"><div class="role-dot"></div><div class="role-line"></div></div>
+                  <div class="role-content">
+                    <div class="role-header">
+                      <span class="role-title">Security Software Engineer<span class="role-dept"> — Video Engineering</span></span>
+                      <span class="role-dates">Mar 2017 – Apr 2018</span>
+                      <span class="role-duration">1 yr 1 mo</span>
+                    </div>
+                    <div class="exp-bullet" data-mode="technical"><span class="exp-dash">—</span><span class="exp-text">Built the secure data pipeline powering FaceID model training, handling high-volume biometric data under strict privacy and integrity requirements</span></div>
+                  </div>
+                </div>
+
+                <div class="role">
+                  <div class="role-marker"><div class="role-dot"></div><div class="role-line"></div></div>
+                  <div class="role-content">
+                    <div class="role-header">
+                      <span class="role-title">Security Engineer<span class="role-dept"> — Apple Online Store</span></span>
+                      <span class="role-dates">Mar 2015 – Mar 2017</span>
+                      <span class="role-duration">2 yrs</span>
+                    </div>
+                    <div class="role-annotation">
+                      <span class="role-annotation-glyph">→</span>
+                      <span class="role-annotation-text">Shifted from offensive security to building cryptographic infrastructure from scratch.</span>
+                    </div>
+                    <div class="exp-bullet" data-mode="technical"><span class="exp-dash">—</span><span class="exp-text">Built DUKPT-based cryptography libraries securing Point of Sale transactions across Apple Retail</span></div>
+                    <div class="exp-bullet" data-mode="technical"><span class="exp-dash">—</span><span class="exp-text">Designed and deployed HSM infrastructure for Apple Pay's Payment Gateway, enabling hardware-backed end-to-end transaction security</span></div>
+                    <div class="exp-bullet" data-mode="technical"><span class="exp-dash">—</span><span class="exp-text">Conducted goal-based penetration tests as a core member of the Retail Engineering Red Team</span></div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- eBay Inc. -->
+            <div class="company-block">
+              <div class="company-header">
+                <div class="company-icon"><img src="/icons/ebay.png" alt="eBay"></div>
+                <div class="company-name">eBay Inc.</div>
+                <span class="company-tenure">1 yr 5 mos</span>
+              </div>
+              <div class="roles-timeline">
+
+                <div class="role">
+                  <div class="role-marker"><div class="role-dot"></div><div class="role-line"></div></div>
+                  <div class="role-content">
+                    <div class="role-header">
+                      <span class="role-title">Information Security Engineer</span>
+                      <span class="role-dates">Oct 2013 – Mar 2015</span>
+                      <span class="role-duration">1 yr 5 mos</span>
+                    </div>
+                    <div class="exp-bullet" data-mode="both"><span class="exp-dash">—</span><span class="exp-text">Managed bug bounty remediation and web application penetration testing program for eBay's Marketplaces vertical</span></div>
+                    <div class="exp-bullet" data-mode="technical"><span class="exp-dash">—</span><span class="exp-text">Built components in Raptor, eBay's internal security framework, to systematically close XSS and other high-frequency web vulnerabilities</span></div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- McAfee Inc. -->
+            <div class="company-block">
+              <div class="company-header">
+                <div class="company-icon"><img src="/icons/mcafee.png" alt="McAfee"></div>
+                <div class="company-name">McAfee Inc.</div>
+                <span class="company-tenure">1 yr 9 mos</span>
+              </div>
+              <div class="roles-timeline">
+
+                <div class="role">
+                  <div class="role-marker"><div class="role-dot"></div><div class="role-line"></div></div>
+                  <div class="role-content">
+                    <div class="role-header">
+                      <span class="role-title">Security Consultant</span>
+                      <span class="role-dates">Jan 2012 – Oct 2013</span>
+                      <span class="role-duration">1 yr 9 mos</span>
+                    </div>
+                    <div class="role-annotation">
+                      <span class="role-annotation-glyph role-annotation-glyph--origin">○</span>
+                      <span class="role-annotation-text">Where the foundation was laid — offensive security work that shaped every system built since.</span>
+                    </div>
+                    <div class="exp-bullet" data-mode="technical"><span class="exp-dash">—</span><span class="exp-text">Delivered penetration testing and security code reviews for major financial institutions, surfacing critical vulnerabilities across web and application layers</span></div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <svg id="curvesSvg" overflow="visible"></svg>
+            <div id="detailPanel"></div>
+
+          </div>
+        </section>
+
+        <!-- Education -->
+        <section class="resume-section resume-section--constrained">
+          <div class="resume-section-title">Education</div>
+
+          <div class="edu-item">
+            <div>
+              <a class="edu-school edu-school-link" href="https://www.jhu.edu" target="_blank" rel="noopener noreferrer">Johns Hopkins University</a>
+              <div class="edu-degree">M.S. Security Informatics · GPA 3.7</div>
+            </div>
+            <div class="edu-year">2011 – 2012</div>
+          </div>
+
+          <div class="edu-item">
+            <div>
+              <a class="edu-school edu-school-link" href="https://www.bits-pilani.ac.in" target="_blank" rel="noopener noreferrer">Birla Institute of Technology and Science</a>
+              <div class="edu-degree">B.E. Computer Science · GPA 8.86/10</div>
+            </div>
+            <div class="edu-year">2007 – 2011</div>
+          </div>
+        </section>
+
+        <!-- Skills -->
+        <section class="resume-section resume-section--constrained">
+          <div class="resume-section-title">Skills</div>
+
+          <div class="skills-group">
+            <div class="skills-group-label">Cryptography</div>
+            <div class="skills-pills">
+              <span class="skill-pill">PKI / X.509</span>
+              <span class="skill-pill">HSM / PKCS#11</span>
+              <span class="skill-pill">Post-Quantum Cryptography (PQC)</span>
+              <span class="skill-pill">Key Management</span>
+              <span class="skill-pill">TLS 1.3</span>
+              <span class="skill-pill">FIPS 140-2/3</span>
+              <span class="skill-pill">Code Signing</span>
+              <span class="skill-pill">DUKPT</span>
+            </div>
+          </div>
+
+          <div class="skills-group">
+            <div class="skills-group-label">Security &amp; Compliance</div>
+            <div class="skills-pills">
+              <span class="skill-pill">SOX Compliance</span>
+              <span class="skill-pill">PAM</span>
+              <span class="skill-pill">Zero Trust</span>
+              <span class="skill-pill">SOC 2</span>
+              <span class="skill-pill">Penetration Testing</span>
+              <span class="skill-pill">Threat Modeling</span>
+              <span class="skill-pill">OWASP</span>
+            </div>
+          </div>
+
+          <div class="skills-group">
+            <div class="skills-group-label">Engineering Leadership</div>
+            <div class="skills-pills">
+              <span class="skill-pill">Engineering Management</span>
+              <span class="skill-pill">Technical Roadmap</span>
+              <span class="skill-pill">Org Design</span>
+              <span class="skill-pill">Headcount Planning</span>
+              <span class="skill-pill">Cross-functional Leadership</span>
+              <span class="skill-pill">OKRs</span>
+            </div>
+          </div>
+
+          <div class="skills-group">
+            <div class="skills-group-label">Languages</div>
+            <div class="skills-pills">
+              <span class="skill-pill">Java</span>
+              <span class="skill-pill">Go</span>
+              <span class="skill-pill">Python</span>
+              <span class="skill-pill">JavaScript</span>
+            </div>
+          </div>
+
+          <div class="skills-group">
+            <div class="skills-group-label">Infrastructure &amp; Platform</div>
+            <div class="skills-pills">
+              <span class="skill-pill">Cloud Security (AWS / GCP / Azure)</span>
+              <span class="skill-pill">Data Pipelines</span>
+              <span class="skill-pill">Distributed Systems</span>
+              <span class="skill-pill">Kubernetes</span>
+              <span class="skill-pill">Enterprise Architecture</span>
+              <span class="skill-pill">CI/CD</span>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+</BaseLayout>
+
+<script>
+const DATA = [
+  /* 0 */ { nodes: [{ label: 'Domains', value: 'PKI · encryption · code signing · secrets' }, { label: 'Output', value: 'Standards & multi-year roadmap' }] },
+  /* 1 */ { nodes: [{ label: 'Function', value: 'GRC Engineering for IS&T' }, { label: 'Products', value: 'Infra catalog · access controls · audit data' }] },
+  /* 2 */ { nodes: [{ label: 'Customers', value: 'Security · Compliance · Finance' }, { label: 'Use cases', value: 'PCI/SOX scoping · incident response' }] },
+  /* 3 */ { nodes: [{ label: 'Standard', value: 'Pluggable Authentication Modules' }, { label: 'Mandate', value: 'SOX access controls on server fleet' }] },
+  /* 4 */ { nodes: [{ label: 'Users', value: '200+ finance stakeholders' }, { label: 'Scope', value: 'Capex · opex · TCO across portfolio' }] },
+  /* 5 */ { nodes: [{ label: 'Context', value: 'Access gap on critical server fleet' }, { label: 'Result', value: 'SOX control fully operationalized' }] },
+  /* 6 */ { nodes: [{ label: 'Constraint', value: 'Biometric data, strict privacy reqs' }, { label: 'Outcome', value: 'Secure model training pipeline' }] },
+  /* 7 */ { nodes: [{ label: 'Standard', value: 'DUKPT per-transaction key derivation' }, { label: 'Scope', value: 'Apple Retail POS fleet' }] },
+  /* 8 */ { nodes: [{ label: 'System', value: 'Apple Pay Payment Gateway' }, { label: 'Infra', value: 'Hardware Security Module fleet' }] },
+  /* 9 */ { nodes: [{ label: 'Team', value: 'Retail Engineering Red Team' }, { label: 'Method', value: 'Goal-based penetration testing' }] },
+  /* 10 */ { nodes: [{ label: 'Vertical', value: 'eBay Marketplaces' }, { label: 'Programs', value: 'Bug bounty · web app pentesting' }] },
+  /* 11 */ { nodes: [{ label: 'Framework', value: 'Raptor — eBay internal security layer' }, { label: 'Scope', value: 'XSS, CSRF, injection vulnerabilities' }] },
+  /* 12 */ { nodes: [{ label: 'Clients', value: 'Major financial institutions' }, { label: 'Deliverables', value: 'Pentest reports · security code reviews' }] },
+];
+
+// Dynamic Apple tenure
+(function() {
+  const start = new Date(2015, 2, 1); // March 2015
+  const now = new Date();
+  const totalMonths = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
+  const yrs = Math.floor(totalMonths / 12);
+  const mos = totalMonths % 12;
+  const label = mos === 0 ? `${yrs} yrs` : `${yrs} yrs ${mos} mo${mos > 1 ? 's' : ''}`;
+  const el = document.getElementById('apple-tenure-resume');
+  if (el) el.textContent = label;
+})();
+
+const wrap  = document.querySelector<HTMLElement>('.experience-wrap')!;
+const svg   = document.getElementById('curvesSvg') as unknown as SVGSVGElement;
+const panel = document.getElementById('detailPanel') as HTMLElement;
+
+const wrapLeft  = wrap.getBoundingClientRect().left;
+const BULLETS_W = document.querySelector('.exp-bullet')!.getBoundingClientRect().right - wrapLeft + 8;
+const CURVE_GAP  = 52;
+const PANEL_LEFT = BULLETS_W + CURVE_GAP;
+const PANEL_W    = 260;
+const NODE_H     = 42;
+const LABEL_HALF = 5;
+const MAX_NODES  = 3;
+
+panel.style.left  = PANEL_LEFT + 'px';
+panel.style.width = PANEL_W + 'px';
+
+const slots = Array.from({ length: MAX_NODES }, () => {
+  const el = document.createElement('div');
+  el.className = 'panel-node';
+  el.innerHTML = '<span class="pn-label"></span><span class="pn-value"></span>';
+  panel.appendChild(el);
+  return el;
+});
+
+function show(bullet: Element, data: typeof DATA[0]) {
+  const n      = data.nodes.length;
+  const panelH = n * NODE_H;
+  const wrapH  = wrap.offsetHeight;
+
+  const wrapRect   = wrap.getBoundingClientRect();
+  const bulletRect = bullet.getBoundingClientRect();
+  const originY    = bulletRect.top - wrapRect.top + bulletRect.height / 2;
+
+  const panelTop = Math.min(Math.max(originY - panelH / 2, 0), wrapH - panelH);
+  panel.style.top     = panelTop + 'px';
+  panel.style.height  = panelH + 'px';
+  panel.style.display = 'block';
+
+  (svg as any).setAttribute('width',  wrap.offsetWidth);
+  (svg as any).setAttribute('height', wrapH);
+  (svg as any).innerHTML = '';
+
+  const cpx     = BULLETS_W + CURVE_GAP * 0.6;
+  const svgEndX = PANEL_LEFT;
+
+  data.nodes.forEach((_node, i) => {
+    const nodeY = panelTop + panelH / (2 * n) + i * (panelH / n);
+
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', `M ${BULLETS_W} ${originY} C ${cpx} ${originY} ${cpx} ${nodeY} ${svgEndX} ${nodeY}`);
+    path.setAttribute('pathLength', '1');
+    path.classList.add('c-path');
+    path.style.transitionDelay = (0.03 + i * 0.08) + 's';
+    (svg as any).appendChild(path);
+
+    const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    dot.setAttribute('cx', String(svgEndX));
+    dot.setAttribute('cy', String(nodeY));
+    dot.setAttribute('r', '2');
+    dot.classList.add('c-dot');
+    dot.style.transitionDelay = (0.2 + i * 0.08) + 's';
+    (svg as any).appendChild(dot);
+  });
+
+  slots.forEach((slot, i) => {
+    if (i < n) {
+      slot.querySelector('.pn-label')!.textContent = data.nodes[i].label;
+      slot.querySelector('.pn-value')!.textContent = data.nodes[i].value;
+      const slotY = panelH / (2 * n) + i * (panelH / n);
+      slot.style.top             = (slotY - LABEL_HALF) + 'px';
+      slot.style.transform       = 'translateX(-4px)';
+      slot.style.opacity         = '0';
+      slot.style.display         = 'flex';
+      slot.style.transitionDelay = (0.17 + i * 0.08) + 's';
+    } else {
+      slot.style.display = 'none';
+    }
+  });
+
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    (svg as any).querySelectorAll('.c-path').forEach((p: HTMLElement) => { p.style.strokeDashoffset = '0'; });
+    (svg as any).querySelectorAll('.c-dot').forEach((d: HTMLElement) => { d.style.opacity = '1'; });
+    slots.forEach((slot, i) => {
+      if (i < n) {
+        slot.style.opacity   = '1';
+        slot.style.transform = 'translateX(0)';
+      }
+    });
+  }));
+}
+
+function hide() {
+  panel.style.display = 'none';
+  (svg as any).innerHTML = '';
+}
+
+// Segmented control
+const expWrap = document.querySelector<HTMLElement>('.experience-wrap')!;
+document.querySelectorAll<HTMLButtonElement>('.seg-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('seg-btn--active'));
+    btn.classList.add('seg-btn--active');
+    expWrap.dataset.resumeMode = btn.dataset.mode ?? 'full';
+    hide();
+  });
+});
+
+const isMobile = window.matchMedia('(max-width: 720px)').matches;
+
+document.querySelectorAll('.exp-bullet').forEach((bullet, i) => {
+  if (isMobile) {
+    bullet.addEventListener('click', () => bullet.classList.toggle('tapped'));
+  } else {
+    bullet.addEventListener('mouseenter', () => show(bullet, DATA[i]));
+    bullet.addEventListener('mouseleave', hide);
+  }
+});
+</script>

@@ -1,0 +1,317 @@
+---
+---
+
+<div class="qstate-widget">
+  <div class="qstate-scene">
+    <svg class="qstate-svg" viewBox="0 0 220 240">
+      <!-- Outer circle -->
+      <circle cx="110" cy="120" r="80" fill="none" stroke="#e5e5ea" stroke-width="1.5"/>
+      <!-- Dashed equator -->
+      <line x1="30" y1="120" x2="190" y2="120" stroke="#e5e5ea" stroke-width="1" stroke-dasharray="4 3"/>
+      <!-- Dashed vertical axis -->
+      <line x1="110" y1="20" x2="110" y2="218" stroke="#e5e5ea" stroke-width="1" stroke-dasharray="4 3"/>
+      <!-- |0⟩ pole ring (amber) -->
+      <circle cx="110" cy="40" r="5" fill="none" stroke="#d97706" stroke-width="1.5"/>
+      <!-- |1⟩ pole ring (blue) -->
+      <circle cx="110" cy="200" r="5" fill="none" stroke="#0ea5e9" stroke-width="1.5"/>
+      <!-- Labels -->
+      <text x="120" y="44"  font-size="13" fill="#9ca3af">|0⟩</text>
+      <text x="120" y="204" font-size="13" fill="#9ca3af">|1⟩</text>
+      <!-- Z-projection: dashed amber from center to axis point -->
+      <line class="qstate-zproj" x1="110" y1="120" x2="110" y2="40"
+            stroke="#d97706" stroke-width="1.5" stroke-dasharray="3 2" opacity="0.45"/>
+      <circle class="qstate-zdot" cx="110" cy="40" r="3.5" fill="#d97706" opacity="0.6"/>
+      <!-- Theta arc -->
+      <path class="qstate-arc" d="" fill="none"
+            stroke="#d97706" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+      <!-- Theta label -->
+      <text class="qstate-theta-lbl" x="126" y="82" font-size="11"
+            font-style="italic" fill="#d97706">θ = 0°</text>
+      <!-- State arrow line -->
+      <line class="qstate-arrow" x1="110" y1="120" x2="110" y2="48"
+            stroke="#1c1c1e" stroke-width="2.5" stroke-linecap="round"/>
+      <!-- Arrowhead -->
+      <polygon class="qstate-head" points="110,40 105,50 115,50" fill="#1c1c1e"/>
+    </svg>
+  </div>
+
+  <div class="qstate-controls">
+    <div class="qstate-slider-row">
+      <span class="qstate-sl-name">θ</span>
+      <input type="range" class="qstate-theta-sl" min="0" max="180" value="0" step="1"/>
+      <span class="qstate-theta-val qstate-sl-val">0°</span>
+    </div>
+
+    <div class="qstate-probs">
+      <div class="qstate-prob-cell">
+        <div class="qstate-prob-lbl">P(|0⟩)</div>
+        <div class="qstate-prob-val qstate-p0v">1.000</div>
+        <div class="qstate-bar-bg">
+          <div class="qstate-bar qstate-p0b" style="width:100%"></div>
+        </div>
+      </div>
+      <div class="qstate-prob-cell">
+        <div class="qstate-prob-lbl">P(|1⟩)</div>
+        <div class="qstate-prob-val qstate-p1v">0.000</div>
+        <div class="qstate-bar-bg">
+          <div class="qstate-bar qstate-p1b" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="qstate-eq">|ψ⟩ = 1.000|0⟩</div>
+  </div>
+</div>
+
+<style>
+  .qstate-widget {
+    display: flex;
+    align-items: stretch;
+    border: 0.5px solid var(--color-border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 1.5rem 0;
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+    background: var(--color-panel);
+  }
+  .qstate-scene {
+    background: var(--color-surface);
+    border-right: 0.5px solid var(--color-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px 12px;
+    flex-shrink: 0;
+  }
+  .qstate-svg {
+    width: 180px;
+    height: 196px;
+    cursor: pointer;
+  }
+  .qstate-svg text {
+    font-family: var(--font-display);
+    user-select: none;
+  }
+  .qstate-controls {
+    flex: 1;
+    padding: 20px 22px 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 14px;
+  }
+  .qstate-slider-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .qstate-sl-name {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--color-ink-4);
+    width: 12px;
+    flex-shrink: 0;
+  }
+  .qstate-sl-val {
+    font-size: 11px;
+    font-weight: 300;
+    color: var(--color-ink-2);
+    width: 34px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  input[type='range'].qstate-theta-sl {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 3px;
+    background: var(--color-tag-bg);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+  input[type='range'].qstate-theta-sl::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: #d97706;
+    cursor: pointer;
+    border: none;
+  }
+  .qstate-probs {
+    display: flex;
+    gap: 10px;
+  }
+  .qstate-prob-cell {
+    flex: 1;
+    background: var(--color-surface);
+    border-radius: 7px;
+    padding: 8px 12px;
+  }
+  .qstate-prob-lbl {
+    font-size: 9.5px;
+    font-weight: 400;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--color-ink-5);
+    margin-bottom: 2px;
+  }
+  .qstate-prob-val {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 400;
+  }
+  .qstate-p0v { color: #c2660a; }
+  .qstate-p1v { color: #0284c7; }
+  .qstate-bar-bg {
+    margin-top: 5px;
+    height: 2px;
+    background: var(--color-tag-bg);
+    border-radius: 1px;
+    overflow: hidden;
+  }
+  .qstate-bar {
+    height: 100%;
+    border-radius: 1px;
+    transition: width 0.04s linear;
+  }
+  .qstate-p0b { background: #d97706; }
+  .qstate-p1b { background: #0ea5e9; }
+  .qstate-eq {
+    font-family: var(--font-display);
+    font-size: 12px;
+    color: var(--color-ink-4);
+    padding: 7px 12px;
+    background: var(--color-surface);
+    border-radius: 6px;
+    text-align: center;
+    letter-spacing: 0.01em;
+  }
+  @media (max-width: 520px) {
+    .qstate-widget { flex-direction: column; }
+    .qstate-scene { border-right: none; border-bottom: 0.5px solid var(--color-border); }
+    .qstate-svg { width: 160px; height: 174px; }
+  }
+</style>
+
+<script>
+function initQState(container: HTMLElement): void {
+  const CX = 110, CY = 120, R = 80, ARC_R = 28;
+
+  const svgEl      = container.querySelector<SVGSVGElement>('.qstate-svg')!;
+  const zprojEl    = container.querySelector<SVGLineElement>('.qstate-zproj')!;
+  const zdotEl     = container.querySelector<SVGCircleElement>('.qstate-zdot')!;
+  const arcEl      = container.querySelector<SVGPathElement>('.qstate-arc')!;
+  const thetaLbl   = container.querySelector<SVGTextElement>('.qstate-theta-lbl')!;
+  const arrowLine  = container.querySelector<SVGLineElement>('.qstate-arrow')!;
+  const arrowHead  = container.querySelector<SVGPolygonElement>('.qstate-head')!;
+  const thetaSl    = container.querySelector<HTMLInputElement>('.qstate-theta-sl')!;
+  const thetaValEl = container.querySelector<HTMLElement>('.qstate-theta-val')!;
+  const p0bar      = container.querySelector<HTMLElement>('.qstate-p0b')!;
+  const p1bar      = container.querySelector<HTMLElement>('.qstate-p1b')!;
+  const p0val      = container.querySelector<HTMLElement>('.qstate-p0v')!;
+  const p1val      = container.querySelector<HTMLElement>('.qstate-p1v')!;
+  const eqEl       = container.querySelector<HTMLElement>('.qstate-eq')!;
+
+  function update(thetaDeg: number): void {
+    const theta = thetaDeg * Math.PI / 180;
+    const ux = Math.sin(theta);
+    const uy = -Math.cos(theta); // SVG y-down, so -cos points up toward |0⟩
+    const px =  Math.cos(theta);
+    const py =  Math.sin(theta);
+
+    const tx = CX + R * ux;
+    const ty = CY + R * uy;
+
+    // Arrow line stops short of tip to leave room for the head
+    arrowLine.setAttribute('x2', String(CX + (R - 10) * ux));
+    arrowLine.setAttribute('y2', String(CY + (R - 10) * uy));
+
+    // Arrowhead triangle
+    const w1x = tx - 9 * ux + 5 * px;
+    const w1y = ty - 9 * uy + 5 * py;
+    const w2x = tx - 9 * ux - 5 * px;
+    const w2y = ty - 9 * uy - 5 * py;
+    arrowHead.setAttribute('points', `${tx},${ty} ${w1x},${w1y} ${w2x},${w2y}`);
+
+    // Z-projection: dashed line from center to axis intercept
+    const zy = CY + R * uy; // = CY - R * cos(theta)
+    zprojEl.setAttribute('x2', String(CX));
+    zprojEl.setAttribute('y2', String(zy));
+    zdotEl.setAttribute('cy', String(zy));
+
+    // Theta arc
+    if (thetaDeg > 1) {
+      const arcEndX = CX + ARC_R * Math.sin(theta);
+      const arcEndY = CY - ARC_R * Math.cos(theta);
+      const largeArc = theta > Math.PI ? 1 : 0;
+      arcEl.setAttribute('d',
+        `M ${CX} ${CY - ARC_R} A ${ARC_R} ${ARC_R} 0 ${largeArc} 1 ${arcEndX.toFixed(2)} ${arcEndY.toFixed(2)}`
+      );
+      arcEl.removeAttribute('display');
+    } else {
+      arcEl.setAttribute('display', 'none');
+    }
+
+    // Theta label at midpoint of arc
+    const mid = theta / 2;
+    const lx = CX + (ARC_R + 15) * Math.sin(mid);
+    const ly = CY - (ARC_R + 15) * Math.cos(mid);
+    thetaLbl.setAttribute('x', String((lx + (theta < 0.15 ? 4 : 2)).toFixed(1)));
+    thetaLbl.setAttribute('y', String((ly + 4).toFixed(1)));
+    if (thetaDeg > 1) {
+      thetaLbl.textContent = `θ = ${thetaDeg}°`;
+      thetaLbl.removeAttribute('display');
+    } else {
+      thetaLbl.setAttribute('display', 'none');
+    }
+
+    // Probabilities
+    const p0 = Math.cos(theta / 2) ** 2;
+    const p1 = 1 - p0;
+    p0bar.style.width = (p0 * 100).toFixed(1) + '%';
+    p1bar.style.width = (p1 * 100).toFixed(1) + '%';
+    p0val.textContent = p0.toFixed(3);
+    p1val.textContent = p1.toFixed(3);
+
+    // State equation
+    const c = Math.cos(theta / 2).toFixed(3);
+    const s = Math.sin(theta / 2).toFixed(3);
+    let eq = `|ψ⟩ = ${c}|0⟩`;
+    if (parseFloat(s) > 0.001) eq += ` + ${s}|1⟩`;
+    eqEl.textContent = eq;
+  }
+
+  thetaSl.addEventListener('input', () => {
+    const deg = parseInt(thetaSl.value);
+    thetaValEl.textContent = deg + '°';
+    update(deg);
+  });
+
+  // Click on SVG circle to set theta directly
+  svgEl.addEventListener('click', (e: MouseEvent) => {
+    const pt = svgEl.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const svgPt = pt.matrixTransform(svgEl.getScreenCTM()!.inverse());
+    const dx = svgPt.x - CX;
+    const dy = svgPt.y - CY;
+    const rawTheta = Math.atan2(dx, -dy); // -dy: up = 0
+    const deg = Math.max(0, Math.min(180, Math.round(rawTheta * 180 / Math.PI)));
+    thetaSl.value = String(deg);
+    thetaValEl.textContent = deg + '°';
+    update(deg);
+  });
+
+  update(0);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll<HTMLElement>('.qstate-widget:not([data-init])').forEach(el => {
+    initQState(el);
+    el.setAttribute('data-init', 'true');
+  });
+});
+</script>
