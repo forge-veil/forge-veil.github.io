@@ -1,0 +1,41 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Sidebar from '../components/Sidebar.astro';
+import KleinBottle from '../components/KleinBottle.astro';
+---
+
+<BaseLayout title="Vatsal Bakshi" description="Engineering Manager at Apple, working on cryptographic architecture across PKI, post-quantum migration, and HSM infrastructure.">
+  <div class="layout">
+    <Sidebar />
+
+    <main class="feed">
+      <div class="home-layout">
+        <div class="home-wrap">
+
+          <div class="home-intro">
+            <p>I work on the Crypto Services team at <a href="https://www.apple.com" target="_blank" rel="noopener noreferrer">Apple</a>, a smaller and highly specialized group embedded within the Information Systems and Technology (IS&amp;T) organization. Before this I was working on engineering challenges associated with infrastructure in data centers supporting various compliance and security teams.</p>
+            <p>I am a hands-on engineering leader who enjoys solving software engineering problems at any scale.</p>
+            <p>I received my Masters in Information Security from <a href="https://isi.jhu.edu/" target="_blank" rel="noopener noreferrer">Johns Hopkins University</a> and my B.E. in Computer Science from <a href="https://www.bits-pilani.ac.in" target="_blank" rel="noopener noreferrer">Birla Institute of Technology &amp; Science, Pilani</a>.</p>
+            <p>Away from the keyboard, I spend time outside golfing or hiking with my wife. I'm also an avid astrophotographer — some of my work can be viewed on <a href="https://app.astrobin.com/u/primordialphotons" target="_blank" rel="noopener noreferrer">Astrobin</a>.</p>
+          </div>
+
+          <nav class="home-links">
+            <a href="/resume" class="home-link">
+              <span class="home-link-label">Resume</span>
+              <span class="home-link-desc">Work history &amp; technical background</span>
+              <span class="home-link-arrow">↗</span>
+            </a>
+            <a href="/blog" class="home-link">
+              <span class="home-link-label">Writing</span>
+              <span class="home-link-desc">Thoughts on various things</span>
+              <span class="home-link-arrow">↗</span>
+            </a>
+          </nav>
+
+        </div>
+
+        <KleinBottle />
+      </div>
+    </main>
+  </div>
+</BaseLayout>
