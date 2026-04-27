@@ -200,6 +200,13 @@ function initSurface(wrap: HTMLElement, mode: string, amp: number, sigma: number
   }).observe(wrap.parentElement!, { childList: true });
 }
 
+// Small world-space lift so grid lines always clear the mesh surface
+const GRID_LIFT = 0.006;
+
+function gridY(z: number, flat: boolean): number {
+  return (flat ? 0 : z) + GRID_LIFT;
+}
+
 // ── Grid lines — rgba(140,140,158,0.40) equivalent in Three.js ────
 function buildGridLines(amp: number, sigma: number, flat: boolean): THREE.LineSegments {
   const LINES = 16;
@@ -210,16 +217,16 @@ function buildGridLines(amp: number, sigma: number, flat: boolean): THREE.LineSe
     const u = -EXT + i*step;
     for (let j = 0; j < LINES; j++) {
       const v0 = -EXT + j*step, v1 = v0 + step;
-      verts.push(u, flat ? 0 : surfaceZ(u,v0,amp,sigma), v0,
-                 u, flat ? 0 : surfaceZ(u,v1,amp,sigma), v1);
+      verts.push(u, gridY(surfaceZ(u,v0,amp,sigma), flat), v0,
+                 u, gridY(surfaceZ(u,v1,amp,sigma), flat), v1);
     }
   }
   for (let j = 0; j <= LINES; j++) {
     const v = -EXT + j*step;
     for (let i = 0; i < LINES; i++) {
       const u0 = -EXT + i*step, u1 = u0 + step;
-      verts.push(u0, flat ? 0 : surfaceZ(u0,v,amp,sigma), v,
-                 u1, flat ? 0 : surfaceZ(u1,v,amp,sigma), v);
+      verts.push(u0, gridY(surfaceZ(u0,v,amp,sigma), flat), v,
+                 u1, gridY(surfaceZ(u1,v,amp,sigma), flat), v);
     }
   }
 
@@ -241,16 +248,16 @@ function buildGridPositions(amp: number, sigma: number, flat: boolean): Float32A
     const u = -EXT + i*step;
     for (let j = 0; j < LINES; j++) {
       const v0 = -EXT + j*step, v1 = v0 + step;
-      verts.push(u, flat ? 0 : surfaceZ(u,v0,amp,sigma), v0,
-                 u, flat ? 0 : surfaceZ(u,v1,amp,sigma), v1);
+      verts.push(u, gridY(surfaceZ(u,v0,amp,sigma), flat), v0,
+                 u, gridY(surfaceZ(u,v1,amp,sigma), flat), v1);
     }
   }
   for (let j = 0; j <= LINES; j++) {
     const v = -EXT + j*step;
     for (let i = 0; i < LINES; i++) {
       const u0 = -EXT + i*step, u1 = u0 + step;
-      verts.push(u0, flat ? 0 : surfaceZ(u0,v,amp,sigma), v,
-                 u1, flat ? 0 : surfaceZ(u1,v,amp,sigma), v);
+      verts.push(u0, gridY(surfaceZ(u0,v,amp,sigma), flat), v,
+                 u1, gridY(surfaceZ(u1,v,amp,sigma), flat), v);
     }
   }
   return new Float32Array(verts);
