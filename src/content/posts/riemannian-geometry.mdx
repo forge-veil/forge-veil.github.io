@@ -12,6 +12,12 @@ import RiemannianSurface from '../../components/RiemannianSurface.astro';
 
 {/* HOOK */}
 
+You are standing on a flat x-y plane. To measure the distance of a tiny step, you square each coordinate change and add them together: $ds^2 = dx^2 + dy^2$. This is the simplest metric imaginable — Pythagoras applied infinitesimally. Every step in every direction is governed by the same formula, uniformly, everywhere.
+
+Now look at the surface above. It is the same plane, but with a bump. Spin it and watch the coordinate grid. Near the peak, a step of the same coordinate size covers more actual surface area than the same step on the flat rim. The coordinate step and the real distance have come apart. The formula $ds^2 = dx^2 + dy^2$ no longer works — it would lie to you about distances near that peak.
+
+This is the problem Riemannian geometry was invented to solve.
+
 <RiemannianSurface mode="flat" />
 
 <div class="toc-card">
@@ -32,11 +38,45 @@ import RiemannianSurface from '../../components/RiemannianSurface.astro';
 
 <RiemannianSurface mode="bump" />
 
+Imagine an ant living on the surface of a sphere. It cannot fly off the surface and look at the sphere from outside. Yet it can still discover that its world is curved: if it draws a large enough triangle, the angles add up to more than 180°. If it walks two paths that start out parallel, they will eventually meet. Curvature is not a property of how the surface sits inside some larger space — it is an intrinsic property of the surface itself, discoverable from within.
+
+To do any calculation, the ant needs a way to label points. It lays down two numbers $(u^1, u^2)$ at every location — a coordinate chart. On a flat plane these are just $x$ and $y$. On the bump, they might be latitude and longitude, or radial distance from the peak, or any other convenient pair. The choice is arbitrary. The coordinates are a filing system we impose on the surface, not a feature of the surface itself.
+
+The abstract object — the surface, without any particular coordinate labels — is called a **manifold**, written $M$. Formally, a manifold is a smooth space with the property that any small enough patch looks flat: if you zoom in close enough to any point, the surface is locally indistinguishable from an ordinary Euclidean plane. Globally it can curve, fold, and close on itself. But locally, coordinates always behave like $x$ and $y$.
+
+The component above shows the bump as a manifold. Rotate it and watch the coordinate grid $(u^1, u^2)$ painted on the surface — those labels follow the surface wherever it goes.
+
+---
+
 ## The metric tensor: how do you measure distances?
 
 <RiemannianSurface mode="distances" />
 
+Here is the problem the bump creates precisely. On a flat plane, a step $du^1$ in the first coordinate direction always covers the same physical distance, no matter where you are. On the bump, the same coordinate step $du^1$ near the peak covers more actual surface than the same step on the flat rim. The surface has stretched the coordinate grid unevenly. If we try to use $ds^2 = (du^1)^2 + (du^2)^2$, we get the wrong answer near the peak.
+
+What we need is a correction factor at every point: a small matrix $g_{ij}$ that encodes exactly how much a coordinate step stretches into real distance. On the flat plane this matrix is the identity — no correction is needed. On the bump, each entry of $g_{ij}$ varies from point to point, tracking the stretching of the surface. The corrected distance formula is:
+
+$$ds^2 = g_{ij} \, du^i \, du^j$$
+
+Here $i$ and $j$ each range over 1 and 2, and we use the **Einstein summation convention**: whenever an index appears twice in a single term — once up, once down — it is summed over. So the right-hand side is shorthand for $g_{11}(du^1)^2 + g_{12} \, du^1 du^2 + g_{21} \, du^2 du^1 + g_{22}(du^2)^2$. This is the one and only time we introduce this convention; from here on, repeated indices always mean sum.
+
+For our bump surface, $g_{ij}$ is a symmetric 2×2 matrix at each point: $g_{11}$ stretches distances in the $u^1$ direction, $g_{22}$ in the $u^2$ direction, and $g_{12} = g_{21}$ captures the coupling between the two directions when they are not orthogonal. On the flat plane, all of this collapses to $g_{ij} = \delta_{ij}$ — the identity. On the bump, every entry varies across $M$.
+
+The full **metric tensor** $g$ is the collection of these matrices — one symmetric 2×2 matrix at every point of $M$. It is the central object of Riemannian geometry. From it alone, you can compute distances, angles, volumes, and every geometric quantity that follows. The component above shows $g_{11}$, $g_{12}$, $g_{22}$, and $ds^2$ live when you click two nearby points.
+
+---
+
 ## Signature: what kind of metric is this?
+
+At any point on $M$, the metric matrix $g_{ij}$ is symmetric and can be diagonalised. The signs of its eigenvalues — all positive, or some negative — classify the geometry at that point.
+
+For our bump surface, both eigenvalues are positive at every point. The **signature** is $(+,+)$. This is a **Riemannian** metric: $ds^2 \geq 0$ always, distances are real and positive, and two distinct points are always separated by a positive distance.
+
+Flip one sign — allow one negative eigenvalue — and you get a **Lorentzian** metric. The Minkowski metric of special relativity has signature $(-,+,+,+)$: one time direction and three spatial directions, with $ds^2 = -c^2 dt^2 + dx^2 + dy^2 + dz^2$. Distances can be zero between distinct events, or imaginary. The null interval — $ds^2 = 0$ — is exactly what light travels along. These are not pathological cases; they are the geometry of spacetime.
+
+This section earns its place by naming the vocabulary. The follow-up post on the Schwarzschild solution opens with a Lorentzian metric — one sign flipped from everything built here — and the geometry of that single sign change is what makes black holes possible.
+
+---
 
 ## Curvature: does the space bend?
 
