@@ -1,0 +1,248 @@
+---
+interface Props {
+  mode: 'flat' | 'bump' | 'distances' | 'curvature' | 'geodesic' | 'parallel-transport';
+  height?: number;
+  amp?: number;
+  sigma?: number;
+}
+const { mode, height = 420, amp = 1.1, sigma = 0.8 } = Astro.props;
+---
+
+<div
+  class="rs-wrap"
+  data-mode={mode}
+  data-amp={amp}
+  data-sigma={sigma}
+  style={`height: ${height}px`}
+>
+  <canvas class="rs-canvas"></canvas>
+  <canvas class="rs-overlay"></canvas>
+  <div class="rs-ui"></div>
+</div>
+
+<style>
+  .rs-wrap {
+    position: relative;
+    width: 100%;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #f9f9fb;
+    border: 1px solid rgba(0,0,0,0.07);
+    margin: 2rem 0;
+  }
+  .rs-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  .rs-overlay {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+  .rs-ui {
+    position: absolute;
+    bottom: 12px;
+    left: 16px;
+    right: 16px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+    pointer-events: none;
+  }
+  .rs-chip {
+    font-family: 'Menlo', 'Courier New', monospace;
+    font-size: 10.5px;
+    color: #6e6e73;
+    background: rgba(255,255,255,0.88);
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 6px;
+    padding: 3px 8px;
+    backdrop-filter: blur(4px);
+  }
+  .rs-chip em { color: #1c1c1e; font-style: normal; }
+  .rs-slider-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    pointer-events: all;
+    background: rgba(255,255,255,0.88);
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 8px;
+    padding: 6px 12px;
+    backdrop-filter: blur(4px);
+  }
+  .rs-slider-label { font-family: 'Geist', sans-serif; font-size: 11px; color: #6e6e73; }
+  .rs-slider-row input[type=range] { width: 100px; accent-color: #1c1c1e; }
+  .rs-slider-val { font-family: 'Menlo', monospace; font-size: 11px; color: #1c1c1e; min-width: 28px; }
+</style>
+
+<script>
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import {
+  surfaceZ, metricTensor, gaussianCurvature,
+  computeGeodesic, parallelTransport
+} from '../lib/riemann';
+
+const GRID = 60;
+const EXT  = 2.2;
+
+document.querySelectorAll<HTMLElement>('.rs-wrap').forEach(wrap => {
+  const mode  = wrap.dataset.mode!;
+  const amp   = parseFloat(wrap.dataset.amp  ?? '1.1');
+  const sigma = parseFloat(wrap.dataset.sigma ?? '0.8');
+  initSurface(wrap, mode, amp, sigma);
+});
+
+function initSurface(wrap: HTMLElement, mode: string, amp: number, sigma: number) {
+  const glCanvas = wrap.querySelector<HTMLCanvasElement>('.rs-canvas')!;
+  const ovCanvas = wrap.querySelector<HTMLCanvasElement>('.rs-overlay')!;
+  const uiDiv    = wrap.querySelector<HTMLElement>('.rs-ui')!;
+
+  // ── Three.js setup ────────────────────────────────────────────────
+  const renderer = new THREE.WebGLRenderer({ canvas: glCanvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setClearColor(0xf9f9fb, 1);
+
+  const scene  = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(40, 1, 0.01, 100);
+  camera.position.set(0, 3.2, 4.5);
+  camera.lookAt(0, 0, 0);
+
+  const controls = new OrbitControls(camera, glCanvas);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.minPolarAngle = 0.1;
+  controls.maxPolarAngle = Math.PI / 2;
+
+  // ── Lighting ──────────────────────────────────────────────────────
+  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+  const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+  sun.position.set(3, 6, 4);
+  scene.add(sun);
+
+  // ── Surface geometry ──────────────────────────────────────────────
+  const currentAmp = { value: amp };
+  const geo = new THREE.PlaneGeometry(EXT*2, EXT*2, GRID, GRID);
+  geo.rotateX(-Math.PI / 2);
+
+  function updateGeometry(a: number) {
+    const pos = geo.attributes.position as THREE.BufferAttribute;
+    for (let i = 0; i < pos.count; i++) {
+      const u = pos.getX(i), v = pos.getZ(i);
+      pos.setY(i, mode === 'flat' ? 0 : surfaceZ(u, v, a, sigma));
+    }
+    pos.needsUpdate = true;
+    geo.computeVertexNormals();
+  }
+  updateGeometry(amp);
+
+  const mat = new THREE.MeshPhongMaterial({
+    color: 0xf0f0f4,
+    specular: 0x888888,
+    shininess: 30,
+    side: THREE.DoubleSide,
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  scene.add(mesh);
+
+  // ── Grid lines ────────────────────────────────────────────────────
+  const gridLines = buildGridLines(mode === 'flat' ? 0 : amp, sigma, mode === 'flat');
+  scene.add(gridLines);
+
+  // ── Resize ────────────────────────────────────────────────────────
+  function resize() {
+    const w = wrap.clientWidth, h = wrap.clientHeight;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    const dpr = Math.min(devicePixelRatio, 2);
+    ovCanvas.width  = Math.round(w * dpr);
+    ovCanvas.height = Math.round(h * dpr);
+    ovCanvas.style.width  = w + 'px';
+    ovCanvas.style.height = h + 'px';
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // ── Mode dispatch ─────────────────────────────────────────────────
+  let afterRender: (() => void) | null = null;
+
+  if (mode === 'flat') afterRender = setupFlat(ovCanvas, camera);
+
+  // ── Render loop ───────────────────────────────────────────────────
+  let animId: number | null = null;
+  function tick() {
+    animId = requestAnimationFrame(tick);
+    controls.update();
+    renderer.render(scene, camera);
+    afterRender?.();
+  }
+
+  const observer = new IntersectionObserver(([entry]) => {
+    if (entry.isIntersecting) { if (animId === null) tick(); }
+    else { if (animId !== null) { cancelAnimationFrame(animId); animId = null; } }
+  }, { threshold: 0 });
+  observer.observe(wrap);
+}
+
+// ── Grid line geometry ─────────────────────────────────────────────
+function buildGridLines(amp: number, sigma: number, flat: boolean): THREE.LineSegments {
+  const LINES = 16;
+  const verts: number[] = [];
+  const step  = (EXT*2) / LINES;
+
+  for (let i = 0; i <= LINES; i++) {
+    const u = -EXT + i*step;
+    for (let j = 0; j < LINES; j++) {
+      const v0 = -EXT + j*step, v1 = v0 + step;
+      const y0 = flat ? 0 : surfaceZ(u, v0, amp, sigma);
+      const y1 = flat ? 0 : surfaceZ(u, v1, amp, sigma);
+      verts.push(u,y0,v0, u,y1,v1);
+    }
+  }
+  for (let j = 0; j <= LINES; j++) {
+    const v = -EXT + j*step;
+    for (let i = 0; i < LINES; i++) {
+      const u0 = -EXT + i*step, u1 = u0 + step;
+      const y0 = flat ? 0 : surfaceZ(u0, v, amp, sigma);
+      const y1 = flat ? 0 : surfaceZ(u1, v, amp, sigma);
+      verts.push(u0,y0,v, u1,y1,v);
+    }
+  }
+
+  const lineGeo = new THREE.BufferGeometry();
+  lineGeo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+  return new THREE.LineSegments(lineGeo, new THREE.LineBasicMaterial({ color: 0xababba, linewidth: 1 }));
+}
+
+// ── Mode: flat ─────────────────────────────────────────────────────
+function setupFlat(ovCanvas: HTMLCanvasElement, camera: THREE.Camera): () => void {
+  return () => {
+    const dpr = Math.min(devicePixelRatio, 2);
+    const ctx = ovCanvas.getContext('2d')!;
+    ctx.clearRect(0, 0, ovCanvas.width, ovCanvas.height);
+    ctx.save();
+    ctx.scale(dpr, dpr);
+    const cW = ovCanvas.width / dpr;
+    const cH = ovCanvas.height / dpr;
+
+    const project = (x: number, y: number, z: number): [number, number] => {
+      const v = new THREE.Vector3(x, y, z).project(camera as THREE.PerspectiveCamera);
+      return [(v.x+1)/2*cW, (-v.y+1)/2*cH];
+    };
+
+    ctx.font = '12px Menlo, monospace';
+    ctx.fillStyle = '#86868b';
+    ctx.textAlign = 'center';
+    const [ax, ay] = project(EXT*0.88, 0, 0);
+    ctx.fillText('u¹', ax, ay - 6);
+    const [bx, by] = project(0, 0, EXT*0.88);
+    ctx.fillText('u²', bx + 8, by);
+    ctx.restore();
+  };
+}
+</script>
