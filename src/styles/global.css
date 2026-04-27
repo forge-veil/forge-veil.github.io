@@ -698,8 +698,10 @@ a.external-link::after {
   font-size: 0.95em;
 }
 
-/* Display equations: $$...$$ renders as <p> containing only a .katex span */
-.prose p:has(> .katex:only-child) {
+/* Display equations: $$...$$ renders as <p> containing a .katex-display span.
+   Do NOT use .katex:only-child — :only-child ignores text nodes, so it
+   incorrectly matches inline equations that are the sole element child. */
+.prose p:has(> .katex-display) {
   margin: 2px 0 10px;
   padding: 12px 20px;
   background: var(--color-surface);
@@ -709,8 +711,7 @@ a.external-link::after {
   text-align: center;
 }
 
-/* Remove inline pill from display equations */
-.prose p:has(> .katex:only-child) .katex {
+.prose p:has(> .katex-display) .katex {
   background: none;
   padding: 0;
   border-radius: 0;
