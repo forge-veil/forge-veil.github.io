@@ -126,10 +126,14 @@ function initSurface(wrap: HTMLElement, mode: string, amp: number, sigma: number
   updateGeometry(amp);
 
   // MeshBasicMaterial ignores lights — every face renders as exactly
-  // rgba(246,246,250), matching the flat fill from the brainstormed mockup
+  // rgba(246,246,250), matching the flat fill from the brainstormed mockup.
+  // polygonOffset pushes the mesh back in depth so coplanar grid lines win.
   const mat = new THREE.MeshBasicMaterial({
     color: 0xf6f6fa,
     side: THREE.DoubleSide,
+    polygonOffset: true,
+    polygonOffsetFactor: 1,
+    polygonOffsetUnits: 1,
   });
   const mesh = new THREE.Mesh(geo, mat);
   scene.add(mesh);
