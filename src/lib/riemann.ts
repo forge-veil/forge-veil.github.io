@@ -83,3 +83,89 @@ export function christoffelSymbols(
   }
   return gamma;
 }
+
+// RHS of geodesic ODE: d[u,v,vu,vv]/dt = [vu, vv, accel_u, accel_v]
+function geodesicRHS(
+  u: number, v: number, vu: number, vv: number,
+  amp: number, sigma: number
+): [number, number, number, number] {
+  const G = christoffelSymbols(u, v, amp, sigma);
+  const au = -(G[0][0][0]*vu*vu + 2*G[0][0][1]*vu*vv + G[0][1][1]*vv*vv);
+  const av = -(G[1][0][0]*vu*vu + 2*G[1][0][1]*vu*vv + G[1][1][1]*vv*vv);
+  return [vu, vv, au, av];
+}
+
+function rk4Step(
+  u: number, v: number, vu: number, vv: number,
+  dt: number, amp: number, sigma: number
+): [number, number, number, number] {
+  const [k1u,k1v,k1vu,k1vv] = geodesicRHS(u,v,vu,vv,amp,sigma);
+  const [k2u,k2v,k2vu,k2vv] = geodesicRHS(u+dt*k1u/2,v+dt*k1v/2,vu+dt*k1vu/2,vv+dt*k1vv/2,amp,sigma);
+  const [k3u,k3v,k3vu,k3vv] = geodesicRHS(u+dt*k2u/2,v+dt*k2v/2,vu+dt*k2vu/2,vv+dt*k2vv/2,amp,sigma);
+  const [k4u,k4v,k4vu,k4vv] = geodesicRHS(u+dt*k3u,v+dt*k3v,vu+dt*k3vu,vv+dt*k3vv,amp,sigma);
+  return [
+    u  + dt*(k1u +2*k2u +2*k3u +k4u )/6,
+    v  + dt*(k1v +2*k2v +2*k3v +k4v )/6,
+    vu + dt*(k1vu+2*k2vu+2*k3vu+k4vu)/6,
+    vv + dt*(k1vv+2*k2vv+2*k3vv+k4vv)/6,
+  ];
+}
+
+function shoot(
+  u0:number, v0:number, vu0:number, vv0:number,
+  nSteps:number, amp:number, sigma:number
+): Array<[number,number]> {
+  const dt = 1.0 / nSteps;
+  const path: Array<[number,number]> = [[u0,v0]];
+  let [u,v,vu,vv] = [u0,v0,vu0,vv0];
+  for (let i = 0; i < nSteps; i++) {
+    [u,v,vu,vv] = rk4Step(u,v,vu,vv,dt,amp,sigma);
+    path.push([u,v]);
+  }
+  return path;
+}
+
+// Connect (u0,v0) to (u1,v1) via the shortest geodesic using iterative shooting.
+export function computeGeodesic(
+  u0: number, v0: number, u1: number, v1: number,
+  amp: number, sigma: number,
+  nSteps = 60, nIter = 25
+): Array<[number, number]> {
+  const du = u1-u0, dv = v1-v0;
+  const dist = Math.sqrt(du*du + dv*dv);
+  if (dist < 1e-8) return [[u0,v0]];
+
+  // Initial guess: straight-line velocity scaled to reach target in t=1
+  let vu = du, vv = dv;
+
+  for (let iter = 0; iter < nIter; iter++) {
+    const path = shoot(u0, v0, vu, vv, nSteps, amp, sigma);
+    const [eu, ev] = path[path.length-1];
+    const errU = eu-u1, errV = ev-v1;
+    if (Math.sqrt(errU*errU + errV*errV) < 1e-5) return path;
+    vu -= errU * 0.6;
+    vv -= errV * 0.6;
+  }
+  return shoot(u0, v0, vu, vv, nSteps, amp, sigma);
+}
+
+// Parallel transport vector v0 along a coordinate path using ∇_γ' v = 0.
+// Returns the transported vector at each path point.
+export function parallelTransport(
+  path: Array<[number, number]>,
+  v0: [number, number],
+  amp: number, sigma: number
+): Array<[number, number]> {
+  const vectors: Array<[number, number]> = [[v0[0], v0[1]]];
+  for (let i = 0; i < path.length-1; i++) {
+    const [u, v] = path[i];
+    const [du, dv] = [path[i+1][0]-u, path[i+1][1]-v];
+    const [wu, wv] = vectors[i];
+    const G = christoffelSymbols(u, v, amp, sigma);
+    // dw^k/ds = -Γ^k_{ij} (du^i/ds) w^j
+    const dwu = -(G[0][0][0]*du*wu + G[0][0][1]*du*wv + G[0][1][0]*dv*wu + G[0][1][1]*dv*wv);
+    const dwv = -(G[1][0][0]*du*wu + G[1][0][1]*du*wv + G[1][1][0]*dv*wu + G[1][1][1]*dv*wv);
+    vectors.push([wu+dwu, wv+dwv]);
+  }
+  return vectors;
+}
