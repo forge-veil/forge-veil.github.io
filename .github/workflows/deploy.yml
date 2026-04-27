@@ -9,6 +9,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  checks: write
 
 concurrency:
   group: "pages"
@@ -30,8 +31,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build
-        run: npm run build
+      - name: Test and Build
+        run: make build
+
+      - name: Publish test report
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Vitest Tests
+          path: test-results.xml
+          reporter: java-junit
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

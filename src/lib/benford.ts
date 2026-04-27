@@ -37,7 +37,7 @@ export function madScore(actual: number[]): number {
 
 export function fitLabel(mad: number): 'Good' | 'Close' | 'Suspicious' {
   if (mad < 0.006) return 'Good'
-  if (mad < 0.025) return 'Close'
+  if (mad < 0.012) return 'Close'
   return 'Suspicious'
 }
 
