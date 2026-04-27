@@ -60,7 +60,7 @@ $$ds^2 = g_{ij} \, du^i \, du^j$$
 
 Here $i$ and $j$ each range over 1 and 2, and we use the **Einstein summation convention**: whenever an index appears twice in a single term — once up, once down — it is summed over. So the right-hand side is shorthand for $g_{11}(du^1)^2 + g_{12} \, du^1 du^2 + g_{21} \, du^2 du^1 + g_{22}(du^2)^2$. This is the one and only time we introduce this convention; from here on, repeated indices always mean sum.
 
-For our bump surface, $g_{ij}$ is a symmetric 2×2 matrix at each point: $g_{11}$ stretches distances in the $u^1$ direction, $g_{22}$ in the $u^2$ direction, and $g_{12} = g_{21}$ captures the coupling between the two directions when they are not orthogonal. On the flat plane, all of this collapses to $g_{ij} = \delta_{ij}$ — the identity. On the bump, every entry varies across $M$.
+For our bump surface, $g_{ij}$ is a symmetric 2×2 matrix at each point: $g_{11}$ stretches distances in the $u^1$ direction, $g_{22}$ in the $u^2$ direction, and $g_{12} = g_{21}$ captures the coupling between the two directions when they are not orthogonal. On the flat plane, all of this collapses to $g_{ij} = \delta_{ij}$ — the **Kronecker delta**, which is 1 when $i = j$ and 0 otherwise, making $g$ the identity matrix. On the bump, every entry varies across $M$.
 
 The full **metric tensor** $g$ is the collection of these matrices — one symmetric 2×2 matrix at every point of $M$. It is the central object of Riemannian geometry. From it alone, you can compute distances, angles, volumes, and every geometric quantity that follows. The component above shows $g_{11}$, $g_{12}$, $g_{22}$, and $ds^2$ live when you click two nearby points.
 
@@ -84,13 +84,13 @@ This section earns its place by naming the vocabulary. The follow-up post on the
 
 The simplest measure of curvature at a point is **Gaussian curvature**, written $K$ — a single number. At the peak of the bump: $K > 0$, the surface curves inward like the top of a sphere. On the flat rim: $K = 0$. Between the peak and the flat rim, the surface bends outward in one direction and inward in another — a saddle shape — giving $K < 0$. The heat map on the component above shows this variation across the surface.
 
-The remarkable theorem that makes curvature intrinsic is Gauss's **Theorema Egregium**: $K$ can be computed from $g_{ij}$ and its derivatives alone. No knowledge of how the surface sits in 3D space is needed. For our bump, where the height is given by a function $f = z(u, v)$:
+The remarkable theorem that makes curvature intrinsic is Gauss's **Theorema Egregium**: $K$ can be computed from $g_{ij}$ and its derivatives alone. No knowledge of how the surface sits in 3D space is needed. For the bump surface, write the height as $f(u, v) = z(u^1, u^2)$ using the shorthand $u = u^1$, $v = u^2$; then:
 
 $$K = \frac{f_{uu} f_{vv} - f_{uv}^2}{\left(1 + f_u^2 + f_v^2\right)^2}$$
 
-The numerator involves second derivatives of the height — the rate at which the slope itself is changing. The denominator is the square of the metric determinant factor. Every piece of this formula is computable by an ant on the surface who can measure distances but has never seen the third dimension.
+The numerator involves second derivatives of the height — the rate at which the slope itself is changing. The denominator is the square of the metric determinant factor. Every piece of this formula is computable by an ant on the surface who can measure distances but has never seen the third dimension. Those height-function derivatives might look like they require knowing the embedding in 3D — but they are fully determined by the metric $g_{ij}$; an ant equipped with a ruler but confined to the surface could, in principle, recover them by measuring distances alone.
 
-For spaces of higher dimension, $K$ is no longer sufficient — we need a richer object. The **Riemann curvature tensor** $R^l{}_{ijk}$ is a rank-4 tensor derived from $g_{ij}$ and its second derivatives; it encodes the curvature in every pair of directions simultaneously. Successive compressions extract coarser information: the **Ricci tensor** $R_{ij} = R^l{}_{ilj}$ contracts one pair of indices, leaving a symmetric matrix. The **Ricci scalar** $R = g^{ij} R_{ij}$ contracts again, leaving a single number. Each compression loses detail but becomes more tractable. Einstein's field equations — the equations governing general relativity — are written in terms of $R_{ij}$ and $R$, with the metric $g_{ij}$ as the fundamental unknown. Hover any point on the surface above to read $K$ at that location.
+For spaces of higher dimension, $K$ is no longer sufficient — we need a richer object. The **Riemann curvature tensor** $R^l{}_{ijk}$ is a rank-4 tensor derived from $g_{ij}$ and its second derivatives; it encodes the curvature in every pair of directions simultaneously. Successive compressions extract coarser information: the **Ricci tensor** $R_{ij} = R^l{}_{ilj}$ contracts one pair of indices, leaving a symmetric matrix. The **Ricci scalar** $R = g^{ij} R_{ij}$ contracts again, leaving a single number. (Here $g^{ij}$ denotes the matrix inverse of $g_{ij}$ — the "raised-index" version of the metric, satisfying $g^{ik} g_{kj} = \delta^i_j$.) Each compression loses detail but becomes more tractable. Einstein's field equations — the equations governing general relativity — are written in terms of $R_{ij}$ and $R$, with the metric $g_{ij}$ as the fundamental unknown. Hover any point on the surface above to read $K$ at that location.
 
 ---
 
@@ -124,7 +124,7 @@ This is the same $\Gamma$ that appeared in the geodesic equation. It was hiding 
 
 **Parallel transport** is what happens when you carry a vector $w$ along a path $\gamma$ using this connection — moving it without rotating it relative to the surface at each step. Mathematically, the transported vector satisfies:
 
-$$\frac{dw^k}{dt} = -\Gamma^k_{ij} \, \dot{\gamma}^i \, w^j$$
+$$\frac{dw^k}{dt} = -\Gamma^k_{ij} \, \dot{x}^i \, w^j$$
 
 On a curved surface, something unexpected happens: if you parallel-transport a vector around a closed loop, it returns rotated. The rotation angle is called the **holonomy** of the loop, and it is directly proportional to the Gaussian curvature enclosed by the path. An ant living on the surface can discover exactly how much the space curves by carrying a gyroscope around a closed path and measuring the rotation when it returns home. The component above lets you draw a closed path; the arrow shows the transported vector and updates the holonomy angle when the loop closes.
 
