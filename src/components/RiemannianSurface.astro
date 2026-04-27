@@ -178,6 +178,8 @@ function initSurface(wrap: HTMLElement, mode: string, amp: number, sigma: number
   if (mode === 'bump')      setupBump(uiDiv, mesh, geo, sigma, currentAmp, gridLines);
   if (mode === 'distances') setupDistances(glCanvas, camera, scene, mesh, amp, sigma, uiDiv, disposeList, modeController.signal);
   if (mode === 'curvature') setupCurvature(glCanvas, camera, scene, mesh, geo, mat as THREE.MeshPhongMaterial, amp, sigma, uiDiv, modeController.signal);
+  if (mode === 'geodesic')           setupGeodesic(glCanvas, camera, scene, mesh, amp, sigma, uiDiv, disposeList, modeController.signal);
+  if (mode === 'parallel-transport') setupParallelTransport(glCanvas, camera, scene, mesh, amp, sigma, uiDiv, disposeList, modeController.signal);
 
   // ── Render loop ───────────────────────────────────────────────────
   let animId: number | null = null;
@@ -443,5 +445,160 @@ function setupCurvature(
     const k  = gaussianCurvature(pt.x, pt.z, amp, sigma);
     kChip.innerHTML = `K = <em>${k.toFixed(4)}</em> at (${pt.x.toFixed(2)}, ${pt.z.toFixed(2)})`;
   }, { signal });
+}
+
+// ── Mode: geodesic ────────────────────────────────────────────────
+function setupGeodesic(
+  glCanvas: HTMLCanvasElement, camera: THREE.PerspectiveCamera,
+  scene: THREE.Scene, mesh: THREE.Mesh,
+  amp: number, sigma: number, uiDiv: HTMLElement,
+  disposeList: Array<THREE.BufferGeometry | THREE.Material>,
+  signal: AbortSignal
+) {
+  const raycaster = new THREE.Raycaster();
+  const dotGeo    = new THREE.SphereGeometry(0.05, 8, 8);
+  const dotMat    = new THREE.MeshBasicMaterial({ color: 0x1c1c1e });
+  disposeList.push(dotGeo, dotMat);
+  let dots: THREE.Mesh[]          = [];
+  let geodesicLine: THREE.Line | null = null;
+  let clickCount = 0;
+
+  glCanvas.addEventListener('click', (e) => {
+    if (clickCount >= 2) {
+      dots.forEach(d => scene.remove(d));
+      dots = [];
+      if (geodesicLine) { scene.remove(geodesicLine); geodesicLine = null; }
+      clickCount = 0;
+      uiDiv.innerHTML = `<div class="rs-chip">Click two points to trace geodesic</div>`;
+    }
+    const rect = glCanvas.getBoundingClientRect();
+    const ndc  = new THREE.Vector2(
+      (e.clientX - rect.left) / rect.width  * 2 - 1,
+      -(e.clientY - rect.top) / rect.height * 2 + 1
+    );
+    raycaster.setFromCamera(ndc, camera);
+    const hits = raycaster.intersectObject(mesh);
+    if (!hits.length) return;
+
+    const pt  = hits[0].point;
+    const dot = new THREE.Mesh(dotGeo, dotMat);
+    dot.position.copy(pt);
+    scene.add(dot);
+    dots.push(dot);
+    clickCount++;
+
+    if (clickCount === 2) {
+      const p0 = dots[0].position, p1 = dots[1].position;
+      uiDiv.innerHTML = `<div class="rs-chip">Computing geodesic…</div>`;
+
+      Promise.resolve().then(() => {
+        const path2D = computeGeodesic(p0.x, p0.z, p1.x, p1.z, amp, sigma);
+        const pts3D  = path2D.map(([u,v]) => new THREE.Vector3(u, surfaceZ(u,v,amp,sigma)+0.012, v));
+        const lGeo   = new THREE.BufferGeometry().setFromPoints(pts3D);
+        geodesicLine = new THREE.Line(lGeo, new THREE.LineBasicMaterial({ color: 0x1c1c1e }));
+        scene.add(geodesicLine);
+        uiDiv.innerHTML = `<div class="rs-chip">γ(t) — geodesic</div>`;
+      });
+    }
+  }, { signal });
+
+  uiDiv.innerHTML = `<div class="rs-chip">Click two points to trace geodesic</div>`;
+}
+
+// ── Mode: parallel-transport ──────────────────────────────────────
+function setupParallelTransport(
+  glCanvas: HTMLCanvasElement, camera: THREE.PerspectiveCamera,
+  scene: THREE.Scene, mesh: THREE.Mesh,
+  amp: number, sigma: number, uiDiv: HTMLElement,
+  disposeList: Array<THREE.BufferGeometry | THREE.Material>,
+  signal: AbortSignal
+) {
+  const raycaster = new THREE.Raycaster();
+  const dotGeo    = new THREE.SphereGeometry(0.04, 8, 8);
+  const dotMat    = new THREE.MeshBasicMaterial({ color: 0x6e6e73 });
+  disposeList.push(dotGeo, dotMat);
+  let pathPts: THREE.Vector3[]    = [];
+  let pathLine: THREE.Line | null = null;
+  let vecArrows: THREE.ArrowHelper[] = [];
+  let dots: THREE.Mesh[]          = [];
+
+  const chip = document.createElement('div');
+  chip.className = 'rs-chip';
+  chip.textContent = 'Click points to draw path · close loop to transport';
+  uiDiv.appendChild(chip);
+
+  function reset() {
+    pathPts = [];
+    dots.forEach(d => scene.remove(d));
+    dots = [];
+    if (pathLine) { scene.remove(pathLine); pathLine = null; }
+    vecArrows.forEach(a => scene.remove(a));
+    vecArrows = [];
+    chip.innerHTML = 'Click points to draw path · close loop to transport';
+  }
+
+  glCanvas.addEventListener('click', (e) => {
+    const rect = glCanvas.getBoundingClientRect();
+    const ndc  = new THREE.Vector2(
+      (e.clientX - rect.left) / rect.width  * 2 - 1,
+      -(e.clientY - rect.top) / rect.height * 2 + 1
+    );
+    raycaster.setFromCamera(ndc, camera);
+    const hits = raycaster.intersectObject(mesh);
+    if (!hits.length) return;
+
+    const pt = hits[0].point;
+
+    // Close loop if clicking near the start point
+    if (pathPts.length > 2) {
+      const dx = pt.x - pathPts[0].x, dz = pt.z - pathPts[0].z;
+      if (Math.sqrt(dx*dx + dz*dz) < 0.3) {
+        pathPts.push(pathPts[0].clone());
+        runTransport();
+        return;
+      }
+    }
+
+    pathPts.push(pt);
+    const dot = new THREE.Mesh(dotGeo, dotMat);
+    dot.position.copy(pt);
+    scene.add(dot);
+    dots.push(dot);
+
+    if (pathLine) scene.remove(pathLine);
+    const lGeo = new THREE.BufferGeometry().setFromPoints(
+      pathPts.map(p => p.clone().setY(p.y + 0.01))
+    );
+    pathLine = new THREE.Line(lGeo, new THREE.LineBasicMaterial({ color: 0xababba }));
+    scene.add(pathLine);
+  }, { signal });
+
+  function runTransport() {
+    const path2D = pathPts.map(p => [p.x, p.z] as [number,number]);
+    const v0: [number,number] = [1, 0];
+    const vecs = parallelTransport(path2D, v0, amp, sigma);
+
+    vecArrows.forEach(a => scene.remove(a));
+    vecArrows = [];
+
+    const SCALE = 0.4;
+    const step  = Math.max(1, Math.floor(pathPts.length / 8));
+    for (let i = 0; i < pathPts.length; i += step) {
+      const [vu, vv] = vecs[i] ?? vecs[vecs.length-1];
+      const origin   = pathPts[i].clone().setY(pathPts[i].y + 0.02);
+      const dir      = new THREE.Vector3(vu, 0, vv).normalize();
+      const arrow    = new THREE.ArrowHelper(dir, origin, SCALE, 0x1c1c1e, 0.12, 0.07);
+      scene.add(arrow);
+      vecArrows.push(arrow);
+    }
+
+    const [fvu, fvv] = vecs[vecs.length-1];
+    const dot   = v0[0]*fvu + v0[1]*fvv;
+    const cross = v0[0]*fvv - v0[1]*fvu;
+    const angle = Math.atan2(cross, dot) * 180 / Math.PI;
+
+    chip.innerHTML = `Holonomy: <em>${angle.toFixed(1)}°</em> &nbsp;·&nbsp; <span style="cursor:pointer;text-decoration:underline" id="pt-reset">Reset</span>`;
+    uiDiv.querySelector<HTMLElement>('#pt-reset')?.addEventListener('click', reset);
+  }
 }
 </script>
