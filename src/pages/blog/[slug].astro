@@ -55,6 +55,7 @@ function readTime(body: string | undefined) {
           <h1 class="article-title">{post.data.title}</h1>
           <div class="article-meta">
             <span>{formatDate(post.data.publishedAt)}</span>
+            {post.data.wip && <span class="article-wip">work in progress</span>}
           </div>
         </header>
         </div>

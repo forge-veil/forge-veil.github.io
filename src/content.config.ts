@@ -39,6 +39,7 @@ export const collections = {
       tags: z.array(z.string()).default([]),
       publishedAt: z.coerce.date(),
       published: z.boolean().default(false),
+      wip: z.boolean().default(false),
       postLayout: z.enum(['longform']).optional(),
     }),
   }),

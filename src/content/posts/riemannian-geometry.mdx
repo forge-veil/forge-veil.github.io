@@ -1,0 +1,199 @@
+---
+title: "The Geometry of Curved Spaces"
+description: "Flat geometry is a special case. Here is the mathematics of spaces that bend: manifolds, metric tensors, curvature, geodesics, and covariant derivatives."
+topic: mathematics
+postLayout: longform
+series:
+  slug: geometry-curved-spaces
+  name: Geometry of Curved Spaces
+  part: 1
+  total: 4
+tags: [riemannian-geometry, manifolds, metric-tensor, curvature, geodesics, differential-geometry]
+publishedAt: 2026-04-27
+published: true
+wip: true
+---
+
+import RiemannianSurface from '../../components/RiemannianSurface.astro';
+
+<RiemannianSurface mode="flat" side />
+
+You are standing on a flat x-y plane. To measure the distance of a tiny step, you square each coordinate change and add them together: $ds^2 = dx^2 + dy^2$. This is the simplest metric imaginable, Pythagoras applied infinitesimally. Every step in every direction is governed by the same formula, uniformly, everywhere.
+
+Now look at the surface. It is the same plane, but with a bump. Spin it and watch the coordinate grid. Near the peak, a step of the same coordinate size covers more actual surface area than the same step on the flat rim. The coordinate step and the real distance have come apart. The formula $ds^2 = dx^2 + dy^2$ no longer works; it would lie to you about distances near that peak.
+
+This is the problem Riemannian geometry was invented to solve. This post is meant to be visual explainer of basics of Riemannian geometry. 
+
+<div class="toc-card">
+  <p class="toc-card-heading">In this post</p>
+  <ol class="toc-card-list">
+    <li><a class="toc-card-item" href="#manifolds-what-is-a-curved-space"><span class="toc-n">1</span>Manifolds: what is a curved space?</a></li>
+    <li><a class="toc-card-item" href="#the-metric-tensor-how-do-you-measure-distances"><span class="toc-n">2</span>The metric tensor: how do you measure distances?</a></li>
+    <li><a class="toc-card-item" href="#signature-what-kind-of-metric-is-this"><span class="toc-n">3</span>Signature: what kind of metric is this?</a></li>
+    <li><a class="toc-card-item" href="#curvature-does-the-space-bend"><span class="toc-n">4</span>Curvature: does the space bend?</a></li>
+    <li><a class="toc-card-item" href="#geodesics-what-is-a-straight-line"><span class="toc-n">5</span>Geodesics: what is a straight line?</a></li>
+    <li><a class="toc-card-item" href="#connections-and-covariant-derivatives"><span class="toc-n">6</span>Connections: how do you differentiate?</a></li>
+  </ol>
+</div>
+
+---
+
+## Manifolds: what is a curved space?
+
+<div class="intuition">
+  <p class="intuition-label">Intuition</p>
+  <p class="intuition-text">Imagine a crumpled piece of paper. To an ant walking on it, the surface feels flat locally, but globally it is curved. A manifold is like this: locally flat everywhere, globally curved. You can assign coordinates to each small patch, just like street addresses on a city map, even though the whole surface bends. It's the stage on which the geometry takes place.</p>
+</div>
+
+<RiemannianSurface mode="bump" side />
+
+Imagine an ant living on the surface of a sphere. It cannot fly off the surface and look at the sphere from outside. Yet it can still discover that its world is curved: if it draws a large enough triangle, the angles add up to more than 180°. If it walks two paths that start out parallel, they will eventually meet. Curvature is not a property of how the surface sits inside some larger space; it is an intrinsic property of the surface itself, discoverable from within.
+
+To do any calculation, the ant needs a way to label points. It lays down coordinates $x^\mu$ at every location, a coordinate chart. On a flat plane these are just $x$ and $y$. On the bump, they might be latitude and longitude, or radial distance from the peak, or any other convenient labelling. The choice is arbitrary. The coordinates are a filing system we impose on the surface, not a feature of the surface itself.
+
+The abstract object, the surface, without any particular coordinate labels, is called a **manifold**, written $M$. Formally, a manifold is a smooth space with the property that any small enough patch looks flat: if you zoom in close enough to any point, the surface is locally indistinguishable from an ordinary Euclidean plane. Globally it can curve, fold, and close on itself. But locally, coordinates always behave like $x$ and $y$.
+
+Formally: a manifold $M$ is a set of points that locally looks like $\mathbb{R}^n$. Around every point there exists a small open neighborhood that can be mapped smoothly to $\mathbb{R}^n$ and back — that neighborhood is a **coordinate patch**, or **chart**. Within it, points carry coordinates $(x^1, x^2, \ldots, x^n)$ that behave just like ordinary Cartesian coordinates.
+
+The surface in the animation is the manifold $M$. The blue region $U_1$ and the amber region $U_2$ are two such coordinate patches. Inside each one the local axes $(x^1, x^2)$ are drawn — two perpendicular directions spanning $\mathbb{R}^2$ at that location. The purple strip is $U_1 \cap U_2$, the overlap where both charts are simultaneously valid. On that overlap, the coordinates assigned by $U_1$ and those assigned by $U_2$ are smooth functions of each other. That compatibility condition is precisely what makes $M$ a smooth manifold rather than an arbitrary set of points.
+
+---
+
+## The metric tensor: how do you measure distances?
+
+<div class="intuition">
+  <p class="intuition-label">Intuition</p>
+  <p class="intuition-text">Imagine stretching a piece of paper more in some directions than others. Your ruler starts behaving oddly: distances change depending on where you place it and which direction you measure. The metric is this ruler, carried to every point on the surface. It encodes how lengths and angles work at each location, even when the surface curves or when time behaves differently from space.</p>
+</div>
+
+<RiemannianSurface mode="distances" side />
+
+Here is the problem the bump creates precisely. On a flat plane, a step $dx^1$ in the first coordinate direction always covers the same physical distance, no matter where you are. On the bump, the same coordinate step $dx^1$ near the peak covers more actual surface than the same step on the flat rim. The surface has stretched the coordinate grid unevenly. If we try to use $ds^2 = (dx^1)^2 + (dx^2)^2$, we get the wrong answer near the peak.
+
+What we need is a correction factor at every point: a symmetric matrix $g_{\mu\nu}(x)$ that encodes exactly how much a coordinate step stretches into real distance. On the flat plane this matrix is the identity; no correction is needed. On the bump, each entry varies from point to point, tracking the stretching of the surface. The corrected distance formula is:
+
+$$ds^2 = g_{\mu\nu}(x) \, dx^\mu \, dx^\nu$$
+
+Here $\mu$ and $\nu$ each range over 1 and 2, and we use the **Einstein summation convention**: whenever an index appears twice in a single term, once up, once down, it is summed over. So the right-hand side expands to $g_{11}(dx^1)^2 + g_{12} \, dx^1 dx^2 + g_{21} \, dx^2 dx^1 + g_{22}(dx^2)^2$. From here on, repeated indices always mean sum.
+
+Reading the formula term by term:
+
+- $g_{\mu\nu}(x)$ is the **metric tensor**, a symmetric matrix at every point $x \in M$. Its entries encode how coordinate steps scale into real distances at that location.
+- $dx^\mu$ and $dx^\nu$ are infinitesimal displacements in the coordinate directions.
+
+For our bump surface, $g_{11}$ stretches distances along $x^1$, $g_{22}$ along $x^2$, and $g_{12} = g_{21}$ captures coupling when the coordinate directions are not orthogonal. Two standard forms anchor the intuition:
+
+$$\text{Euclidean }\mathbb{R}^3\colon \quad ds^2 = dx^2 + dy^2 + dz^2 \qquad g_{\mu\nu} = \delta_{\mu\nu}$$
+
+$$\text{Spacetime }\colon \quad ds^2 = -dt^2 + dx^2 + dy^2 + dz^2 \qquad g_{\mu\nu} = \operatorname{diag}(-1,+1,+1,+1)$$
+
+The Euclidean case is Pythagoras at infinitesimal scale. The spacetime case introduces a minus sign for the time direction — and that sign changes everything.
+
+<div class="note">
+  <p class="note-label">Riemannian vs semi-Riemannian</p>
+  <p class="note-text">When all eigenvalues of $g_{\mu\nu}$ are positive, the metric is **Riemannian**: $ds^2 \geq 0$ always, distances are real, and the geometry is that of an ordinary curved surface. Our bump lives here.</p>
+  <p class="note-text">When one or more eigenvalues are negative, the metric is **semi-Riemannian** (or pseudo-Riemannian). The physically important case is **Lorentzian**: one negative eigenvalue for the time direction. In that setting $ds^2$ can be positive (spacelike separation, two events that are purely spatial), zero (lightlike, the path a photon takes), or negative (timelike, the path a massive object follows). The metric tensor is the same object in both cases — the only difference is the sign pattern of its eigenvalues, called the **signature**.</p>
+</div>
+
+The full metric tensor is one symmetric matrix at every point of $M$. From it alone you can derive distances, angles, volumes, and every geometric quantity that follows. The component above shows $g_{11}$, $g_{12}$, $g_{22}$, and $ds^2$ live when you click two nearby points.
+
+---
+
+## Signature: what kind of metric is this?
+
+<div class="intuition">
+  <p class="intuition-label">Intuition</p>
+  <p class="intuition-text">Think of a video game map: every direction you can move is a direction in space. Now add a dimension for time, which behaves differently: you can never turn around in it. The signature tells you which directions are time-like and which are space-like. In relativity the signature is (−, +, +, +): one time direction and three spatial ones, and that single minus sign is what makes the geometry of spacetime different from ordinary curved space.</p>
+</div>
+
+At any point on $M$, the metric matrix $g_{\mu\nu}$ is symmetric and can be diagonalised. The signs of its eigenvalues, all positive or some negative, classify the geometry at that point.
+
+For our bump surface, both eigenvalues are positive at every point. The **signature** is $(+,+)$. This is a **Riemannian** metric: $ds^2 \geq 0$ always, distances are real and positive, and two distinct points are always separated by a positive distance.
+
+Flip one sign, allow one negative eigenvalue, and you get a **Lorentzian** metric. The Minkowski metric of special relativity has signature $(-,+,+,+)$: one time direction and three spatial directions, with $ds^2 = -c^2 dt^2 + dx^2 + dy^2 + dz^2$. Distances can be zero between distinct events, or imaginary. The null interval, $ds^2 = 0$, is exactly what light travels along. These are not pathological cases; they are the geometry of spacetime.
+
+This section earns its place by naming the vocabulary. The follow-up post on the Schwarzschild solution opens with a Lorentzian metric, one sign flipped from everything built here, and the geometry of that single sign change is what makes black holes possible.
+
+---
+
+## Curvature: does the space bend?
+
+<div class="intuition">
+  <p class="intuition-label">Intuition</p>
+  <p class="intuition-text">Roll a marble on three different surfaces. On a flat table it goes straight. On a sphere it curves inward, parallel paths that start out side by side will eventually meet. On a saddle it curves outward, parallel paths that start together spread apart. Curvature tells you which of these three worlds you are in, and it shapes how everything moves through the space, just as gravity shapes how objects fall.</p>
+</div>
+
+<RiemannianSurface mode="curvature" side />
+
+The simplest measure of curvature at a point is **Gaussian curvature**, written $K$, a single number. At the peak of the bump: $K > 0$, the surface curves inward like the top of a sphere. On the flat rim: $K = 0$. Between the peak and the flat rim, the surface bends outward in one direction and inward in another, a saddle shape, giving $K < 0$. The heat map on the component above shows this variation across the surface.
+
+The remarkable theorem that makes curvature intrinsic is Gauss's **Theorema Egregium**: $K$ can be computed from $g_{\mu\nu}$ and its derivatives alone. No knowledge of how the surface sits in 3D space is needed. For the bump surface, write the height as $f(x^1, x^2)$; then:
+
+$$K = \frac{f_{11} f_{22} - f_{12}^2}{\left(1 + f_1^2 + f_2^2\right)^2}$$
+
+where $f_\mu = \partial f / \partial x^\mu$ and $f_{\mu\nu} = \partial^2 f / \partial x^\mu \partial x^\nu$. The numerator involves second derivatives of the height, the rate at which the slope itself is changing. The denominator is the square of the metric determinant factor. Every piece of this formula is computable by an ant on the surface who can measure distances but has never seen the third dimension.
+
+For spaces of higher dimension, $K$ is no longer sufficient; we need a richer object. The **Riemann curvature tensor** $R^\lambda{}_{\mu\nu\rho}$ is a rank-4 tensor derived from $g_{\mu\nu}$ and its second derivatives; it encodes the curvature in every pair of directions simultaneously. Successive compressions extract coarser information: the **Ricci tensor** $R_{\mu\nu} = R^\lambda{}_{\mu\lambda\nu}$ contracts one pair of indices, leaving a symmetric matrix. The **Ricci scalar** $R = g^{\mu\nu} R_{\mu\nu}$ contracts again, leaving a single number. (Here $g^{\mu\nu}$ denotes the matrix inverse of $g_{\mu\nu}$, the "raised-index" version of the metric, satisfying $g^{\mu\lambda} g_{\lambda\nu} = \delta^\mu_\nu$.) Each compression loses detail but becomes more tractable. Einstein's field equations, the equations governing general relativity, are written in terms of $R_{\mu\nu}$ and $R$, with the metric $g_{\mu\nu}$ as the fundamental unknown. Hover any point on the surface above to read $K$ at that location.
+
+---
+
+## Geodesics: what is a straight line?
+
+<div class="intuition">
+  <p class="intuition-label">Intuition</p>
+  <p class="intuition-text">Aeroplanes don't fly straight lines on a flat map, they fly great circles, the shortest path on a sphere. What looks like a curve on the map is actually the straightest route the surface allows. Geodesics are these "straightest possible paths" in curved space. In general relativity, free-falling objects, planets, light, anything not being pushed, follow geodesics through spacetime.</p>
+</div>
+
+<RiemannianSurface mode="geodesic" side />
+
+On a flat plane, the shortest path between two points is a straight line. On a curved surface, "straight" needs a new definition. A path that bends to follow the surface geometry, never turning left or right relative to the surface itself, is called a **geodesic**. It is the shortest path between two points, or more precisely, the path that locally minimises length.
+
+Parameterise a path on $M$ as $\gamma(t)$, where $t$ runs from 0 to 1 and $\gamma$ traces a curve on the surface. The velocity in coordinates is $\dot{x}^\mu = dx^\mu/dt$. To find the shortest path we minimise the arc-length integral using the calculus of variations. The result is the **geodesic equation**:
+
+$$\ddot{x}^\mu + \Gamma^\mu_{\nu\rho} \, \dot{x}^\nu \dot{x}^\rho = 0$$
+
+The term $\Gamma^\mu_{\nu\rho}$, pronounced "Christoffel symbol", corrects for the curvature of the surface. It bends the path to follow the geometry rather than the coordinate grid. Think of it as the term that says: account for the fact that the coordinate basis vectors themselves are changing direction as you move across the curved surface. We will define $\Gamma^\mu_{\nu\rho}$ precisely in the next section.
+
+On the bump, a geodesic between two points on opposite sides does not always pass over the peak. The path over the top may be longer in the intrinsic metric $g_{\mu\nu}$ than an arc that curves around the side, even though the route over the peak looks shorter when you draw it on a flat map. This is the core lesson of geodesics: the shortest path is determined by the geometry, not by the coordinates. Click two points on the surface above to trace the geodesic between them.
+
+---
+
+## Connections and covariant derivatives
+
+<RiemannianSurface mode="parallel-transport" side />
+
+On flat space, moving a vector from point $A$ to point $B$ is trivial: just slide it along without rotating it. On a curved surface, this breaks down. The **tangent plane** at $A$, the flat plane that best approximates the surface there, is a different plane from the tangent plane at $B$. There is no obvious way to compare a vector at $A$ with a vector at $B$, because they live in different planes. We need a rule for transporting vectors between points in a way that is consistent with the geometry.
+
+That rule is a **connection**. For a Riemannian manifold the natural choice is the **Levi-Civita connection**: the unique connection that is torsion-free ($\Gamma^\mu_{\nu\rho} = \Gamma^\mu_{\rho\nu}$, so the order of the lower indices does not matter) and metric-compatible ($\nabla g = 0$, meaning it preserves lengths and angles under transport). Both conditions together pin down a single connection. Its concrete expression, the **Christoffel symbols**, is:
+
+$$\Gamma^\mu_{\nu\rho} = \frac{1}{2} \, g^{\mu\lambda} \left(\partial_\nu g_{\rho\lambda} + \partial_\rho g_{\nu\lambda} - \partial_\lambda g_{\nu\rho}\right)$$
+
+This is the same $\Gamma$ that appeared in the geodesic equation. It was hiding in $g_{\mu\nu}$ all along: the connection is nothing more than the metric's own derivatives, assembled in the right combination. Knowing $g_{\mu\nu}$ at every point is enough to recover $\Gamma^\mu_{\nu\rho}$ everywhere.
+
+**Parallel transport** is what happens when you carry a vector $w$ along a path $\gamma$ using this connection, moving it without rotating it relative to the surface at each step. Mathematically, the transported vector satisfies:
+
+$$\frac{dw^\mu}{dt} = -\Gamma^\mu_{\nu\rho} \, \dot{x}^\nu \, w^\rho$$
+
+On a curved surface, something unexpected happens: if you parallel-transport a vector around a closed loop, it returns rotated. The rotation angle is called the **holonomy** of the loop, and it is directly proportional to the Gaussian curvature enclosed by the path. An ant living on the surface can discover exactly how much the space curves by carrying a gyroscope around a closed path and measuring the rotation when it returns home. The component above lets you draw a closed path; the arrow shows the transported vector and updates the holonomy angle when the loop closes.
+
+The **covariant derivative** $\nabla_X Y$ is the infinitesimal version of this idea: it measures how a vector field $Y$ changes in the direction of $X$, corrected for the connection. In coordinates:
+
+$$(\nabla_X Y)^\mu = X^\nu \partial_\nu Y^\mu + \Gamma^\mu_{\nu\rho} \, X^\nu Y^\rho$$
+
+The first term $X^\nu \partial_\nu Y^\mu$ is the ordinary directional derivative. On a flat space that would be the whole story. On a curved surface it is not a tensor; if you change coordinates, it picks up spurious extra terms from the fact that the coordinate basis vectors are changing direction. The $\Gamma$ term exactly subtracts those spurious contributions, leaving a quantity that genuinely measures how $Y$ changes relative to the geometry, independent of the coordinate choice.
+
+---
+
+A Riemannian manifold $(M, g_{\mu\nu})$ is a smooth space $M$ equipped with a metric tensor $g_{\mu\nu}$. The metric defines distances, angles, and volumes at every point. Its signature classifies the geometry, Riemannian or Lorentzian. From $g_{\mu\nu}$ alone you can derive the Riemann curvature tensor $R^\lambda{}_{\mu\nu\rho}$, which measures how the space bends in every direction. Geodesics, the solutions to $\ddot{x}^\mu + \Gamma^\mu_{\nu\rho} \dot{x}^\nu \dot{x}^\rho = 0$, are the shortest paths. The Levi-Civita connection $\Gamma^\mu_{\nu\rho}$ encodes how to differentiate vector fields, carrying the geometry's effect into calculus itself.
+
+<div class="summary">
+  <p class="summary-label">In plain language</p>
+  <ul class="summary-list">
+    <li><span class="summary-term">Manifold</span> — a surface that is curved globally but looks flat up close, like the Earth beneath your feet.</li>
+    <li><span class="summary-term">Metric tensor</span> — a ruler that adjusts itself at every point so you always measure real distance, not just coordinate distance.</li>
+    <li><span class="summary-term">Signature</span> — the sign pattern that tells you whether you are in ordinary curved space or spacetime, where time behaves differently from every spatial direction.</li>
+    <li><span class="summary-term">Curvature</span> — a number (or tensor) that captures how much the surface bends: zero on a flat table, positive on a sphere, negative on a saddle.</li>
+    <li><span class="summary-term">Geodesics</span> — the straightest paths available on a curved surface, the routes a planet, a photon, or an aeroplane traces when nothing is pushing it off course.</li>
+    <li><span class="summary-term">Connection</span> — the rule for sliding a vector across a curved surface without rotating it, and the correction term that makes calculus work correctly in curved coordinates.</li>
+  </ul>
+</div>
