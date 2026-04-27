@@ -175,9 +175,9 @@ function initSurface(wrap: HTMLElement, mode: string, amp: number, sigma: number
   const modeController = new AbortController();
 
   if (mode === 'flat') afterRender = setupFlat(ovCanvas, camera);
-  if (mode === 'bump')      setupBump(uiDiv, mesh, geo, sigma, currentAmp, gridLines);
+  if (mode === 'bump')      setupBump(uiDiv, geo, sigma, currentAmp, gridLines);
   if (mode === 'distances') setupDistances(glCanvas, camera, scene, mesh, amp, sigma, uiDiv, disposeList, modeController.signal);
-  if (mode === 'curvature') setupCurvature(glCanvas, camera, scene, mesh, geo, mat as THREE.MeshPhongMaterial, amp, sigma, uiDiv, modeController.signal);
+  if (mode === 'curvature') setupCurvature(glCanvas, camera, mesh, geo, mat as THREE.MeshPhongMaterial, amp, sigma, uiDiv, modeController.signal);
   if (mode === 'geodesic')           setupGeodesic(glCanvas, camera, scene, mesh, amp, sigma, uiDiv, disposeList, modeController.signal);
   if (mode === 'parallel-transport') setupParallelTransport(glCanvas, camera, scene, mesh, amp, sigma, uiDiv, disposeList, modeController.signal);
 
@@ -297,7 +297,7 @@ function setupFlat(ovCanvas: HTMLCanvasElement, camera: THREE.PerspectiveCamera)
 
 // ── Mode: bump ────────────────────────────────────────────────────
 function setupBump(
-  uiDiv: HTMLElement, mesh: THREE.Mesh,
+  uiDiv: HTMLElement,
   geo: THREE.BufferGeometry, sigma: number,
   currentAmp: { value: number }, gridLines: THREE.LineSegments
 ) {
@@ -394,7 +394,7 @@ function setupDistances(
 // ── Mode: curvature ───────────────────────────────────────────────
 function setupCurvature(
   glCanvas: HTMLCanvasElement, camera: THREE.PerspectiveCamera,
-  scene: THREE.Scene, mesh: THREE.Mesh,
+  mesh: THREE.Mesh,
   geo: THREE.BufferGeometry, mat: THREE.MeshPhongMaterial,
   amp: number, sigma: number, uiDiv: HTMLElement, signal: AbortSignal
 ) {
@@ -467,7 +467,12 @@ function setupGeodesic(
     if (clickCount >= 2) {
       dots.forEach(d => scene.remove(d));
       dots = [];
-      if (geodesicLine) { scene.remove(geodesicLine); geodesicLine = null; }
+      if (geodesicLine) {
+        geodesicLine.geometry.dispose();
+        (geodesicLine.material as THREE.Material).dispose();
+        scene.remove(geodesicLine);
+        geodesicLine = null;
+      }
       clickCount = 0;
       uiDiv.innerHTML = `<div class="rs-chip">Click two points to trace geodesic</div>`;
     }
@@ -531,7 +536,12 @@ function setupParallelTransport(
     pathPts = [];
     dots.forEach(d => scene.remove(d));
     dots = [];
-    if (pathLine) { scene.remove(pathLine); pathLine = null; }
+    if (pathLine) {
+      pathLine.geometry.dispose();
+      (pathLine.material as THREE.Material).dispose();
+      scene.remove(pathLine);
+      pathLine = null;
+    }
     vecArrows.forEach(a => scene.remove(a));
     vecArrows = [];
     chip.innerHTML = 'Click points to draw path · close loop to transport';
@@ -565,7 +575,11 @@ function setupParallelTransport(
     scene.add(dot);
     dots.push(dot);
 
-    if (pathLine) scene.remove(pathLine);
+    if (pathLine) {
+      pathLine.geometry.dispose();
+      (pathLine.material as THREE.Material).dispose();
+      scene.remove(pathLine);
+    }
     const lGeo = new THREE.BufferGeometry().setFromPoints(
       pathPts.map(p => p.clone().setY(p.y + 0.01))
     );
@@ -597,8 +611,15 @@ function setupParallelTransport(
     const cross = v0[0]*fvv - v0[1]*fvu;
     const angle = Math.atan2(cross, dot) * 180 / Math.PI;
 
-    chip.innerHTML = `Holonomy: <em>${angle.toFixed(1)}°</em> &nbsp;·&nbsp; <span style="cursor:pointer;text-decoration:underline" id="pt-reset">Reset</span>`;
-    uiDiv.querySelector<HTMLElement>('#pt-reset')?.addEventListener('click', reset);
+    chip.innerHTML = '';
+    const holonomyText = document.createElement('span');
+    holonomyText.innerHTML = `Holonomy: <em>${angle.toFixed(1)}°</em> &nbsp;·&nbsp; `;
+    const resetSpan = document.createElement('span');
+    resetSpan.style.cssText = 'cursor:pointer;text-decoration:underline';
+    resetSpan.textContent = 'Reset';
+    resetSpan.addEventListener('click', reset);
+    chip.appendChild(holonomyText);
+    chip.appendChild(resetSpan);
   }
 }
 </script>
