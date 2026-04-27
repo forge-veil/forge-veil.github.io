@@ -82,10 +82,60 @@ This section earns its place by naming the vocabulary. The follow-up post on the
 
 <RiemannianSurface mode="curvature" />
 
+The simplest measure of curvature at a point is **Gaussian curvature**, written $K$ — a single number. At the peak of the bump: $K > 0$, the surface curves inward like the top of a sphere. On the flat rim: $K = 0$. Between the peak and the flat rim, the surface bends outward in one direction and inward in another — a saddle shape — giving $K < 0$. The heat map on the component above shows this variation across the surface.
+
+The remarkable theorem that makes curvature intrinsic is Gauss's **Theorema Egregium**: $K$ can be computed from $g_{ij}$ and its derivatives alone. No knowledge of how the surface sits in 3D space is needed. For our bump, where the height is given by a function $f = z(u, v)$:
+
+$$K = \frac{f_{uu} f_{vv} - f_{uv}^2}{\left(1 + f_u^2 + f_v^2\right)^2}$$
+
+The numerator involves second derivatives of the height — the rate at which the slope itself is changing. The denominator is the square of the metric determinant factor. Every piece of this formula is computable by an ant on the surface who can measure distances but has never seen the third dimension.
+
+For spaces of higher dimension, $K$ is no longer sufficient — we need a richer object. The **Riemann curvature tensor** $R^l{}_{ijk}$ is a rank-4 tensor derived from $g_{ij}$ and its second derivatives; it encodes the curvature in every pair of directions simultaneously. Successive compressions extract coarser information: the **Ricci tensor** $R_{ij} = R^l{}_{ilj}$ contracts one pair of indices, leaving a symmetric matrix. The **Ricci scalar** $R = g^{ij} R_{ij}$ contracts again, leaving a single number. Each compression loses detail but becomes more tractable. Einstein's field equations — the equations governing general relativity — are written in terms of $R_{ij}$ and $R$, with the metric $g_{ij}$ as the fundamental unknown. Hover any point on the surface above to read $K$ at that location.
+
+---
+
 ## Geodesics: what is a straight line?
 
 <RiemannianSurface mode="geodesic" />
 
+On a flat plane, the shortest path between two points is a straight line. On a curved surface, "straight" needs a new definition. A path that bends to follow the surface geometry — never turning left or right relative to the surface itself — is called a **geodesic**. It is the shortest path between two points, or more precisely, the path that locally minimises length.
+
+Parameterise a path on $M$ as $\gamma(t)$, where $t$ runs from 0 to 1 and $\gamma$ traces a curve on the surface. The velocity in coordinates is $\dot{x}^i = du^i/dt$. To find the shortest path we minimise the arc-length integral using the calculus of variations. The result is the **geodesic equation**:
+
+$$\ddot{x}^k + \Gamma^k_{ij} \, \dot{x}^i \dot{x}^j = 0$$
+
+The term $\Gamma^k_{ij}$ — pronounced "Christoffel symbol" — corrects for the curvature of the surface. It bends the path to follow the geometry rather than the coordinate grid. Think of it as the term that says: account for the fact that the coordinate basis vectors themselves are changing direction as you move across the curved surface. We will define $\Gamma^k_{ij}$ precisely in the next section.
+
+On the bump, a geodesic between two points on opposite sides does not always pass over the peak. The path over the top may be longer in the intrinsic metric $g_{ij}$ than an arc that curves around the side, even though the route over the peak looks shorter when you draw it on a flat map. This is the core lesson of geodesics: the shortest path is determined by the geometry, not by the coordinates. Click two points on the surface above to trace the geodesic between them.
+
+---
+
 ## Connections and covariant derivatives
 
 <RiemannianSurface mode="parallel-transport" />
+
+On flat space, moving a vector from point $A$ to point $B$ is trivial: just slide it along without rotating it. On a curved surface, this breaks down. The **tangent plane** at $A$ — the flat plane that best approximates the surface there — is a different plane from the tangent plane at $B$. There is no obvious way to compare a vector at $A$ with a vector at $B$, because they live in different planes. We need a rule for transporting vectors between points in a way that is consistent with the geometry.
+
+That rule is a **connection**. For a Riemannian manifold the natural choice is the **Levi-Civita connection**: the unique connection that is torsion-free ($\Gamma^k_{ij} = \Gamma^k_{ji}$, so the order of the lower indices does not matter) and metric-compatible ($\nabla g = 0$, meaning it preserves lengths and angles under transport). Both conditions together pin down a single connection. Its concrete expression — the **Christoffel symbols** — is:
+
+$$\Gamma^k_{ij} = \frac{1}{2} \, g^{kl} \left(\partial_i g_{jl} + \partial_j g_{il} - \partial_l g_{ij}\right)$$
+
+This is the same $\Gamma$ that appeared in the geodesic equation. It was hiding in $g$ all along: the connection is nothing more than the metric's own derivatives, assembled in the right combination. Knowing $g_{ij}$ at every point is enough to recover $\Gamma^k_{ij}$ everywhere.
+
+**Parallel transport** is what happens when you carry a vector $w$ along a path $\gamma$ using this connection — moving it without rotating it relative to the surface at each step. Mathematically, the transported vector satisfies:
+
+$$\frac{dw^k}{dt} = -\Gamma^k_{ij} \, \dot{\gamma}^i \, w^j$$
+
+On a curved surface, something unexpected happens: if you parallel-transport a vector around a closed loop, it returns rotated. The rotation angle is called the **holonomy** of the loop, and it is directly proportional to the Gaussian curvature enclosed by the path. An ant living on the surface can discover exactly how much the space curves by carrying a gyroscope around a closed path and measuring the rotation when it returns home. The component above lets you draw a closed path; the arrow shows the transported vector and updates the holonomy angle when the loop closes.
+
+The **covariant derivative** $\nabla_X Y$ is the infinitesimal version of this idea: it measures how a vector field $Y$ changes in the direction of $X$, corrected for the connection. In coordinates:
+
+$$(\nabla_X Y)^k = X^j \partial_j Y^k + \Gamma^k_{jl} \, X^j Y^l$$
+
+The first term $X^j \partial_j Y^k$ is the ordinary directional derivative. On a flat space that would be the whole story. On a curved surface it is not a tensor — if you change coordinates, it picks up spurious extra terms from the fact that the coordinate basis vectors are changing direction. The $\Gamma$ term exactly subtracts those spurious contributions, leaving a quantity that genuinely measures how $Y$ changes relative to the geometry, independent of the coordinate choice.
+
+---
+
+A Riemannian manifold $(M, g)$ is a smooth space $M$ equipped with a metric tensor $g$. The metric defines distances, angles, and volumes at every point. Its signature classifies the geometry — Riemannian or Lorentzian. From $g$ alone you can derive the Riemann curvature tensor $R^l{}_{ijk}$, which measures how the space bends in every direction. Geodesics — the solutions to $\ddot{x}^k + \Gamma^k_{ij} \dot{x}^i \dot{x}^j = 0$ — are the shortest paths. The Levi-Civita connection $\Gamma^k_{ij}$ encodes how to differentiate vector fields, carrying the geometry's effect into calculus itself.
+
+The next post opens a Lorentzian metric — one sign flipped — and reads the Schwarzschild solution as the geometry of a black hole.
