@@ -173,6 +173,9 @@ function initSurface(wrap: HTMLElement, mode: string, amp: number, sigma: number
   let afterRender: (() => void) | null = null;
 
   if (mode === 'flat') afterRender = setupFlat(ovCanvas, camera);
+  if (mode === 'bump')      setupBump(uiDiv, mesh, geo, sigma, currentAmp, gridLines);
+  if (mode === 'distances') setupDistances(glCanvas, camera, scene, mesh, amp, sigma, uiDiv);
+  if (mode === 'curvature') setupCurvature(glCanvas, camera, scene, mesh, geo, mat as THREE.MeshPhongMaterial, amp, sigma, uiDiv);
 
   // ── Render loop ───────────────────────────────────────────────────
   let animId: number | null = null;
@@ -257,5 +260,152 @@ function setupFlat(ovCanvas: HTMLCanvasElement, camera: THREE.PerspectiveCamera)
     ctx.fillText('u²', bx + 8, by);
     ctx.restore();
   };
+}
+
+// ── Mode: bump ────────────────────────────────────────────────────
+function setupBump(
+  uiDiv: HTMLElement, mesh: THREE.Mesh,
+  geo: THREE.BufferGeometry, sigma: number,
+  currentAmp: { value: number }, gridLines: THREE.LineSegments
+) {
+  uiDiv.style.pointerEvents = 'all';
+  uiDiv.innerHTML = `
+    <div class="rs-slider-row">
+      <span class="rs-slider-label">Bump height</span>
+      <input type="range" min="0" max="2.2" step="0.01" value="${currentAmp.value}" id="rs-amp-slider-${Math.random().toString(36).slice(2)}">
+      <span class="rs-slider-val">${currentAmp.value.toFixed(2)}</span>
+    </div>`;
+
+  const slider = uiDiv.querySelector<HTMLInputElement>('input[type=range]')!;
+  const valSpan = uiDiv.querySelector<HTMLSpanElement>('.rs-slider-val')!;
+
+  slider.addEventListener('input', () => {
+    const a = parseFloat(slider.value);
+    currentAmp.value = a;
+    valSpan.textContent = a.toFixed(2);
+    const pos = geo.attributes.position as THREE.BufferAttribute;
+    for (let i = 0; i < pos.count; i++) {
+      const u = pos.getX(i), v = pos.getZ(i);
+      pos.setY(i, surfaceZ(u, v, a, sigma));
+    }
+    pos.needsUpdate = true;
+    geo.computeVertexNormals();
+
+    // Rebuild grid lines
+    const newLines = buildGridLines(a, sigma, false);
+    const lGeo = gridLines.geometry as THREE.BufferGeometry;
+    lGeo.setAttribute('position', newLines.geometry.getAttribute('position'));
+    lGeo.attributes.position.needsUpdate = true;
+  });
+}
+
+// ── Mode: distances ───────────────────────────────────────────────
+function setupDistances(
+  glCanvas: HTMLCanvasElement, camera: THREE.PerspectiveCamera,
+  scene: THREE.Scene, mesh: THREE.Mesh,
+  amp: number, sigma: number, uiDiv: HTMLElement
+) {
+  const raycaster = new THREE.Raycaster();
+  const dotGeo    = new THREE.SphereGeometry(0.04, 8, 8);
+  const dotMat    = new THREE.MeshBasicMaterial({ color: 0x1c1c1e });
+  const points: THREE.Vector3[] = [];
+  const dots: THREE.Mesh[]      = [];
+  let lineObj: THREE.Line | null = null;
+
+  glCanvas.addEventListener('click', (e) => {
+    if (points.length >= 2) {
+      points.length = 0;
+      dots.forEach(d => scene.remove(d));
+      dots.length = 0;
+      if (lineObj) { scene.remove(lineObj); lineObj = null; }
+      uiDiv.innerHTML = '';
+    }
+    const rect = glCanvas.getBoundingClientRect();
+    const ndc  = new THREE.Vector2(
+      (e.clientX - rect.left) / rect.width  * 2 - 1,
+      -(e.clientY - rect.top) / rect.height * 2 + 1
+    );
+    raycaster.setFromCamera(ndc, camera);
+    const hits = raycaster.intersectObject(mesh);
+    if (!hits.length) return;
+    const pt = hits[0].point;
+    points.push(pt);
+
+    const dot = new THREE.Mesh(dotGeo, dotMat);
+    dot.position.copy(pt);
+    scene.add(dot);
+    dots.push(dot);
+
+    if (points.length === 2) {
+      const [p0, p1] = points;
+      const lGeo = new THREE.BufferGeometry().setFromPoints([p0, p1]);
+      lineObj = new THREE.Line(lGeo, new THREE.LineBasicMaterial({ color: 0x1c1c1e }));
+      scene.add(lineObj);
+
+      const u  = (p0.x + p1.x) / 2, v = (p0.z + p1.z) / 2;
+      const du = p1.x - p0.x,       dv = p1.z - p0.z;
+      const g  = metricTensor(u, v, amp, sigma);
+      const ds2 = g[0][0]*du*du + 2*g[0][1]*du*dv + g[1][1]*dv*dv;
+      uiDiv.innerHTML = `
+        <div class="rs-chip">ds² = <em>${ds2.toFixed(4)}</em></div>
+        <div class="rs-chip">g₁₁ = <em>${g[0][0].toFixed(3)}</em></div>
+        <div class="rs-chip">g₁₂ = <em>${g[0][1].toFixed(3)}</em></div>
+        <div class="rs-chip">g₂₂ = <em>${g[1][1].toFixed(3)}</em></div>`;
+    }
+  });
+}
+
+// ── Mode: curvature ───────────────────────────────────────────────
+function setupCurvature(
+  glCanvas: HTMLCanvasElement, camera: THREE.PerspectiveCamera,
+  scene: THREE.Scene, mesh: THREE.Mesh,
+  geo: THREE.BufferGeometry, mat: THREE.MeshPhongMaterial,
+  amp: number, sigma: number, uiDiv: HTMLElement
+) {
+  mat.vertexColors = true;
+  mat.needsUpdate  = true;
+
+  const pos    = geo.attributes.position as THREE.BufferAttribute;
+  const colors = new Float32Array(pos.count * 3);
+  const kVals: number[] = [];
+
+  let kMin = Infinity, kMax = -Infinity;
+  for (let i = 0; i < pos.count; i++) {
+    const k = gaussianCurvature(pos.getX(i), pos.getZ(i), amp, sigma);
+    kVals.push(k);
+    kMin = Math.min(kMin, k); kMax = Math.max(kMax, k);
+  }
+
+  for (let i = 0; i < pos.count; i++) {
+    const t = (kVals[i] - kMin) / (kMax - kMin + 1e-12);
+    // blue-grey (flat) → warm red (peaked)
+    const r = t < 0.5 ? 0.78 + 0.44*t*2                : 0.78 + 0.44*(1-(t-0.5)*2)*0.5 + 0.56;
+    const g = t < 0.5 ? 0.82 + 0.18*t*2 - 0.3*t        : 0.82 - 0.53*(t-0.5)*2;
+    const b = t < 0.5 ? 0.92 - 0.22*t*2                 : 0.90 - 0.87*(t-0.5)*2;
+    colors[i*3]   = Math.min(1, Math.max(0, r));
+    colors[i*3+1] = Math.min(1, Math.max(0, g));
+    colors[i*3+2] = Math.min(1, Math.max(0, b));
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+  const raycaster = new THREE.Raycaster();
+  uiDiv.innerHTML = `<div class="rs-chip">Hover to read K &nbsp;·&nbsp; blue = flat · red = peaked</div>`;
+
+  glCanvas.addEventListener('mousemove', (e) => {
+    const rect = glCanvas.getBoundingClientRect();
+    const ndc  = new THREE.Vector2(
+      (e.clientX - rect.left) / rect.width  * 2 - 1,
+      -(e.clientY - rect.top) / rect.height * 2 + 1
+    );
+    raycaster.setFromCamera(ndc, camera);
+    const hits = raycaster.intersectObject(mesh);
+    if (!hits.length) {
+      uiDiv.innerHTML = `<div class="rs-chip">Hover to read K &nbsp;·&nbsp; blue = flat · red = peaked</div>`;
+      return;
+    }
+    const pt = hits[0].point;
+    const k  = gaussianCurvature(pt.x, pt.z, amp, sigma);
+    uiDiv.innerHTML = `<div class="rs-chip">K = <em>${k.toFixed(4)}</em> at (${pt.x.toFixed(2)}, ${pt.z.toFixed(2)})</div>`;
+  });
 }
 </script>
