@@ -4,12 +4,13 @@ interface Props {
   height?: number;
   amp?: number;
   sigma?: number;
+  side?: boolean;
 }
-const { mode, height = 420, amp = 1.1, sigma = 0.8 } = Astro.props;
+const { mode, height = 420, amp = 1.1, sigma = 0.8, side = false } = Astro.props;
 ---
 
 <div
-  class="rs-wrap"
+  class={`rs-wrap${side ? ' rs-side' : ''}`}
   data-mode={mode}
   data-amp={amp}
   data-sigma={sigma}
@@ -29,6 +30,18 @@ const { mode, height = 420, amp = 1.1, sigma = 0.8 } = Astro.props;
     background: #fafafa;
     border: 1px solid rgba(0,0,0,0.08);
     margin: 2rem 0;
+  }
+  .rs-side {
+    float: right;
+    width: 44%;
+    margin: 0.25rem 0 1.5rem 2rem;
+  }
+  @media (max-width: 860px) {
+    .rs-side {
+      float: none;
+      width: 100%;
+      margin: 2rem 0;
+    }
   }
   .rs-canvas {
     display: block;
@@ -104,7 +117,9 @@ function initSurface(wrap: HTMLElement, mode: string, amp: number, sigma: number
 
   const scene  = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(40, 1, 0.01, 100);
-  camera.position.set(0, 3.2, 4.5);
+  // Flat mode sits lower and further back so the bump reads in perspective
+  if (mode === 'flat') camera.position.set(0, 1.6, 6.2);
+  else                 camera.position.set(0, 3.2, 4.5);
   camera.lookAt(0, 0, 0);
 
   const controls = new OrbitControls(camera, glCanvas);
@@ -128,11 +143,9 @@ function initSurface(wrap: HTMLElement, mode: string, amp: number, sigma: number
   }
   updateGeometry(amp);
 
-  // MeshBasicMaterial ignores lights — every face renders as exactly
-  // rgba(246,246,250), matching the flat fill from the brainstormed mockup.
-  // polygonOffset pushes the mesh back in depth so coplanar grid lines win.
   const mat = new THREE.MeshBasicMaterial({
     color: 0xf6f6fa,
+    vertexColors: true,
     side: THREE.DoubleSide,
     polygonOffset: true,
     polygonOffsetFactor: 1,
@@ -140,6 +153,7 @@ function initSurface(wrap: HTMLElement, mode: string, amp: number, sigma: number
   });
   const mesh = new THREE.Mesh(geo, mat);
   scene.add(mesh);
+  applyKColors(geo, mode === 'flat' ? 0 : amp, sigma);
 
   // ── Grid lines — light, semi-transparent ──────────────────────────
   const gridLines = buildGridLines(mode === 'flat' ? 0 : amp, sigma, mode === 'flat');
@@ -167,11 +181,11 @@ function initSurface(wrap: HTMLElement, mode: string, amp: number, sigma: number
   const modeController = new AbortController();
   const sig = modeController.signal;
 
-  if (mode === 'flat')             afterRender = setupFlat(ovCanvas, camera);
-  if (mode === 'bump')             setupBump(uiDiv, geo, sigma, currentAmp, gridLines);
+  if (mode === 'flat')             afterRender = setupFlat(ovCanvas, camera, scene, disposeList, geo, sigma, gridLines);
+  if (mode === 'bump')             afterRender = setupBump(uiDiv, geo, sigma, currentAmp, gridLines, scene, camera, ovCanvas, disposeList);
   if (mode === 'distances')        afterRender = setupDistances(glCanvas, camera, scene, mesh, amp, sigma, ovCanvas, disposeList, sig);
-  if (mode === 'curvature')        afterRender = setupCurvature(glCanvas, camera, mesh, geo, mat as THREE.MeshBasicMaterial, amp, sigma, ovCanvas, sig);
-  if (mode === 'geodesic')         afterRender = setupGeodesic(glCanvas, camera, scene, mesh, amp, sigma, ovCanvas, disposeList, sig);
+  if (mode === 'curvature')        afterRender = setupCurvature(glCanvas, camera, mesh, amp, sigma, ovCanvas, sig);
+  if (mode === 'geodesic')         afterRender = setupGeodesic(glCanvas, camera, scene, mesh, amp, sigma, uiDiv, ovCanvas, disposeList, sig);
   if (mode === 'parallel-transport') afterRender = setupParallelTransport(glCanvas, camera, scene, mesh, amp, sigma, uiDiv, ovCanvas, disposeList, sig);
 
   // ── Render loop ───────────────────────────────────────────────────
@@ -248,6 +262,42 @@ function gridVerts(amp: number, sigma: number, flat: boolean): Float32Array {
   return new Float32Array(verts);
 }
 
+// ── Curvature heat-map coloring (blue=flat → red=peaked) ─────────
+// Reuses the existing Float32Array in-place after first call to avoid GC.
+function applyKColors(geo: THREE.BufferGeometry, amp: number, sigma: number) {
+  const pos = geo.attributes.position as THREE.BufferAttribute;
+  const n = pos.count;
+  const kVals = new Float32Array(n);
+  let kMin = Infinity, kMax = -Infinity;
+  for (let i = 0; i < n; i++) {
+    const k = gaussianCurvature(pos.getX(i), pos.getZ(i), amp, sigma);
+    kVals[i] = k;
+    if (k < kMin) kMin = k;
+    if (k > kMax) kMax = k;
+  }
+  const range = kMax - kMin + 1e-12;
+  let colAttr = geo.getAttribute('color') as THREE.BufferAttribute | undefined;
+  let colors: Float32Array;
+  if (colAttr && (colAttr.array as Float32Array).length === n * 3) {
+    colors = colAttr.array as Float32Array;
+  } else {
+    colors = new Float32Array(n * 3);
+    colAttr = undefined;
+  }
+  for (let i = 0; i < n; i++) {
+    const t = (kVals[i] - kMin) / range;
+    const s = t < 0.5 ? t * 2 : (t - 0.5) * 2;
+    colors[i*3]   = Math.min(1, t < 0.5 ? 0.78 + 0.17*s : 0.95 - 0.03*s);
+    colors[i*3+1] = Math.min(1, t < 0.5 ? 0.82 + 0.08*s : 0.90 - 0.55*s);
+    colors[i*3+2] = Math.min(1, Math.max(0, t < 0.5 ? 0.92 - 0.07*s : 0.85 - 0.57*s));
+  }
+  if (colAttr) {
+    colAttr.needsUpdate = true;
+  } else {
+    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  }
+}
+
 // ── Canvas overlay helpers ─────────────────────────────────────────
 function makeCtx(ovCanvas: HTMLCanvasElement, camera: THREE.PerspectiveCamera) {
   const ctx = ovCanvas.getContext('2d')!;
@@ -272,18 +322,209 @@ function makeCtx(ovCanvas: HTMLCanvasElement, camera: THREE.PerspectiveCamera) {
 }
 
 // ── Mode: flat ─────────────────────────────────────────────────────
-function setupFlat(ovCanvas: HTMLCanvasElement, camera: THREE.PerspectiveCamera): () => void {
-  const { frame, done } = makeCtx(ovCanvas, camera);
+function setupFlat(
+  ovCanvas: HTMLCanvasElement,
+  camera: THREE.PerspectiveCamera,
+  scene: THREE.Scene,
+  disposeList: Array<THREE.BufferGeometry | THREE.Material>,
+  geo: THREE.BufferGeometry,
+  sigma: number,
+  gridLines: THREE.LineSegments
+): () => void {
+  const overlay = makeCtx(ovCanvas, camera);
+
+  const AMP_MAX = 1.1;
+  // Fixed (u¹, u²) coordinates of the two demonstration points
+  const Pu = -0.75, Pv = -0.4;
+  const Qu =  0.60, Qv =  0.55;
+  // Corner of the right-angle triangle — always on the flat base plane (y=0)
+  const Cu = Qu, Cv = Pv;
+
+  // Smoothstep easing
+  function ease(x: number): number {
+    x = Math.max(0, Math.min(1, x));
+    return x * x * (3 - 2 * x);
+  }
+
+  // Animation: 12-second cycle
+  //  0 – 2.5 s  flat pause
+  //  2.5 – 5.5  bump ramps in
+  //  5.5 – 8    hold at peak
+  //  8 – 11     bump ramps out
+  //  11 – 12    flat pause, then loop
+  const CYCLE = 12;
+  function getAmp(t: number): number {
+    if (t < 2.5) return 0;
+    if (t < 5.5) return AMP_MAX * ease((t - 2.5) / 3);
+    if (t < 8.0) return AMP_MAX;
+    if (t < 11)  return AMP_MAX * (1 - ease((t - 8) / 3));
+    return 0;
+  }
+
+  // 3D dot markers — positions updated each frame
+  const dotGeo = new THREE.SphereGeometry(0.045, 12, 12);
+  const dotMat = new THREE.MeshBasicMaterial({ color: 0x1c1c1e });
+  disposeList.push(dotGeo, dotMat);
+  const pDot = new THREE.Mesh(dotGeo, dotMat);
+  const qDot = new THREE.Mesh(dotGeo, dotMat);
+  scene.add(pDot, qDot);
+
+  // Inline formula renderer using measureText for exact spacing
+  function drawFormula(
+    ctx: CanvasRenderingContext2D,
+    startX: number, y: number,
+    baseAlpha: number, dzAlpha: number
+  ) {
+    let x = startX;
+    const draw = (text: string, small: boolean, color: string, alpha: number) => {
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = color;
+      ctx.font = small ? "8px 'Menlo', monospace" : "12px 'Menlo', monospace";
+      ctx.fillText(text, x, small ? y - 5 : y);
+      x += ctx.measureText(text).width;
+    };
+    // ds² = (dx¹)² + (dx²)²
+    draw('ds² = (dx', false, '#1c1c1e', baseAlpha);
+    draw('1',         true,  '#1c1c1e', baseAlpha);
+    draw(')² + (dx',  false, '#1c1c1e', baseAlpha);
+    draw('2',         true,  '#1c1c1e', baseAlpha);
+    draw(')²',        false, '#1c1c1e', baseAlpha);
+    // + (dz)² — fades in during bump
+    if (dzAlpha > 0.01) draw(' + (dz)²', false, '#c0392b', dzAlpha);
+    ctx.globalAlpha = 1;
+  }
+
+  const startTime = performance.now() / 1000;
+
   return () => {
-    const { ctx, cW, cH, project } = frame();
-    ctx.font = "12px 'Menlo', monospace";
+    const elapsed = (performance.now() / 1000 - startTime) % CYCLE;
+    const curAmp  = getAmp(elapsed);
+    const isFlat  = curAmp < 0.0005;
+    const bumpFrac = curAmp / AMP_MAX; // 0 = flat, 1 = full bump
+
+    // ── Update surface mesh ──────────────────────────────────────────
+    const pos = geo.attributes.position as THREE.BufferAttribute;
+    for (let i = 0; i < pos.count; i++) {
+      const u = pos.getX(i), v = pos.getZ(i);
+      pos.setY(i, isFlat ? 0 : surfaceZ(u, v, curAmp, sigma));
+    }
+    pos.needsUpdate = true;
+    applyKColors(geo, curAmp, sigma);
+
+    // ── Update grid lines ────────────────────────────────────────────
+    const lGeo = gridLines.geometry as THREE.BufferGeometry;
+    lGeo.setAttribute('position', new THREE.BufferAttribute(
+      gridVerts(curAmp, sigma, isFlat), 3
+    ));
+    lGeo.attributes.position.needsUpdate = true;
+
+    // ── Move 3D dots to current surface height ───────────────────────
+    const Py = isFlat ? 0 : surfaceZ(Pu, Pv, curAmp, sigma);
+    const Qy = isFlat ? 0 : surfaceZ(Qu, Qv, curAmp, sigma);
+    pDot.position.set(Pu, Py, Pv);
+    qDot.position.set(Qu, Qy, Qv);
+
+    // ── Overlay ──────────────────────────────────────────────────────
+    const { ctx, project } = overlay.frame();
+
+    // Project surface points and flat-plane base points
+    const [px,  py]  = project(Pu, Py, Pv);   // P on surface
+    const [qx,  qy]  = project(Qu, Qy, Qv);   // Q on surface
+    const [p0x, p0y] = project(Pu, 0,  Pv);   // P projected onto flat base
+    const [q0x, q0y] = project(Qu, 0,  Qv);   // Q projected onto flat base
+    const [cornX, cornY] = project(Cu, 0, Cv); // right-angle corner (always flat)
+
+    // ── Right-triangle legs on the flat base plane ───────────────────
+    ctx.strokeStyle = '#86868b';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([5, 4]);
+    ctx.beginPath(); ctx.moveTo(p0x, p0y); ctx.lineTo(cornX, cornY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cornX, cornY); ctx.lineTo(q0x, q0y); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Right-angle marker at corner
+    {
+      const sz = 8;
+      const d1x = p0x - cornX, d1y = p0y - cornY;
+      const l1 = Math.sqrt(d1x*d1x + d1y*d1y) || 1;
+      const d2x = q0x - cornX, d2y = q0y - cornY;
+      const l2 = Math.sqrt(d2x*d2x + d2y*d2y) || 1;
+      const n1x = d1x/l1*sz, n1y = d1y/l1*sz;
+      const n2x = d2x/l2*sz, n2y = d2y/l2*sz;
+      ctx.beginPath();
+      ctx.moveTo(cornX + n1x, cornY + n1y);
+      ctx.lineTo(cornX + n1x + n2x, cornY + n1y + n2y);
+      ctx.lineTo(cornX + n2x, cornY + n2y);
+      ctx.strokeStyle = '#86868b';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    // ── Hypotenuse: path along the surface from P → Q ────────────────
+    // Sample the surface at N points so the line follows the curvature
+    {
+      const N = 40;
+      ctx.beginPath();
+      for (let i = 0; i <= N; i++) {
+        const t  = i / N;
+        const su = Pu + (Qu - Pu) * t;
+        const sv = Pv + (Qv - Pv) * t;
+        const sy = isFlat ? 0 : surfaceZ(su, sv, curAmp, sigma);
+        const [sx2d, sy2d] = project(su, sy, sv);
+        if (i === 0) ctx.moveTo(sx2d, sy2d); else ctx.lineTo(sx2d, sy2d);
+      }
+      ctx.strokeStyle = '#1c1c1e';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([]);
+      ctx.stroke();
+    }
+
+    // ── dz lift lines: base → surface at P and Q ─────────────────────
+    if (bumpFrac > 0.02) {
+      const dzAlpha = Math.min(1, bumpFrac * 3);
+      ctx.globalAlpha = dzAlpha;
+      ctx.strokeStyle = '#c0392b';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 3]);
+      ctx.beginPath(); ctx.moveTo(p0x, p0y); ctx.lineTo(px, py); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(q0x, q0y); ctx.lineTo(qx, qy); ctx.stroke();
+      ctx.setLineDash([]);
+      // dz label at P
+      ctx.font = "10px 'Menlo', monospace";
+      ctx.fillStyle = '#c0392b';
+      ctx.textAlign = 'left';
+      ctx.fillText('dz', (p0x + px) / 2 + 5, (p0y + py) / 2);
+      ctx.globalAlpha = 1;
+    }
+
+    // ── Point labels: xᵘ and xᵛ ─────────────────────────────────────
+    ctx.fillStyle = '#1c1c1e';
+    ctx.textAlign = 'left';
+    ctx.font = "13px 'Menlo', monospace"; ctx.fillText('x', px - 22, py - 2);
+    ctx.font = "9px 'Menlo', monospace";  ctx.fillText('μ', px - 11, py - 8);
+    ctx.font = "13px 'Menlo', monospace"; ctx.fillText('x', qx + 8,  qy - 2);
+    ctx.font = "9px 'Menlo', monospace";  ctx.fillText('ν', qx + 19, qy - 8);
+
+    // ── Leg labels ────────────────────────────────────────────────────
     ctx.fillStyle = '#86868b';
     ctx.textAlign = 'center';
-    const [ax, ay] = project(EXT*0.88, 0, 0);
-    ctx.fillText('u¹', ax, ay - 6);
-    const [bx, by] = project(0, 0, EXT*0.88);
-    ctx.fillText('u²', bx + 8, by);
-    done();
+    const m1x = (p0x + cornX) / 2, m1y = (p0y + cornY) / 2;
+    ctx.font = "11px 'Menlo', monospace"; ctx.fillText('dx', m1x - 4, m1y - 8);
+    ctx.font = "8px 'Menlo', monospace";  ctx.fillText('1',  m1x + 8,  m1y - 13);
+    const m2x = (cornX + q0x) / 2, m2y = (cornY + q0y) / 2;
+    ctx.font = "11px 'Menlo', monospace"; ctx.fillText('dx', m2x + 14, m2y);
+    ctx.font = "8px 'Menlo', monospace";  ctx.fillText('2',  m2x + 26, m2y - 5);
+
+    // ── Formula ───────────────────────────────────────────────────────
+    // base formula fades from dark → grey as bump grows
+    const baseAlpha = Math.max(0.4, 1 - ease(Math.max(0, (bumpFrac - 0.25) / 0.5)));
+    const dzTermAlpha = ease(Math.min(1, Math.max(0, (bumpFrac - 0.2) / 0.5)));
+    const mhx = (p0x + q0x) / 2;
+    const mhy = (p0y + q0y) / 2;
+    ctx.textAlign = 'left';
+    drawFormula(ctx, mhx - 66, mhy + 30, baseAlpha, dzTermAlpha);
+
+    overlay.done();
   };
 }
 
@@ -291,8 +532,12 @@ function setupFlat(ovCanvas: HTMLCanvasElement, camera: THREE.PerspectiveCamera)
 function setupBump(
   uiDiv: HTMLElement,
   geo: THREE.BufferGeometry, sigma: number,
-  currentAmp: { value: number }, gridLines: THREE.LineSegments
-) {
+  currentAmp: { value: number }, gridLines: THREE.LineSegments,
+  scene: THREE.Scene,
+  camera: THREE.PerspectiveCamera,
+  ovCanvas: HTMLCanvasElement,
+  disposeList: Array<THREE.BufferGeometry | THREE.Material>
+): () => void {
   uiDiv.style.pointerEvents = 'all';
   uiDiv.innerHTML = `
     <div class="rs-slider-row">
@@ -303,6 +548,55 @@ function setupBump(
 
   const slider  = uiDiv.querySelector<HTMLInputElement>('input[type=range]')!;
   const valSpan = uiDiv.querySelector<HTMLSpanElement>('.rs-slider-val')!;
+
+  // ── Coordinate patches ────────────────────────────────────────────
+  // Two overlapping rectangular patches in (u,v) space mapped onto the surface.
+  // The intersection U₁ ∩ U₂ is highlighted as a third mesh on top.
+  const PATCH_SEG = 28;
+  const vExt = 1.8;
+  const patchDefs = [
+    { u0: -EXT,  u1:  0.4, v0: -vExt, v1: vExt, color: 0x5b8dee, opacity: 0.16 }, // U₁
+    { u0: -0.6,  u1:  EXT, v0: -vExt, v1: vExt, color: 0xe8874a, opacity: 0.16 }, // U₂
+    { u0: -0.6,  u1:  0.4, v0: -vExt, v1: vExt, color: 0x8b6ee8, opacity: 0.28 }, // U₁ ∩ U₂
+  ];
+
+  function buildPatchGeo(def: typeof patchDefs[0], amp: number): THREE.BufferGeometry {
+    const pw = def.u1 - def.u0, ph = def.v1 - def.v0;
+    const g  = new THREE.PlaneGeometry(pw, ph, PATCH_SEG, PATCH_SEG);
+    g.rotateX(-Math.PI / 2);
+    g.translate((def.u0 + def.u1) / 2, 0, (def.v0 + def.v1) / 2);
+    const pos = g.attributes.position as THREE.BufferAttribute;
+    for (let i = 0; i < pos.count; i++) {
+      pos.setY(i, surfaceZ(pos.getX(i), pos.getZ(i), amp, sigma) + GRID_LIFT * 4);
+    }
+    pos.needsUpdate = true;
+    return g;
+  }
+
+  const patchMeshes = patchDefs.map(def => {
+    const g = buildPatchGeo(def, currentAmp.value);
+    const m = new THREE.MeshBasicMaterial({
+      color: def.color,
+      transparent: true,
+      opacity: def.opacity,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
+    disposeList.push(g, m);
+    const mesh = new THREE.Mesh(g, m);
+    scene.add(mesh);
+    return mesh;
+  });
+
+  function updatePatches(amp: number) {
+    patchMeshes.forEach((mesh, idx) => {
+      const pos = mesh.geometry.attributes.position as THREE.BufferAttribute;
+      for (let i = 0; i < pos.count; i++) {
+        pos.setY(i, surfaceZ(pos.getX(i), pos.getZ(i), amp, sigma) + GRID_LIFT * 4);
+      }
+      pos.needsUpdate = true;
+    });
+  }
 
   slider.addEventListener('input', () => {
     const a = parseFloat(slider.value);
@@ -317,7 +611,95 @@ function setupBump(
     const lGeo = gridLines.geometry as THREE.BufferGeometry;
     lGeo.setAttribute('position', new THREE.BufferAttribute(buildGridPositions(a, sigma, false), 3));
     lGeo.attributes.position.needsUpdate = true;
+    applyKColors(geo, a, sigma);
+    updatePatches(a);
   });
+
+  // ── Canvas overlay: M label, patch labels, local coordinate axes ──
+  const overlay = makeCtx(ovCanvas, camera);
+
+  // Axis arrow helper — draws a labelled arrow from (ox,oy) to (tx,ty)
+  function drawAxis(
+    ctx: CanvasRenderingContext2D,
+    ox: number, oy: number, tx: number, ty: number,
+    label: string, color: string
+  ) {
+    const dx = tx - ox, dy = ty - oy;
+    const len = Math.sqrt(dx*dx + dy*dy) || 1;
+    const nx = dx/len, ny = dy/len;
+    const AH = 5;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(tx, ty); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(tx, ty);
+    ctx.lineTo(tx - AH*nx + AH*0.35*ny, ty - AH*ny - AH*0.35*nx);
+    ctx.lineTo(tx - AH*nx - AH*0.35*ny, ty - AH*ny + AH*0.35*nx);
+    ctx.closePath(); ctx.fillStyle = color; ctx.fill();
+    ctx.font = "italic 9px 'Menlo', monospace";
+    ctx.fillStyle = color;
+    ctx.textAlign = 'left';
+    ctx.fillText(label, tx + nx*5, ty + ny*5);
+  }
+
+  const AXIS_LEN = 0.38;
+  const axisGroups = [
+    { cu: -1.4, cv: 0.1, color: '#2a5bbf' },
+    { cu:  1.2, cv: 0.1, color: '#b85a12' },
+  ];
+
+  return () => {
+    const { ctx, project } = overlay.frame();
+    const amp = currentAmp.value;
+    const lift = GRID_LIFT * 5;
+
+    // ── Local coordinate axes inside U₁ and U₂ ──────────────────────
+    for (const ag of axisGroups) {
+      const oy3 = surfaceZ(ag.cu, ag.cv, amp, sigma) + lift;
+      const [ox, oy] = project(ag.cu, oy3, ag.cv);
+
+      const ax1y3 = surfaceZ(ag.cu + AXIS_LEN, ag.cv, amp, sigma) + lift;
+      const [ax1x, ax1y] = project(ag.cu + AXIS_LEN, ax1y3, ag.cv);
+
+      const ax2y3 = surfaceZ(ag.cu, ag.cv + AXIS_LEN, amp, sigma) + lift;
+      const [ax2x, ax2y] = project(ag.cu, ax2y3, ag.cv + AXIS_LEN);
+
+      // Origin dot
+      ctx.beginPath();
+      ctx.arc(ox, oy, 2.5, 0, Math.PI*2);
+      ctx.fillStyle = ag.color;
+      ctx.fill();
+
+      drawAxis(ctx, ox, oy, ax1x, ax1y, 'x¹', ag.color);
+      drawAxis(ctx, ox, oy, ax2x, ax2y, 'x²', ag.color);
+    }
+
+    // ── Patch and manifold labels ────────────────────────────────────
+    ctx.textAlign = 'center';
+
+    // M — the whole manifold, floats above the bump peak
+    const mPeakY = surfaceZ(0, 0, amp, sigma) + 0.32;
+    const [msx, msy] = project(0, mPeakY, 0);
+    ctx.font = "italic bold 15px 'Menlo', monospace";
+    ctx.fillStyle = '#1c1c1e';
+    ctx.fillText('M', msx, msy);
+
+    // U₁, U₂, overlap
+    const patchLabels = [
+      { u: -1.4, v:  0.6, text: 'U₁',       color: '#2a5bbf', size: 11 },
+      { u:  1.2, v:  0.6, text: 'U₂',       color: '#b85a12', size: 11 },
+      { u: -0.1, v: -1.2, text: 'U₁ ∩ U₂', color: '#5c38b0', size: 10 },
+    ];
+    for (const lb of patchLabels) {
+      const y = surfaceZ(lb.u, lb.v, amp, sigma) + 0.14;
+      const [sx, sy] = project(lb.u, y, lb.v);
+      ctx.font = `italic ${lb.size}px 'Menlo', monospace`;
+      ctx.fillStyle = lb.color;
+      ctx.fillText(lb.text, sx, sy);
+    }
+
+    overlay.done();
+  };
 }
 
 // ── Mode: distances ───────────────────────────────────────────────
@@ -371,7 +753,15 @@ function setupDistances(
 
     if (state.pts.length === 2) {
       const [p0, p1] = state.pts;
-      const lGeo = new THREE.BufferGeometry().setFromPoints([p0, p1]);
+      const N = 40;
+      const surfPts: THREE.Vector3[] = [];
+      for (let i = 0; i <= N; i++) {
+        const t  = i / N;
+        const su = p0.x + (p1.x - p0.x) * t;
+        const sv = p0.z + (p1.z - p0.z) * t;
+        surfPts.push(new THREE.Vector3(su, surfaceZ(su, sv, amp, sigma) + GRID_LIFT * 2, sv));
+      }
+      const lGeo = new THREE.BufferGeometry().setFromPoints(surfPts);
       state.lineObj = new THREE.Line(lGeo, new THREE.LineBasicMaterial({ color: 0x1c1c1e }));
       scene.add(state.lineObj);
       const u  = (p0.x+p1.x)/2, v = (p0.z+p1.z)/2;
@@ -432,36 +822,11 @@ function setupDistances(
 function setupCurvature(
   glCanvas: HTMLCanvasElement, camera: THREE.PerspectiveCamera,
   mesh: THREE.Mesh,
-  geo: THREE.BufferGeometry, mat: THREE.MeshBasicMaterial,
   amp: number, sigma: number,
   ovCanvas: HTMLCanvasElement,
   signal: AbortSignal
 ): () => void {
   const overlay = makeCtx(ovCanvas, camera);
-  mat.vertexColors = true;
-  mat.needsUpdate  = true;
-
-  const pos    = geo.attributes.position as THREE.BufferAttribute;
-  const colors = new Float32Array(pos.count * 3);
-  const kVals: number[] = [];
-  let kMin = Infinity, kMax = -Infinity;
-
-  for (let i = 0; i < pos.count; i++) {
-    const k = gaussianCurvature(pos.getX(i), pos.getZ(i), amp, sigma);
-    kVals.push(k);
-    kMin = Math.min(kMin, k); kMax = Math.max(kMax, k);
-  }
-  for (let i = 0; i < pos.count; i++) {
-    const t = (kVals[i] - kMin) / (kMax - kMin + 1e-12);
-    const s = t < 0.5 ? t*2 : (t-0.5)*2;
-    const r = t < 0.5 ? 0.78 + 0.17*s : 0.95 - 0.03*s;
-    const g = t < 0.5 ? 0.82 + 0.08*s : 0.90 - 0.55*s;
-    const b = t < 0.5 ? 0.92 - 0.07*s : 0.85 - 0.57*s;
-    colors[i*3]   = Math.min(1, Math.max(0, r));
-    colors[i*3+1] = Math.min(1, Math.max(0, g));
-    colors[i*3+2] = Math.min(1, Math.max(0, b));
-  }
-  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
   const raycaster = new THREE.Raycaster();
   const state = { hitPt: null as THREE.Vector3 | null, k: 0 };
@@ -481,7 +846,7 @@ function setupCurvature(
   glCanvas.addEventListener('mouseleave', () => { state.hitPt = null; }, { signal });
 
   return () => {
-    const { ctx, cW, cH, project } = overlay.frame();
+    const { ctx, cH, project } = overlay.frame();
     ctx.font = "10.5px 'Menlo', monospace";
     ctx.textAlign = 'left';
 
@@ -509,6 +874,7 @@ function setupGeodesic(
   glCanvas: HTMLCanvasElement, camera: THREE.PerspectiveCamera,
   scene: THREE.Scene, mesh: THREE.Mesh,
   amp: number, sigma: number,
+  uiDiv: HTMLElement,
   ovCanvas: HTMLCanvasElement,
   disposeList: Array<THREE.BufferGeometry | THREE.Material>,
   signal: AbortSignal
@@ -520,29 +886,34 @@ function setupGeodesic(
   disposeList.push(dotGeo, dotMat);
 
   const state = {
-    dots:        [] as THREE.Mesh[],
-    geodesicLine: null as THREE.Line | null,
-    midPt:       null as THREE.Vector3 | null,
-    computing:   false,
-    clickCount:  0,
+    dots:      [] as THREE.Mesh[],
+    path3D:    [] as THREE.Vector3[],
+    midPt:     null as THREE.Vector3 | null,
+    computing: false,
+    clickCount: 0,
   };
+
+  const resetBtn = document.createElement('span');
+  resetBtn.className = 'rs-reset';
+  resetBtn.textContent = 'reset';
+  resetBtn.style.display = 'none';
+  uiDiv.appendChild(resetBtn);
+  uiDiv.style.pointerEvents = 'all';
 
   function reset() {
     state.dots.forEach(d => scene.remove(d));
     state.dots = [];
-    if (state.geodesicLine) {
-      state.geodesicLine.geometry.dispose();
-      (state.geodesicLine.material as THREE.Material).dispose();
-      scene.remove(state.geodesicLine);
-      state.geodesicLine = null;
-    }
+    state.path3D = [];
     state.midPt = null;
     state.computing = false;
     state.clickCount = 0;
+    resetBtn.style.display = 'none';
   }
 
+  resetBtn.addEventListener('click', reset, { signal });
+
   glCanvas.addEventListener('click', (e) => {
-    if (state.clickCount >= 2) { reset(); return; }
+    if (state.clickCount >= 2) return;
     const rect = glCanvas.getBoundingClientRect();
     raycaster.setFromCamera(new THREE.Vector2(
       (e.clientX - rect.left) / rect.width  * 2 - 1,
@@ -562,12 +933,10 @@ function setupGeodesic(
       state.computing = true;
       Promise.resolve().then(() => {
         const path2D = computeGeodesic(p0.x, p0.z, p1.x, p1.z, amp, sigma);
-        const pts3D  = path2D.map(([u,v]) => new THREE.Vector3(u, surfaceZ(u,v,amp,sigma)+0.012, v));
-        const lGeo   = new THREE.BufferGeometry().setFromPoints(pts3D);
-        state.geodesicLine = new THREE.Line(lGeo, new THREE.LineBasicMaterial({ color: 0x1c1c1e }));
-        scene.add(state.geodesicLine);
-        state.midPt = pts3D[Math.floor(pts3D.length / 2)];
+        state.path3D = path2D.map(([u,v]) => new THREE.Vector3(u, surfaceZ(u,v,amp,sigma)+0.012, v));
+        state.midPt  = state.path3D[Math.floor(state.path3D.length / 2)];
         state.computing = false;
+        resetBtn.style.display = 'inline';
       });
     }
   }, { signal });
@@ -601,13 +970,23 @@ function setupGeodesic(
       ctx.fillStyle = '#1c1c1e';
       ctx.fillText('q', qx + 8, qy - 4);
     }
+    if (state.path3D.length >= 2) {
+      ctx.beginPath();
+      state.path3D.forEach((p, i) => {
+        const [sx, sy] = project(p.x, p.y, p.z);
+        if (i === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+      });
+      ctx.strokeStyle = '#1c1c1e';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([]);
+      ctx.stroke();
+    }
+
     if (state.midPt) {
       const [mx, my] = project(state.midPt.x, state.midPt.y, state.midPt.z);
       ctx.font = "10.5px 'Menlo', monospace";
       ctx.fillStyle = '#86868b';
       ctx.fillText('γ(t)', mx + 6, my - 8);
-      ctx.textAlign = 'right';
-      ctx.fillText('click to reset', cW - 14, cH - 14);
     }
 
     overlay.done();
@@ -632,7 +1011,6 @@ function setupParallelTransport(
 
   const state = {
     pathPts:   [] as THREE.Vector3[],
-    pathLine:  null as THREE.Line | null,
     vecArrows: [] as THREE.ArrowHelper[],
     dots:      [] as THREE.Mesh[],
     lastPt:    null as THREE.Vector3 | null,
@@ -651,12 +1029,6 @@ function setupParallelTransport(
     state.pathPts = [];
     state.dots.forEach(d => scene.remove(d));
     state.dots = [];
-    if (state.pathLine) {
-      state.pathLine.geometry.dispose();
-      (state.pathLine.material as THREE.Material).dispose();
-      scene.remove(state.pathLine);
-      state.pathLine = null;
-    }
     state.vecArrows.forEach(a => scene.remove(a));
     state.vecArrows = [];
     state.lastPt = null;
@@ -693,18 +1065,6 @@ function setupParallelTransport(
     scene.add(dot);
     state.dots.push(dot);
 
-    if (state.pathLine) {
-      state.pathLine.geometry.dispose();
-      (state.pathLine.material as THREE.Material).dispose();
-      scene.remove(state.pathLine);
-    }
-    const lGeo = new THREE.BufferGeometry().setFromPoints(
-      state.pathPts.map(p => p.clone().setY(p.y + 0.01))
-    );
-    state.pathLine = new THREE.Line(lGeo, new THREE.LineBasicMaterial({
-      color: 0x8c8c9e, transparent: true, opacity: 0.6,
-    }));
-    scene.add(state.pathLine);
   }, { signal });
 
   function runTransport() {
@@ -736,13 +1096,27 @@ function setupParallelTransport(
   }
 
   return () => {
-    const { ctx, cW, cH, project } = overlay.frame();
+    const { ctx, cH, project } = overlay.frame();
     ctx.font = "10.5px 'Menlo', monospace";
     ctx.textAlign = 'left';
 
     if (!state.done && state.pathPts.length === 0) {
       ctx.fillStyle = '#86868b';
       ctx.fillText('click points to draw path  ·  click near start to close loop', 14, cH - 14);
+    }
+
+    if (state.pathPts.length >= 2) {
+      ctx.beginPath();
+      state.pathPts.forEach((p, i) => {
+        const [sx, sy] = project(p.x, p.y, p.z);
+        if (i === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+      });
+      ctx.strokeStyle = '#8c8c9e';
+      ctx.lineWidth = 1.5;
+      ctx.globalAlpha = 0.7;
+      ctx.setLineDash([]);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
     }
 
     if (state.angle !== null && state.lastPt) {
