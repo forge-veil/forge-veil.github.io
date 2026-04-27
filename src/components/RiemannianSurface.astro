@@ -82,6 +82,8 @@ import {
 const GRID      = 60;
 const EXT       = 2.2;
 const GRID_LIFT = 0.006;
+const GRID_LINES = 16;  // how many lines in each direction (visual density)
+const GRID_SEGS  = 60;  // segments per line — must be high enough to hug steep slopes
 
 document.querySelectorAll<HTMLElement>('.rs-wrap').forEach(wrap => {
   const mode  = wrap.dataset.mode!;
@@ -207,29 +209,8 @@ function gridY(z: number, flat: boolean): number {
 
 // ── Grid lines — rgba(140,140,158,0.40) equivalent in Three.js ────
 function buildGridLines(amp: number, sigma: number, flat: boolean): THREE.LineSegments {
-  const LINES = 16;
-  const verts: number[] = [];
-  const step  = (EXT*2) / LINES;
-
-  for (let i = 0; i <= LINES; i++) {
-    const u = -EXT + i*step;
-    for (let j = 0; j < LINES; j++) {
-      const v0 = -EXT + j*step, v1 = v0 + step;
-      verts.push(u, gridY(surfaceZ(u,v0,amp,sigma), flat), v0,
-                 u, gridY(surfaceZ(u,v1,amp,sigma), flat), v1);
-    }
-  }
-  for (let j = 0; j <= LINES; j++) {
-    const v = -EXT + j*step;
-    for (let i = 0; i < LINES; i++) {
-      const u0 = -EXT + i*step, u1 = u0 + step;
-      verts.push(u0, gridY(surfaceZ(u0,v,amp,sigma), flat), v,
-                 u1, gridY(surfaceZ(u1,v,amp,sigma), flat), v);
-    }
-  }
-
   const lineGeo = new THREE.BufferGeometry();
-  lineGeo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+  lineGeo.setAttribute('position', new THREE.Float32BufferAttribute(gridVerts(amp, sigma, flat), 3));
   return new THREE.LineSegments(lineGeo, new THREE.LineBasicMaterial({
     color: 0x8c8c9e,
     transparent: true,
@@ -238,22 +219,28 @@ function buildGridLines(amp: number, sigma: number, flat: boolean): THREE.LineSe
 }
 
 function buildGridPositions(amp: number, sigma: number, flat: boolean): Float32Array {
-  const LINES = 16;
-  const verts: number[] = [];
-  const step  = (EXT*2) / LINES;
+  return gridVerts(amp, sigma, flat);
+}
 
-  for (let i = 0; i <= LINES; i++) {
-    const u = -EXT + i*step;
-    for (let j = 0; j < LINES; j++) {
-      const v0 = -EXT + j*step, v1 = v0 + step;
+function gridVerts(amp: number, sigma: number, flat: boolean): Float32Array {
+  // GRID_LINES controls visual density; GRID_SEGS controls how closely each
+  // line follows the surface — must be high enough that no segment dips below.
+  const lineStep = (EXT*2) / GRID_LINES;
+  const segStep  = (EXT*2) / GRID_SEGS;
+  const verts: number[] = [];
+
+  for (let i = 0; i <= GRID_LINES; i++) {
+    const u = -EXT + i*lineStep;
+    for (let j = 0; j < GRID_SEGS; j++) {
+      const v0 = -EXT + j*segStep, v1 = v0 + segStep;
       verts.push(u, gridY(surfaceZ(u,v0,amp,sigma), flat), v0,
                  u, gridY(surfaceZ(u,v1,amp,sigma), flat), v1);
     }
   }
-  for (let j = 0; j <= LINES; j++) {
-    const v = -EXT + j*step;
-    for (let i = 0; i < LINES; i++) {
-      const u0 = -EXT + i*step, u1 = u0 + step;
+  for (let j = 0; j <= GRID_LINES; j++) {
+    const v = -EXT + j*lineStep;
+    for (let i = 0; i < GRID_SEGS; i++) {
+      const u0 = -EXT + i*segStep, u1 = u0 + segStep;
       verts.push(u0, gridY(surfaceZ(u0,v,amp,sigma), flat), v,
                  u1, gridY(surfaceZ(u1,v,amp,sigma), flat), v);
     }
