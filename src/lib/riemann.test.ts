@@ -71,9 +71,9 @@ describe('christoffelSymbols', () => {
     // At origin of a radially symmetric bump, Γ^0_{00} = Γ^1_{11} by symmetry
     expect(g[0][0][0]).toBeCloseTo(g[1][1][1], 5);
   });
-  it('Γ^0_{00} is negative at bump flank (surface curves back)', () => {
+  it('Γ^0_{00} is positive at bump flank (metric gradient still increasing)', () => {
     const g = christoffelSymbols(0.5, 0, AMP, SIG);
-    // On the down-slope at u=0.5, geodesic acceleration in u is negative
+    // At u=0.5 < sigma=0.8, slope magnitude is still growing so Γ^0_{00} > 0
     expect(g[0][0][0]).toBeGreaterThan(0);
   });
   it('throws RangeError when sigma <= 0', () => {
