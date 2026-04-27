@@ -79,8 +79,9 @@ import {
   computeGeodesic, parallelTransport
 } from '../lib/riemann';
 
-const GRID = 60;
-const EXT  = 2.2;
+const GRID      = 60;
+const EXT       = 2.2;
+const GRID_LIFT = 0.006;
 
 document.querySelectorAll<HTMLElement>('.rs-wrap').forEach(wrap => {
   const mode  = wrap.dataset.mode!;
@@ -199,9 +200,6 @@ function initSurface(wrap: HTMLElement, mode: string, amp: number, sigma: number
     }
   }).observe(wrap.parentElement!, { childList: true });
 }
-
-// Small world-space lift so grid lines always clear the mesh surface
-const GRID_LIFT = 0.006;
 
 function gridY(z: number, flat: boolean): number {
   return (flat ? 0 : z) + GRID_LIFT;
