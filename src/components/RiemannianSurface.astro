@@ -166,7 +166,8 @@ function initSurface(wrap: HTMLElement, mode: string, amp: number, sigma: number
     ovCanvas.style.height = h + 'px';
   }
   resize();
-  window.addEventListener('resize', resize);
+  const resizeController = new AbortController();
+  window.addEventListener('resize', resize, { signal: resizeController.signal });
 
   // ── Mode dispatch ─────────────────────────────────────────────────
   let afterRender: (() => void) | null = null;
@@ -187,6 +188,18 @@ function initSurface(wrap: HTMLElement, mode: string, amp: number, sigma: number
     else { if (animId !== null) { cancelAnimationFrame(animId); animId = null; } }
   }, { threshold: 0 });
   observer.observe(wrap);
+
+  // Dispose GL resources and listeners when the component is removed from the DOM
+  new MutationObserver(() => {
+    if (!document.contains(wrap)) {
+      resizeController.abort();
+      observer.disconnect();
+      if (animId !== null) { cancelAnimationFrame(animId); animId = null; }
+      renderer.dispose();
+      geo.dispose();
+      mat.dispose();
+    }
+  }).observe(wrap.parentElement!, { childList: true });
 }
 
 // ── Grid line geometry ─────────────────────────────────────────────
@@ -220,10 +233,10 @@ function buildGridLines(amp: number, sigma: number, flat: boolean): THREE.LineSe
 }
 
 // ── Mode: flat ─────────────────────────────────────────────────────
-function setupFlat(ovCanvas: HTMLCanvasElement, camera: THREE.Camera): () => void {
+function setupFlat(ovCanvas: HTMLCanvasElement, camera: THREE.PerspectiveCamera): () => void {
+  const ctx = ovCanvas.getContext('2d')!;
   return () => {
     const dpr = Math.min(devicePixelRatio, 2);
-    const ctx = ovCanvas.getContext('2d')!;
     ctx.clearRect(0, 0, ovCanvas.width, ovCanvas.height);
     ctx.save();
     ctx.scale(dpr, dpr);
@@ -231,7 +244,7 @@ function setupFlat(ovCanvas: HTMLCanvasElement, camera: THREE.Camera): () => voi
     const cH = ovCanvas.height / dpr;
 
     const project = (x: number, y: number, z: number): [number, number] => {
-      const v = new THREE.Vector3(x, y, z).project(camera as THREE.PerspectiveCamera);
+      const v = new THREE.Vector3(x, y, z).project(camera);
       return [(v.x+1)/2*cW, (-v.y+1)/2*cH];
     };
 
