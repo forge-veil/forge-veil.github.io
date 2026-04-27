@@ -41,6 +41,7 @@ export function christoffelSymbols(
   u: number, v: number, amp: number, sigma: number
 ): [[[number,number],[number,number]],[[number,number],[number,number]]] {
   if (sigma <= 0) throw new RangeError('sigma must be greater than 0');
+  // h² × max(∂³g) ≪ 1 for amp≲2, sigma≳0.3; gives ~8 significant digits
   const h = 1e-5;
   const g   = metricTensor(u,   v,   amp, sigma);
   const gu1 = metricTensor(u+h, v,   amp, sigma);
@@ -62,6 +63,7 @@ export function christoffelSymbols(
 
   const [[g11,g12],[,g22]] = g;
   const det = g11*g22 - g12*g12;
+  if (Math.abs(det) < 1e-12) throw new RangeError('metric tensor is singular or near-singular');
   const ginv = [[g22/det, -g12/det], [-g12/det, g11/det]];
 
   // Γ^k_{ij} = ½ g^{kl} (∂_i g_{jl} + ∂_j g_{il} − ∂_l g_{ij})
