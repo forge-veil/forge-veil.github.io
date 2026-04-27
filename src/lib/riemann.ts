@@ -137,16 +137,18 @@ export function computeGeodesic(
 
   // Initial guess: straight-line velocity scaled to reach target in t=1
   let vu = du, vv = dv;
+  let lastPath = shoot(u0, v0, vu, vv, nSteps, amp, sigma);
 
   for (let iter = 0; iter < nIter; iter++) {
-    const path = shoot(u0, v0, vu, vv, nSteps, amp, sigma);
-    const [eu, ev] = path[path.length-1];
+    const [eu, ev] = lastPath[lastPath.length-1];
     const errU = eu-u1, errV = ev-v1;
-    if (Math.sqrt(errU*errU + errV*errV) < 1e-5) return path;
+    if (Math.sqrt(errU*errU + errV*errV) < 1e-5) return lastPath;
     vu -= errU * 0.6;
     vv -= errV * 0.6;
+    lastPath = shoot(u0, v0, vu, vv, nSteps, amp, sigma);
   }
-  return shoot(u0, v0, vu, vv, nSteps, amp, sigma);
+  console.warn('computeGeodesic: shooting did not converge', { u0, v0, u1, v1 });
+  return lastPath;
 }
 
 // Parallel transport vector v0 along a coordinate path using ∇_γ' v = 0.
