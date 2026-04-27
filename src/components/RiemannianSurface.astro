@@ -183,7 +183,7 @@ function initSurface(wrap: HTMLElement, mode: string, amp: number, sigma: number
 
   if (mode === 'flat')             afterRender = setupFlat(ovCanvas, camera, scene, disposeList, geo, sigma, gridLines);
   if (mode === 'bump')             afterRender = setupBump(uiDiv, geo, sigma, currentAmp, gridLines, scene, camera, ovCanvas, disposeList);
-  if (mode === 'distances')        afterRender = setupDistances(glCanvas, camera, scene, mesh, amp, sigma, ovCanvas, disposeList, sig);
+  if (mode === 'distances')        afterRender = setupDistances(glCanvas, camera, scene, mesh, amp, sigma, uiDiv, ovCanvas, disposeList, sig);
   if (mode === 'curvature')        afterRender = setupCurvature(glCanvas, camera, mesh, amp, sigma, ovCanvas, sig);
   if (mode === 'geodesic')         afterRender = setupGeodesic(glCanvas, camera, scene, mesh, amp, sigma, uiDiv, ovCanvas, disposeList, sig);
   if (mode === 'parallel-transport') afterRender = setupParallelTransport(glCanvas, camera, scene, mesh, amp, sigma, uiDiv, ovCanvas, disposeList, sig);
@@ -707,6 +707,7 @@ function setupDistances(
   glCanvas: HTMLCanvasElement, camera: THREE.PerspectiveCamera,
   scene: THREE.Scene, mesh: THREE.Mesh,
   amp: number, sigma: number,
+  uiDiv: HTMLElement,
   ovCanvas: HTMLCanvasElement,
   disposeList: Array<THREE.BufferGeometry | THREE.Material>,
   signal: AbortSignal
@@ -718,25 +719,31 @@ function setupDistances(
   disposeList.push(dotGeo, dotMat);
 
   const state = {
-    pts:     [] as THREE.Vector3[],
-    dots:    [] as THREE.Mesh[],
-    lineObj: null as THREE.Line | null,
+    pts:    [] as THREE.Vector3[],
+    dots:   [] as THREE.Mesh[],
+    line3D: [] as THREE.Vector3[],
     g11: 0, g12: 0, g22: 0, ds2: 0,
   };
 
+  const resetBtn = document.createElement('span');
+  resetBtn.className = 'rs-reset';
+  resetBtn.textContent = 'reset';
+  resetBtn.style.display = 'none';
+  uiDiv.appendChild(resetBtn);
+  uiDiv.style.pointerEvents = 'all';
+
+  function reset() {
+    state.pts = [];
+    state.dots.forEach(d => scene.remove(d));
+    state.dots = [];
+    state.line3D = [];
+    resetBtn.style.display = 'none';
+  }
+
+  resetBtn.addEventListener('click', reset, { signal });
+
   glCanvas.addEventListener('click', (e) => {
-    if (state.pts.length >= 2) {
-      state.pts.length = 0;
-      state.dots.forEach(d => scene.remove(d));
-      state.dots.length = 0;
-      if (state.lineObj) {
-        state.lineObj.geometry.dispose();
-        (state.lineObj.material as THREE.Material).dispose();
-        scene.remove(state.lineObj);
-        state.lineObj = null;
-      }
-      return;
-    }
+    if (state.pts.length >= 2) return;
     const rect = glCanvas.getBoundingClientRect();
     raycaster.setFromCamera(new THREE.Vector2(
       (e.clientX - rect.left) / rect.width  * 2 - 1,
@@ -754,21 +761,18 @@ function setupDistances(
     if (state.pts.length === 2) {
       const [p0, p1] = state.pts;
       const N = 40;
-      const surfPts: THREE.Vector3[] = [];
       for (let i = 0; i <= N; i++) {
         const t  = i / N;
         const su = p0.x + (p1.x - p0.x) * t;
         const sv = p0.z + (p1.z - p0.z) * t;
-        surfPts.push(new THREE.Vector3(su, surfaceZ(su, sv, amp, sigma) + GRID_LIFT * 2, sv));
+        state.line3D.push(new THREE.Vector3(su, surfaceZ(su, sv, amp, sigma) + GRID_LIFT * 2, sv));
       }
-      const lGeo = new THREE.BufferGeometry().setFromPoints(surfPts);
-      state.lineObj = new THREE.Line(lGeo, new THREE.LineBasicMaterial({ color: 0x1c1c1e }));
-      scene.add(state.lineObj);
       const u  = (p0.x+p1.x)/2, v = (p0.z+p1.z)/2;
       const du = p1.x-p0.x,     dv = p1.z-p0.z;
       const g  = metricTensor(u, v, amp, sigma);
       state.ds2 = g[0][0]*du*du + 2*g[0][1]*du*dv + g[1][1]*dv*dv;
       state.g11 = g[0][0]; state.g12 = g[0][1]; state.g22 = g[1][1];
+      resetBtn.style.display = 'inline';
     }
   }, { signal });
 
@@ -795,6 +799,18 @@ function setupDistances(
       ctx.fillStyle = '#1c1c1e';
       ctx.fillText('q', qx + 8, qy - 4);
 
+      if (state.line3D.length >= 2) {
+        ctx.beginPath();
+        state.line3D.forEach((p, i) => {
+          const [sx, sy] = project(p.x, p.y, p.z);
+          if (i === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+        });
+        ctx.strokeStyle = '#1c1c1e';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([]);
+        ctx.stroke();
+      }
+
       // Labels near midpoint of the segment
       const mx3 = (state.pts[0].x + state.pts[1].x) / 2;
       const my3 = (state.pts[0].y + state.pts[1].y) / 2;
@@ -808,10 +824,6 @@ function setupDistances(
       ctx.fillText(`g₁₁ = ${state.g11.toFixed(3)}`, mx + 12, my + 15);
       ctx.fillText(`g₁₂ = ${state.g12.toFixed(3)}`, mx + 12, my + 30);
       ctx.fillText(`g₂₂ = ${state.g22.toFixed(3)}`, mx + 12, my + 45);
-
-      ctx.textAlign = 'right';
-      ctx.fillStyle = '#86868b';
-      ctx.fillText('click to reset', cW - 14, cH - 14);
     }
 
     overlay.done();
