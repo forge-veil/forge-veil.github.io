@@ -594,6 +594,7 @@ a.external-link::after {
   border: none;
   border-top: 0.5px solid var(--color-border);
   margin: 44px 0;
+  clear: both;
 }
 
 .prose .post-references {
