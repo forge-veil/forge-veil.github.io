@@ -6,11 +6,15 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import rehypeExternalLinks from 'rehype-external-links';
 
+import cloudflare from '@astrojs/cloudflare';
+
 export default defineConfig({
   site: 'https://forge-veil.github.io',
+
   vite: {
     plugins: [tailwindcss()],
   },
+
   integrations: [
     mdx({
       remarkPlugins: [remarkMath],
@@ -20,4 +24,6 @@ export default defineConfig({
       ],
     }),
   ],
+
+  adapter: cloudflare(),
 });
