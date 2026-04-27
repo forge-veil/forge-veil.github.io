@@ -110,12 +110,6 @@ function initSurface(wrap: HTMLElement, mode: string, amp: number, sigma: number
   controls.minPolarAngle = 0.1;
   controls.maxPolarAngle = Math.PI / 2;
 
-  // ── Lighting ──────────────────────────────────────────────────────
-  scene.add(new THREE.AmbientLight(0xffffff, 0.85));
-  const sun = new THREE.DirectionalLight(0xffffff, 0.75);
-  sun.position.set(3, 6, 4);
-  scene.add(sun);
-
   // ── Surface geometry ──────────────────────────────────────────────
   const currentAmp = { value: amp };
   const geo = new THREE.PlaneGeometry(EXT*2, EXT*2, GRID, GRID);
@@ -128,15 +122,13 @@ function initSurface(wrap: HTMLElement, mode: string, amp: number, sigma: number
       pos.setY(i, mode === 'flat' ? 0 : surfaceZ(u, v, a, sigma));
     }
     pos.needsUpdate = true;
-    geo.computeVertexNormals();
   }
   updateGeometry(amp);
 
-  // Very light grey-white fill — matches mockup rgba(246,246,250,0.95)
-  const mat = new THREE.MeshPhongMaterial({
+  // MeshBasicMaterial ignores lights — every face renders as exactly
+  // rgba(246,246,250), matching the flat fill from the brainstormed mockup
+  const mat = new THREE.MeshBasicMaterial({
     color: 0xf6f6fa,
-    specular: 0x333333,
-    shininess: 8,
     side: THREE.DoubleSide,
   });
   const mesh = new THREE.Mesh(geo, mat);
@@ -171,7 +163,7 @@ function initSurface(wrap: HTMLElement, mode: string, amp: number, sigma: number
   if (mode === 'flat')             afterRender = setupFlat(ovCanvas, camera);
   if (mode === 'bump')             setupBump(uiDiv, geo, sigma, currentAmp, gridLines);
   if (mode === 'distances')        afterRender = setupDistances(glCanvas, camera, scene, mesh, amp, sigma, ovCanvas, disposeList, sig);
-  if (mode === 'curvature')        afterRender = setupCurvature(glCanvas, camera, mesh, geo, mat, amp, sigma, ovCanvas, sig);
+  if (mode === 'curvature')        afterRender = setupCurvature(glCanvas, camera, mesh, geo, mat as THREE.MeshBasicMaterial, amp, sigma, ovCanvas, sig);
   if (mode === 'geodesic')         afterRender = setupGeodesic(glCanvas, camera, scene, mesh, amp, sigma, ovCanvas, disposeList, sig);
   if (mode === 'parallel-transport') afterRender = setupParallelTransport(glCanvas, camera, scene, mesh, amp, sigma, uiDiv, ovCanvas, disposeList, sig);
 
@@ -326,7 +318,6 @@ function setupBump(
       pos.setY(i, surfaceZ(u, v, a, sigma));
     }
     pos.needsUpdate = true;
-    geo.computeVertexNormals();
     const lGeo = gridLines.geometry as THREE.BufferGeometry;
     lGeo.setAttribute('position', new THREE.BufferAttribute(buildGridPositions(a, sigma, false), 3));
     lGeo.attributes.position.needsUpdate = true;
@@ -445,7 +436,7 @@ function setupDistances(
 function setupCurvature(
   glCanvas: HTMLCanvasElement, camera: THREE.PerspectiveCamera,
   mesh: THREE.Mesh,
-  geo: THREE.BufferGeometry, mat: THREE.MeshPhongMaterial,
+  geo: THREE.BufferGeometry, mat: THREE.MeshBasicMaterial,
   amp: number, sigma: number,
   ovCanvas: HTMLCanvasElement,
   signal: AbortSignal
