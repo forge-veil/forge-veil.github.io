@@ -1,6 +1,8 @@
-# vatsal-bakshi.github.io
+# forge-veil.github.io
 
-Personal site for [Vatsal Bakshi](https://vatsal-bakshi.github.io). Built with Astro 6.
+[![Tests](https://github.com/forge-veil/forge-veil.github.io/actions/workflows/deploy.yml/badge.svg)](https://github.com/forge-veil/forge-veil.github.io/actions/workflows/deploy.yml)
+
+Personal site for [Vatsal Bakshi](https://forge-veil.github.io). Built with Astro 6.
 
 ## Stack
 
@@ -31,10 +33,10 @@ public/               # Static assets (icons, favicons)
 ```sh
 npm install
 npm run dev       # localhost:4321
-npm run build
+make build        # test + build
 npm run preview
 ```
 
 ## Deploy
 
-Pushes to `main` trigger the GitHub Actions workflow and deploy to GitHub Pages automatically.
+Pushes to `main` trigger the GitHub Actions workflow, run tests, and deploy to GitHub Pages automatically.
