@@ -52,3 +52,16 @@ describe('gaussianCurvature', () => {
     expect(kOuter).toBeLessThan(0);
   });
 });
+
+describe('invalid inputs', () => {
+  it('throws RangeError when sigma <= 0 (surfaceZ)', () => {
+    expect(() => surfaceZ(0, 0, 1, 0)).toThrow(RangeError);
+    expect(() => surfaceZ(0, 0, 1, -1)).toThrow(RangeError);
+  });
+  it('throws RangeError when sigma <= 0 (metricTensor)', () => {
+    expect(() => metricTensor(0, 0, 1, 0)).toThrow(RangeError);
+  });
+  it('throws RangeError when sigma <= 0 (gaussianCurvature)', () => {
+    expect(() => gaussianCurvature(0, 0, 1, 0)).toThrow(RangeError);
+  });
+});
