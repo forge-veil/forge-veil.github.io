@@ -412,7 +412,12 @@ function initHadamardLab(container: HTMLElement): void {
   let trailPoints: THREE.Vector3[] = [];
 
   function setTrail(pts: THREE.Vector3[]): void {
-    if (trailLine) { scene.remove(trailLine); trailLine = null; }
+    if (trailLine) {
+      scene.remove(trailLine);
+      trailLine.geometry.dispose();
+      (trailLine.material as THREE.Material).dispose();
+      trailLine = null;
+    }
     if (pts.length < 2) return;
     trailLine = new THREE.Line(
       new THREE.BufferGeometry().setFromPoints(pts),
@@ -623,6 +628,7 @@ function initHadamardLab(container: HTMLElement): void {
   // ── Resize ───────────────────────────────────────────────────────────────────
   new ResizeObserver(() => {
     const w = sceneEl.clientWidth;
+    if (w === 0) return;
     camera.aspect = w / H_PX;
     camera.updateProjectionMatrix();
     renderer.setSize(w, H_PX);
