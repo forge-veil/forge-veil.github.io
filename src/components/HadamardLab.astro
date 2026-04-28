@@ -1,0 +1,666 @@
+---
+// No props — circuit is fixed for this post
+---
+
+<div class="hadamard-lab">
+  <!-- Circuit strip -->
+  <div class="lab-circuit">
+    <div class="lab-init-row">
+      <span class="lab-init-label">Start:</span>
+      <button class="init-btn active" data-init="0">|0⟩</button>
+      <button class="init-btn" data-init="1">|1⟩</button>
+    </div>
+    <div class="lab-svg-wrap">
+      <svg class="lab-circuit-svg" viewBox="0 0 480 56" preserveAspectRatio="xMinYMid meet">
+        <g class="circuit-wires"></g>
+        <g class="circuit-labels"></g>
+        <g class="circuit-gate gate-h1" data-gate="1">
+          <rect x="102" y="12" width="36" height="32" rx="4"/>
+          <text x="120" y="28" dominant-baseline="central" text-anchor="middle">H</text>
+        </g>
+        <g class="circuit-gate gate-h2" data-gate="2">
+          <rect x="222" y="12" width="36" height="32" rx="4"/>
+          <text x="240" y="28" dominant-baseline="central" text-anchor="middle">H</text>
+        </g>
+        <g class="circuit-gate gate-m" data-gate="3">
+          <rect x="340" y="11" width="40" height="34" rx="4"/>
+          <path d="M 350 30 A 10 10 0 0 1 370 30"/>
+          <line x1="360" y1="30" x2="368" y2="17" stroke-linecap="round"/>
+        </g>
+        <g class="circuit-output"></g>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Body: sphere + state panel -->
+  <div class="lab-body">
+    <div class="lab-scene-wrap">
+      <div class="lab-scene"></div>
+    </div>
+    <div class="lab-panel">
+      <div class="lab-state-label">|0⟩</div>
+      <div class="lab-probs">
+        <div class="lab-prob-row">
+          <div class="lab-prob-header">
+            <span class="lab-prob-lbl">P(|0⟩)</span>
+            <span class="lab-p0v">1.000</span>
+          </div>
+          <div class="lab-prob-track"><div class="lab-prob-fill lab-p0b" style="width:100%"></div></div>
+        </div>
+        <div class="lab-prob-row">
+          <div class="lab-prob-header">
+            <span class="lab-prob-lbl">P(|1⟩)</span>
+            <span class="lab-p1v">0.000</span>
+          </div>
+          <div class="lab-prob-track"><div class="lab-prob-fill lab-p1b" style="width:0%"></div></div>
+        </div>
+      </div>
+      <div class="lab-note"><strong>Start.</strong> State is |0⟩ — the north pole. Click Next Step to apply the first H gate.</div>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="lab-controls">
+    <button class="lab-btn" data-action="prev" disabled>← Back</button>
+    <button class="lab-btn lab-btn-primary" data-action="next">Next Step →</button>
+    <button class="lab-btn" data-action="reset">Reset</button>
+    <span class="lab-step-counter">Step 0 / 3</span>
+  </div>
+
+  <p class="lab-hint">drag sphere to orbit · click gate boxes to jump to that step</p>
+</div>
+
+<style>
+  .hadamard-lab {
+    border: 0.5px solid var(--color-border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 2rem 0;
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+  }
+
+  /* ── Circuit strip ── */
+  .lab-circuit {
+    padding: 10px 16px;
+    border-bottom: 0.5px solid var(--color-border);
+    background: var(--color-panel);
+  }
+  .lab-init-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .lab-init-label {
+    font-size: 11px;
+    color: var(--color-ink-5);
+  }
+  .init-btn {
+    font-family: var(--font-display);
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    border: 0.5px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-ink-4);
+    transition: all 0.15s;
+  }
+  .init-btn.active {
+    background: var(--color-ink);
+    color: var(--color-panel);
+    border-color: var(--color-ink);
+  }
+  .lab-svg-wrap { overflow-x: auto; }
+  .lab-circuit-svg {
+    display: block;
+    height: 56px;
+    width: 100%;
+    min-width: 480px;
+  }
+
+  /* Gate SVG styles */
+  .circuit-gate rect {
+    fill: rgba(88, 86, 214, 0.08);
+    stroke: #5856d6;
+    stroke-width: 1;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .circuit-gate text {
+    fill: #5856d6;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 700;
+    pointer-events: none;
+  }
+  .circuit-gate path,
+  .circuit-gate line {
+    stroke: var(--color-ink-4);
+    stroke-width: 1.2;
+    fill: none;
+    pointer-events: none;
+  }
+  .circuit-gate[data-state="active"] rect { fill: #5856d6; }
+  .circuit-gate[data-state="active"] text { fill: white; }
+  .circuit-gate[data-state="done"] rect  { opacity: 0.4; }
+  .circuit-gate[data-state="done"] text  { opacity: 0.4; }
+
+  /* ── Body ── */
+  .lab-body {
+    display: grid;
+    grid-template-columns: 1fr 260px;
+    background: var(--color-surface);
+  }
+  @media (max-width: 640px) {
+    .lab-body { grid-template-columns: 1fr; }
+  }
+  .lab-scene-wrap { position: relative; }
+  .lab-scene {
+    width: 100%;
+    height: 320px;
+    cursor: grab;
+    background: var(--color-surface);
+    position: relative;
+  }
+  .lab-scene:active { cursor: grabbing; }
+  .lab-scene canvas { position: absolute; top: 0; left: 0; }
+
+  /* ── State panel ── */
+  .lab-panel {
+    border-left: 0.5px solid var(--color-border);
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    background: var(--color-panel);
+  }
+  @media (max-width: 640px) {
+    .lab-panel {
+      border-left: none;
+      border-top: 0.5px solid var(--color-border);
+    }
+  }
+  .lab-state-label {
+    font-family: var(--font-display);
+    font-size: 13px;
+    color: var(--color-ink-2);
+    padding: 8px 12px;
+    background: var(--color-surface);
+    border-radius: 6px;
+    min-height: 2.4em;
+    display: flex;
+    align-items: center;
+    line-height: 1.4;
+  }
+  .lab-prob-row { margin-bottom: 8px; }
+  .lab-prob-row:last-child { margin-bottom: 0; }
+  .lab-prob-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  .lab-prob-lbl {
+    font-size: 9.5px;
+    font-weight: 400;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--color-ink-5);
+  }
+  .lab-p0v { font-family: var(--font-display); font-size: 13px; color: #c2660a; }
+  .lab-p1v { font-family: var(--font-display); font-size: 13px; color: #0284c7; }
+  .lab-prob-track {
+    height: 2px;
+    background: var(--color-tag-bg);
+    border-radius: 1px;
+    overflow: hidden;
+  }
+  .lab-prob-fill {
+    height: 100%;
+    border-radius: 1px;
+    transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .lab-p0b { background: #d97706; }
+  .lab-p1b { background: #0ea5e9; }
+  .lab-note {
+    font-size: 11px;
+    color: var(--color-ink-5);
+    line-height: 1.55;
+    padding: 8px 10px;
+    background: var(--color-surface);
+    border-radius: 6px;
+  }
+  .lab-note strong { color: var(--color-ink-3); }
+
+  /* ── Controls ── */
+  .lab-controls {
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    background: var(--color-panel);
+    border-top: 0.5px solid var(--color-border);
+  }
+  .lab-btn {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 5px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 0.5px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-ink);
+    transition: all 0.15s;
+  }
+  .lab-btn:hover:not(:disabled) {
+    background: var(--color-ink);
+    color: var(--color-panel);
+    border-color: var(--color-ink);
+  }
+  .lab-btn-primary {
+    background: var(--color-ink);
+    color: var(--color-panel);
+    border-color: var(--color-ink);
+  }
+  .lab-btn-primary:hover:not(:disabled) { opacity: 0.75; }
+  .lab-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .lab-step-counter {
+    margin-left: auto;
+    font-size: 10px;
+    color: var(--color-ink-5);
+    font-weight: 300;
+  }
+  .lab-hint {
+    padding: 8px 16px;
+    font-size: 10px;
+    font-weight: 300;
+    color: var(--color-ink-6);
+    text-align: center;
+    background: var(--color-panel);
+    border-top: 0.5px solid var(--color-border);
+    letter-spacing: 0.01em;
+  }
+</style>
+
+<script>
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+function initHadamardLab(container: HTMLElement): void {
+  const sceneEl   = container.querySelector('.lab-scene')        as HTMLElement;
+  const labelEl   = container.querySelector('.lab-state-label')  as HTMLElement;
+  const noteEl    = container.querySelector('.lab-note')         as HTMLElement;
+  const p0vEl     = container.querySelector('.lab-p0v')          as HTMLElement;
+  const p1vEl     = container.querySelector('.lab-p1v')          as HTMLElement;
+  const p0bEl     = container.querySelector('.lab-p0b')          as HTMLElement;
+  const p1bEl     = container.querySelector('.lab-p1b')          as HTMLElement;
+  const counterEl = container.querySelector('.lab-step-counter') as HTMLElement;
+  const btnNext   = container.querySelector('[data-action="next"]')  as HTMLButtonElement;
+  const btnPrev   = container.querySelector('[data-action="prev"]')  as HTMLButtonElement;
+  const initBtns  = container.querySelectorAll<HTMLButtonElement>('.init-btn');
+
+  type StepData = { theta: number; phi: number; label: string; note: string };
+
+  // Per-init-state step data. Index: STEPS[initState][stepNumber]
+  const STEPS: StepData[][] = [
+    // initState = 0 (starting from |0⟩)
+    [
+      { theta: 0,           phi: 0,        label: '|0⟩',                     note: '<strong>Start.</strong> State is |0⟩ — the north pole. Click Next Step to apply the first H gate.' },
+      { theta: Math.PI / 2, phi: 0,        label: '|+⟩ = (|0⟩ + |1⟩) / √2', note: '<strong>H applied.</strong> 180° rotation around the x+z diagonal axis maps |0⟩ to |+⟩, on the equator. P(0) = P(1) = 0.5.' },
+      { theta: 0,           phi: 0,        label: '|0⟩',                     note: '<strong>H applied again.</strong> The same rotation returns |+⟩ to |0⟩. H·H = I: two Hadamards cancel out.' },
+      { theta: 0,           phi: 0,        label: 'Measured: 0',              note: '<strong>Measured.</strong> The state collapses to a definite classical bit. Measurement is irreversible.' },
+    ],
+    // initState = 1 (starting from |1⟩)
+    [
+      { theta: Math.PI,     phi: 0,        label: '|1⟩',                     note: '<strong>Start.</strong> State is |1⟩ — the south pole. Click Next Step to apply the first H gate.' },
+      { theta: Math.PI / 2, phi: Math.PI,  label: '|−⟩ = (|0⟩ − |1⟩) / √2', note: '<strong>H applied.</strong> |1⟩ maps to |−⟩ — same latitude as |+⟩, but opposite longitude. The phase difference is real.' },
+      { theta: Math.PI,     phi: 0,        label: '|1⟩',                     note: '<strong>H applied again.</strong> |−⟩ returns to |1⟩. H·H = I holds for any starting state.' },
+      { theta: Math.PI,     phi: 0,        label: 'Measured: 1',              note: '<strong>Measured.</strong> The state collapses to a definite classical bit.' },
+    ],
+  ];
+
+  let currentStep = 0;
+  let initState   = 0;
+  const MAX_STEPS = 3;
+
+  // ── Three.js setup ──────────────────────────────────────────────────────────
+  const H_PX = 320;
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(sceneEl.clientWidth || 400, H_PX);
+  renderer.setClearColor(0xf7f7f9);
+  sceneEl.appendChild(renderer.domElement);
+
+  const scene  = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(42, (sceneEl.clientWidth || 400) / H_PX, 0.1, 100);
+  camera.position.set(2.6, 1.6, 2.6);
+
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.07;
+  controls.enablePan     = false;
+  controls.minDistance   = 2.2;
+  controls.maxDistance   = 7;
+
+  // Sphere wireframe
+  scene.add(new THREE.LineSegments(
+    new THREE.EdgesGeometry(new THREE.SphereGeometry(1, 28, 18)),
+    new THREE.LineBasicMaterial({ color: 0xd1d1d6, transparent: true, opacity: 0.45 }),
+  ));
+
+  // Equator ring
+  const eqPts: THREE.Vector3[] = [];
+  for (let i = 0; i <= 128; i++) {
+    const a = (i / 128) * 2 * Math.PI;
+    eqPts.push(new THREE.Vector3(Math.cos(a), 0, Math.sin(a)));
+  }
+  scene.add(new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints(eqPts),
+    new THREE.LineBasicMaterial({ color: 0xc7c7cc, transparent: true, opacity: 0.7 }),
+  ));
+
+  // Z-axis
+  scene.add(new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0, -1.4, 0), new THREE.Vector3(0, 1.4, 0),
+    ]),
+    new THREE.LineBasicMaterial({ color: 0xc7c7cc, transparent: true, opacity: 0.55 }),
+  ));
+
+  // X-axis
+  scene.add(new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(-1.3, 0, 0), new THREE.Vector3(1.3, 0, 0),
+    ]),
+    new THREE.LineBasicMaterial({ color: 0xd1d1d6, transparent: true, opacity: 0.35 }),
+  ));
+
+  // State vector arrow + tip
+  const arrow = new THREE.ArrowHelper(
+    new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 0),
+    1.0, 0x1c1c1e, 0.13, 0.065,
+  );
+  scene.add(arrow);
+
+  const tipMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(0.038, 16, 16),
+    new THREE.MeshBasicMaterial({ color: 0x1c1c1e }),
+  );
+  scene.add(tipMesh);
+
+  // Hadamard rotation axis: (1, 0, 1)/√2 in Bloch sphere coordinates
+  // (x+z diagonal — halfway between the x and z axes)
+  const HAD_AXIS = new THREE.Vector3(1, 0, 1).normalize();
+  const rotAxisGeo = new THREE.BufferGeometry().setFromPoints([
+    HAD_AXIS.clone().multiplyScalar(-1.45),
+    HAD_AXIS.clone().multiplyScalar(1.45),
+  ]);
+  const rotAxisMat = new THREE.LineDashedMaterial({
+    color: 0x5856d6, dashSize: 0.08, gapSize: 0.05,
+    transparent: true, opacity: 0,
+  });
+  const rotAxisLine = new THREE.Line(rotAxisGeo, rotAxisMat);
+  rotAxisLine.computeLineDistances();
+  scene.add(rotAxisLine);
+
+  // Trail (recreated each animation frame from accumulated points)
+  let trailLine: THREE.Line | null = null;
+  let trailPoints: THREE.Vector3[] = [];
+
+  function setTrail(pts: THREE.Vector3[]): void {
+    if (trailLine) { scene.remove(trailLine); trailLine = null; }
+    if (pts.length < 2) return;
+    trailLine = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(pts),
+      new THREE.LineBasicMaterial({ color: 0x5856d6, transparent: true, opacity: 0.55 }),
+    );
+    scene.add(trailLine);
+  }
+
+  // ── Animation state ──────────────────────────────────────────────────────────
+  let animTheta = 0;
+  let animPhi   = 0;
+
+  type TweenState = {
+    fromTheta: number; fromPhi: number;
+    toTheta:   number; toPhi:   number;
+    t: number;
+  };
+  let tween: TweenState | null = null;
+  const TWEEN_FRAMES = 55;
+
+  function blochVec(theta: number, phi: number): THREE.Vector3 {
+    return new THREE.Vector3(
+      Math.sin(theta) * Math.cos(phi),
+      Math.cos(theta),
+      Math.sin(theta) * Math.sin(phi),
+    );
+  }
+
+  // Returns the equivalent of b such that |b - a| ≤ π (shortest angular path)
+  function shortAngle(a: number, b: number): number {
+    const d = ((b - a + Math.PI) % (2 * Math.PI)) - Math.PI;
+    return a + d;
+  }
+
+  function easeInOut(t: number): number {
+    return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+  }
+
+  function updateArrow(theta: number, phi: number): void {
+    const v = blochVec(theta, phi);
+    arrow.setDirection(v.clone().normalize());
+    tipMesh.position.copy(v);
+  }
+
+  function updateProbs(theta: number): void {
+    const p0 = Math.cos(theta / 2) ** 2;
+    const p1  = 1 - p0;
+    p0vEl.textContent = p0.toFixed(3);
+    p1vEl.textContent = p1.toFixed(3);
+    p0bEl.style.width = (p0 * 100).toFixed(1) + '%';
+    p1bEl.style.width = (p1 * 100).toFixed(1) + '%';
+  }
+
+  // ── Circuit SVG ─────────────────────────────────────────────────────────────
+  const svgNS     = 'http://www.w3.org/2000/svg';
+  const WIRE_Y    = 28;
+  const WIRE_SEGS = [[16, 102], [138, 222], [258, 340], [380, 464]] as const;
+  const LABEL_XS  = [16, 142, 262, 384] as const;
+
+  function updateCircuit(step: number): void {
+    const wiresEl  = container.querySelector('.circuit-wires')  as SVGGElement;
+    const labelsEl = container.querySelector('.circuit-labels') as SVGGElement;
+    const outputEl = container.querySelector('.circuit-output') as SVGGElement;
+    wiresEl.innerHTML  = '';
+    labelsEl.innerHTML = '';
+    outputEl.innerHTML = '';
+
+    // Wire segments: done (purple), current (dark), future (muted)
+    WIRE_SEGS.forEach(([x1, x2], i) => {
+      const ln = document.createElementNS(svgNS, 'line');
+      ln.setAttribute('x1', String(x1)); ln.setAttribute('y1', String(WIRE_Y));
+      ln.setAttribute('x2', String(x2)); ln.setAttribute('y2', String(WIRE_Y));
+      if (i < step) {
+        ln.setAttribute('stroke', '#5856d6');
+        ln.setAttribute('stroke-width', '1.5');
+        ln.setAttribute('opacity', '0.5');
+      } else if (i === step) {
+        ln.setAttribute('stroke', '#1c1c1e');
+        ln.setAttribute('stroke-width', '1.5');
+        ln.setAttribute('opacity', '0.7');
+      } else {
+        ln.setAttribute('stroke', '#1c1c1e');
+        ln.setAttribute('stroke-width', '1');
+        ln.setAttribute('opacity', '0.2');
+      }
+      wiresEl.appendChild(ln);
+    });
+
+    // Gate highlight via data-state attribute (styled in CSS)
+    const gateH1 = container.querySelector('.gate-h1') as SVGGElement;
+    const gateH2 = container.querySelector('.gate-h2') as SVGGElement;
+    const gateM  = container.querySelector('.gate-m')  as SVGGElement;
+    gateH1.dataset.state = step === 1 ? 'active' : step > 1 ? 'done' : 'pending';
+    gateH2.dataset.state = step === 2 ? 'active' : step > 2 ? 'done' : 'pending';
+    gateM.dataset.state  = step === 3 ? 'active' : 'pending';
+
+    // State labels above the wire — appear progressively
+    const stateLabels = [
+      initState === 0 ? '|0⟩' : '|1⟩',
+      initState === 0 ? '|+⟩' : '|−⟩',
+      initState === 0 ? '|0⟩' : '|1⟩',
+      '',
+    ] as const;
+
+    for (let i = 0; i <= step && i < 4; i++) {
+      if (!stateLabels[i]) continue;
+      const t = document.createElementNS(svgNS, 'text');
+      t.setAttribute('x', String(LABEL_XS[i]));
+      t.setAttribute('y', '13');
+      t.setAttribute('font-family', 'var(--font-display)');
+      t.setAttribute('font-size', '11');
+      t.setAttribute('fill', i === step ? '#5856d6' : '#8e8e93');
+      t.textContent = stateLabels[i];
+      labelsEl.appendChild(t);
+    }
+
+    // Double wire + result label after measurement
+    if (step === 3) {
+      const result = initState === 0 ? '0' : '1';
+      ([26, 30] as const).forEach(y => {
+        const ln = document.createElementNS(svgNS, 'line');
+        ln.setAttribute('x1', '380'); ln.setAttribute('y1', String(y));
+        ln.setAttribute('x2', '464'); ln.setAttribute('y2', String(y));
+        ln.setAttribute('stroke', '#5856d6');
+        ln.setAttribute('stroke-width', '1.5');
+        ln.setAttribute('opacity', '0.6');
+        outputEl.appendChild(ln);
+      });
+      const t = document.createElementNS(svgNS, 'text');
+      t.setAttribute('x', '450'); t.setAttribute('y', '20');
+      t.setAttribute('font-family', 'var(--font-display)');
+      t.setAttribute('font-size', '13');
+      t.setAttribute('fill', '#5856d6');
+      t.textContent = result;
+      outputEl.appendChild(t);
+    }
+  }
+
+  // ── Step display ─────────────────────────────────────────────────────────────
+  function showStep(step: number): void {
+    const data        = STEPS[initState][step];
+    labelEl.textContent   = data.label;
+    noteEl.innerHTML      = data.note;
+    counterEl.textContent = `Step ${step} / ${MAX_STEPS}`;
+    btnNext.disabled      = step >= MAX_STEPS;
+    btnPrev.disabled      = step <= 0;
+    updateProbs(data.theta);
+    // Rotation axis visible only during H-application steps
+    rotAxisMat.opacity = (step === 1 || step === 2) ? 0.55 : 0;
+    updateCircuit(step);
+  }
+
+  function animateTo(targetStep: number): void {
+    const from = STEPS[initState][currentStep];
+    const to   = STEPS[initState][targetStep];
+    trailPoints = [blochVec(from.theta, from.phi)];
+    tween = {
+      fromTheta: from.theta,
+      fromPhi:   from.phi,
+      toTheta:   to.theta,
+      toPhi:     shortAngle(from.phi, to.phi),
+      t: 0,
+    };
+    currentStep      = targetStep;
+    btnNext.disabled = true;
+    btnPrev.disabled = true;
+    showStep(targetStep);
+  }
+
+  function reset(): void {
+    tween       = null;
+    currentStep = 0;
+    trailPoints = [];
+    setTrail([]);
+    const data  = STEPS[initState][0];
+    animTheta   = data.theta;
+    animPhi     = data.phi;
+    updateArrow(animTheta, animPhi);
+    showStep(0);
+  }
+
+  // ── Event listeners ─────────────────────────────────────────────────────────
+  initBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      initState = parseInt(btn.dataset.init ?? '0');
+      initBtns.forEach(b => b.classList.toggle('active', b === btn));
+      reset();
+    });
+  });
+
+  container.querySelectorAll<SVGGElement>('.circuit-gate').forEach(g => {
+    g.style.cursor = 'pointer';
+    g.addEventListener('click', () => {
+      if (tween) return;
+      const target = parseInt(g.dataset.gate ?? '0');
+      if (target !== currentStep) animateTo(target);
+    });
+  });
+
+  btnNext.addEventListener('click', () => {
+    if (!tween && currentStep < MAX_STEPS) animateTo(currentStep + 1);
+  });
+  btnPrev.addEventListener('click', () => {
+    if (!tween && currentStep > 0) animateTo(currentStep - 1);
+  });
+  container.querySelector('[data-action="reset"]')?.addEventListener('click', reset);
+
+  // ── Resize ───────────────────────────────────────────────────────────────────
+  new ResizeObserver(() => {
+    const w = sceneEl.clientWidth;
+    camera.aspect = w / H_PX;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, H_PX);
+  }).observe(sceneEl);
+
+  // ── Render loop ──────────────────────────────────────────────────────────────
+  reset();
+  (function animate(): void {
+    requestAnimationFrame(animate);
+
+    const tw = tween;
+    if (tw !== null) {
+      tw.t      = Math.min(tw.t + 1 / TWEEN_FRAMES, 1);
+      const e   = easeInOut(tw.t);
+      animTheta = tw.fromTheta + (tw.toTheta - tw.fromTheta) * e;
+      animPhi   = tw.fromPhi   + (tw.toPhi   - tw.fromPhi)   * e;
+      trailPoints.push(blochVec(animTheta, animPhi));
+      setTrail(trailPoints);
+      updateArrow(animTheta, animPhi);
+      updateProbs(animTheta);
+      if (tw.t >= 1) {
+        tween            = null;
+        animTheta        = tw.toTheta;
+        animPhi          = tw.toPhi;
+        btnNext.disabled = currentStep >= MAX_STEPS;
+        btnPrev.disabled = currentStep <= 0;
+      }
+    }
+
+    controls.update();
+    renderer.render(scene, camera);
+  })();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll<HTMLElement>('.hadamard-lab:not([data-initialized])').forEach(el => {
+    initHadamardLab(el);
+    el.setAttribute('data-initialized', 'true');
+  });
+});
+</script>
