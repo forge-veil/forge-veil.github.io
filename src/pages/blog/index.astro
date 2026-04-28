@@ -52,12 +52,6 @@ for (const topic of TOPICS) {
   });
 }
 
-function readTime(body: string | undefined) {
-  if (!body) return '1 min read';
-  const words = body.trim().split(/\s+/).length;
-  return `${Math.max(1, Math.round(words / 200))} min read`;
-}
-
 function formatDate(date: Date) {
   return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 }
@@ -100,7 +94,7 @@ function formatDate(date: Date) {
                   {series.posts.map(post => (
                     <a href={`/blog/${post.id.replace(/\.(md|mdx)$/, '')}`} class="series-post">
                       <div class="series-post-part">
-                        Part {post.data.series!.part} of {series.posts.length}
+                        Part {post.data.series!.part} of {post.data.series!.total}
                       </div>
                       <div class="series-post-title">{post.data.title}</div>
                       <p class="series-post-desc">{post.data.description}</p>

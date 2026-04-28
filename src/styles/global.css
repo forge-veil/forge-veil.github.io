@@ -2055,6 +2055,69 @@ a.external-link::after {
   top: 24px;
 }
 
+.lab-aside {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 0 32px;
+  align-items: start;
+  margin: 0 0 28px;
+}
+
+.lab-aside .hadamard-lab {
+  margin: 0 !important;
+}
+
+.lab-aside-text {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 300;
+  line-height: 1.72;
+  color: var(--color-ink-2);
+}
+
+.lab-aside-text p { margin-top: 0; margin-bottom: 16px; }
+.lab-aside-text p:last-child { margin-bottom: 0; }
+
+.note-aside {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 28px;
+  align-items: start;
+  margin: 1.4rem 0 1rem;
+}
+
+.note-aside .note {
+  margin: 0;
+}
+
+.math-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 1.4rem 0;
+}
+
+.math-card {
+  background: var(--color-surface);
+  border: 0.5px solid var(--color-border);
+  border-radius: 8px;
+  padding: 14px 16px 10px;
+  overflow-x: auto;
+}
+
+.math-card-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #5856d6;
+  margin: 0 0 8px;
+}
+
+@media (max-width: 600px) {
+  .math-grid { grid-template-columns: 1fr; }
+}
+
 /* ── Mobile ── */
 
 @media (max-width: 720px) {
@@ -2138,6 +2201,14 @@ a.external-link::after {
 
   .sphere-section-widget .bloch-sphere {
     position: static;
+  }
+
+  .lab-aside {
+    grid-template-columns: 1fr;
+  }
+
+  .note-aside {
+    grid-template-columns: 1fr;
   }
 
   .shape-carousel { display: none; }

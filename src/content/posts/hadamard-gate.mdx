@@ -1,6 +1,6 @@
 ---
 title: "Quantum Gates as Rotations: The Hadamard"
-description: "If a qubit state is a point on the Bloch sphere, a quantum gate is a rotation. Unitarity tells you which rotations are allowed. The Hadamard is the most important one."
+description: "If a qubit state is a point on the Bloch sphere, a quantum gate is a rotation. Unitarity tells us which rotations are allowed. The Hadamard is the most important one."
 topic: quantum-computing
 postLayout: longform
 series:
@@ -15,20 +15,18 @@ published: true
 
 import HadamardLab from '../../components/HadamardLab.astro';
 
-Here is a concrete question: you have a qubit in the state $|0\rangle$. You need it in a perfectly equal superposition — equal probability of measuring 0 or 1. How do you get there in one step?
-
-The answer is the **Hadamard gate**. One matrix multiplication, and you're at the equator of the Bloch sphere. But to understand *why* this works — and why the Hadamard matrix looks the way it does — you need to understand what quantum gates are allowed to do in the first place.
+In the last post, we built the Bloch sphere: every qubit state is a point on its surface. The north pole is $|0\rangle$, the south pole is $|1\rangle$, the equator is superposition. We have the map. Now we need operations: ways to move that point. But not every map from sphere to sphere is a valid quantum gate. The constraints are tight, and they have a name: **unitarity**. Understanding them is the same as understanding why the Hadamard works.
 
 <div class="toc-card">
   <p class="toc-card-heading">In this post</p>
   <ol class="toc-card-list">
-    <li><a class="toc-card-item" href="#gates-as-rotations"><span class="toc-n">1</span>Gates as rotations — why quantum operations must preserve the Bloch sphere</a></li>
-    <li><a class="toc-card-item" href="#unitarity"><span class="toc-n">2</span>Unitarity — the mathematical requirement that makes this precise</a></li>
-    <li><a class="toc-card-item" href="#the-hadamard-geometrically"><span class="toc-n">3</span>The Hadamard geometrically — a 180° rotation, before we look at the matrix</a></li>
-    <li><a class="toc-card-item" href="#try-it"><span class="toc-n">4</span>Try it — step through the circuit and watch the rotation on the sphere</a></li>
-    <li><a class="toc-card-item" href="#the-matrix"><span class="toc-n">5</span>The matrix — the numbers, now that the geometry is in place</a></li>
-    <li><a class="toc-card-item" href="#reading-a-quantum-circuit"><span class="toc-n">6</span>Reading a quantum circuit — wires, boxes, and chaining gates</a></li>
-    <li><a class="toc-card-item" href="#further-reading"><span class="toc-n">7</span>Further reading — key references for this series</a></li>
+    <li><a class="toc-card-item" href="#gates-as-rotations"><span class="toc-n">1</span>Gates as rotations: why quantum operations must preserve the Bloch sphere</a></li>
+    <li><a class="toc-card-item" href="#unitarity"><span class="toc-n">2</span>Unitarity: the mathematical requirement that makes this precise</a></li>
+    <li><a class="toc-card-item" href="#the-hadamard-geometrically"><span class="toc-n">3</span>The Hadamard geometrically: a 180° rotation, before we look at the matrix</a></li>
+    <li><a class="toc-card-item" href="#try-it"><span class="toc-n">4</span>Try it: step through the circuit and watch the rotation on the sphere</a></li>
+    <li><a class="toc-card-item" href="#the-matrix"><span class="toc-n">5</span>The matrix: the numbers, now that the geometry is in place</a></li>
+    <li><a class="toc-card-item" href="#reading-a-quantum-circuit"><span class="toc-n">6</span>Reading a quantum circuit: wires, boxes, and chaining gates</a></li>
+    <li><a class="toc-card-item" href="#further-reading"><span class="toc-n">7</span>Further reading: key references for this series</a></li>
   </ol>
 </div>
 
@@ -40,11 +38,11 @@ In the last post we established that a qubit's state is a point on the surface o
 
 A quantum gate is an operation that moves that point. The question is: which moves are allowed?
 
-Not all moves preserve what needs to be preserved. A quantum state is a unit vector — its amplitudes satisfy $|\alpha|^2 + |\beta|^2 = 1$. That constraint is the requirement that probabilities sum to 1. Any gate that stretched or compressed the sphere would violate it: after the gate, the probabilities would no longer add up.
+Not all moves preserve what needs to be preserved. A quantum state is a unit vector; its amplitudes satisfy $|\alpha|^2 + |\beta|^2 = 1$. That constraint is the requirement that probabilities sum to 1. Any gate that stretched or compressed the sphere would violate it: after the gate, the probabilities would no longer add up.
 
 The operations that preserve the sphere are exactly the **rigid rotations**. A rotation moves the point without changing the fact that it's on the sphere.
 
-There is a second requirement: quantum mechanics is **reversible**. Every valid gate must be undoable. Rotations are reversible — you can always rotate back. A projection or a map that collapses two states to one would be irreversible and therefore not a valid gate.
+There is a second requirement: quantum mechanics is **reversible**. Every valid gate must be undoable. Rotations are reversible; we can always rotate back. A projection or a map that collapses two states to one would be irreversible and therefore not a valid gate.
 
 ## Unitarity
 
@@ -64,28 +62,44 @@ A classical NOT gate is a special case: it swaps $|0\rangle \leftrightarrow |1\r
 
 ## The Hadamard geometrically
 
-The gate is named after **Jacques Hadamard** (1865–1963), a French mathematician whose work touched prime number theory, partial differential equations, and the geometry of determinants. In an 1893 paper [3], Hadamard studied a question about how large the determinant of a real matrix can be relative to its entries, and showed that matrices with entries in $\{+1, -1\}$ achieve the maximum. These are now called *Hadamard matrices*. The $2 \times 2$ case — up to the normalizing $1/\sqrt{2}$ factor — is the gate we're studying. The name carried into quantum computing through the canonical textbook by Nielsen and Chuang [1], and has since become universal.
+The gate is named after **Jacques Hadamard** (1865–1963), a French mathematician whose work touched prime number theory, partial differential equations, and the geometry of determinants. In an 1893 paper [3], Hadamard studied a question about how large the determinant of a real matrix can be relative to its entries, and showed that matrices with entries in $\{+1, -1\}$ achieve the maximum. These are now called *Hadamard matrices*. The $2 \times 2$ case (up to the normalizing $1/\sqrt{2}$ factor) is the gate we're studying. The name carried into quantum computing through the canonical textbook by Nielsen and Chuang [1], and has since become universal.
 
-The Hadamard gate, written $H$, is a 180° rotation around the axis pointing in the $(x+z)/\sqrt{2}$ direction — the diagonal halfway between the x and z axes of the Bloch sphere.
+The Hadamard gate, written $H$, is a 180° rotation around the axis pointing in the $(x+z)/\sqrt{2}$ direction, the diagonal halfway between the x and z axes of the Bloch sphere.
+
+<div class="note-aside">
+<div>
 
 What this does to the named states:
 
-- $|0\rangle$ (north pole, $\theta = 0$) maps to $|{+}\rangle = (|0\rangle + |1\rangle)/\sqrt{2}$ — the positive x-axis on the equator
-- $|1\rangle$ (south pole, $\theta = \pi$) maps to $|{-}\rangle = (|0\rangle - |1\rangle)/\sqrt{2}$ — the negative x-axis on the equator
+- $|0\rangle$ (north pole, $\theta = 0$) maps to $|{+}\rangle = (|0\rangle + |1\rangle)/\sqrt{2}$, the positive x-axis on the equator
+- $|1\rangle$ (south pole, $\theta = \pi$) maps to $|{-}\rangle = (|0\rangle - |1\rangle)/\sqrt{2}$, the negative x-axis on the equator
 - $|{+}\rangle$ maps back to $|0\rangle$
 - $|{-}\rangle$ maps back to $|1\rangle$
 
 Because a 180° rotation applied twice is the identity, **$H$ is its own inverse**: $H^2 = I$.
 
-Notice what $H$ does to the north pole: it takes a state with certainty of measuring 0, and moves it to a state with 50/50 probability. This is why the Hadamard is the superposition-creation gate — nearly every quantum algorithm begins with one.
+Notice what $H$ does to the north pole: it takes a state with certainty of measuring 0, and moves it to a state with 50/50 probability. This is why the Hadamard is the superposition-creation gate; nearly every quantum algorithm begins with one.
+
+</div>
+<div class="note">
+  <p class="note-label">Physical grounding</p>
+  <p class="note-text">A qubit is the quantum state of a physical <a href="https://en.wikipedia.org/wiki/Spinor" target="_blank" rel="noopener">spin-½ particle</a>: an electron, an atomic nucleus, or the quantized flux in a superconducting loop. The Bloch sphere rotations above correspond to real magnetic pulses applied to that particle. The geometry carries a consequence: a full 360° physical rotation returns the Bloch sphere point to its start, but multiplies the underlying spinor by −1. That sign flip is unobservable on its own (global phase is not measurable) but becomes visible when two paths interfere. That mechanism is the subject of Post 3.</p>
+</div>
+
+</div>
 
 ## Try it
 
-The widget below connects circuit notation to the Bloch sphere in a single view. Step through the circuit and watch the rotation happen on the sphere. The dashed line is the rotation axis — the $(x+z)/\sqrt{2}$ direction that $H$ rotates around.
+<div class="lab-aside">
+  <div class="lab-aside-text">
 
-Try both starting states. $|0\rangle$ maps to $|{+}\rangle$; $|1\rangle$ maps to $|{-}\rangle$. Both land on the equator, but at opposite longitudes. They have identical measurement probabilities — both are 50/50 — but different phases. That difference will matter in post 3.
+The widget connects circuit notation to the Bloch sphere in a single view. Step through the circuit and watch the rotation happen on the sphere. The dashed line is the rotation axis, the $(x+z)/\sqrt{2}$ direction that $H$ rotates around.
 
-<HadamardLab />
+Try both starting states. $|0\rangle$ maps to $|{+}\rangle$; $|1\rangle$ maps to $|{-}\rangle$. Both land on the equator, but at opposite longitudes. They have identical measurement probabilities (both are 50/50) but different phases. That difference will matter in post 3.
+
+  </div>
+  <HadamardLab />
+</div>
 
 ## The matrix
 
@@ -93,13 +107,20 @@ With the geometry in place, the matrix is just a coordinate description of the s
 
 $$H = \frac{1}{\sqrt{2}}\begin{pmatrix} 1 & 1 \\ 1 & -1 \end{pmatrix}$$
 
-Verify $H|0\rangle = |{+}\rangle$:
+<div class="math-grid">
+<div class="math-card">
+<p class="math-card-label">Verify H|0⟩ = |+⟩</p>
 
 $$H|0\rangle = \frac{1}{\sqrt{2}}\begin{pmatrix}1&1\\1&-1\end{pmatrix}\begin{pmatrix}1\\0\end{pmatrix} = \frac{1}{\sqrt{2}}\begin{pmatrix}1\\1\end{pmatrix} = \frac{|0\rangle + |1\rangle}{\sqrt{2}}$$
 
-Verify $H|1\rangle = |{-}\rangle$:
+</div>
+<div class="math-card">
+<p class="math-card-label">Verify H|1⟩ = |−⟩</p>
 
 $$H|1\rangle = \frac{1}{\sqrt{2}}\begin{pmatrix}1&1\\1&-1\end{pmatrix}\begin{pmatrix}0\\1\end{pmatrix} = \frac{1}{\sqrt{2}}\begin{pmatrix}1\\-1\end{pmatrix} = \frac{|0\rangle - |1\rangle}{\sqrt{2}}$$
+
+</div>
+</div>
 
 Check unitarity: $H$ is real and symmetric, so $H^\dagger = H$. And:
 
@@ -109,30 +130,31 @@ Both properties confirm what the geometry told us: $H$ is its own inverse.
 
 ## Reading a quantum circuit
 
-The widget uses the standard notation for quantum circuits. Here is what you need to know.
+The widget uses the standard notation for quantum circuits. Here is what we need.
 
 A **wire** represents a qubit over time, read left to right. The qubit starts in a known state at the left end and evolves as gates act on it.
 
 A **box** on the wire is a gate. The label names the gate: $H$ for Hadamard, $X$ for NOT, $Z$ for the phase flip. Read a wire from left to right to see the sequence of operations.
 
-A **meter symbol** at the end of a wire is a measurement. It collapses the qubit to a classical bit — 0 or 1 — based on the outcome probabilities. The **double wire** after the meter carries that classical bit.
+A **meter symbol** at the end of a wire is a measurement. It collapses the qubit to a classical bit, 0 or 1, based on the outcome probabilities. The **double wire** after the meter carries that classical bit.
 
 Gates in sequence **compose**: the output of one gate is the input to the next. The widget shows $|0\rangle \to H \to H \to$ measure. The first H creates superposition; the second H undoes it. Stepping through makes H·H = I visible.
 
-**Order matters.** Matrix multiplication is not commutative in general, and neither is gate composition. Applying $X$ then $H$ is not the same as $H$ then $X$. As a worked example: $X|0\rangle = |1\rangle$, then $H|1\rangle = |{-}\rangle$ — so $X$ followed by $H$ takes $|0\rangle$ to $|{-}\rangle$. Compare that with $H|0\rangle = |{+}\rangle$, then $X|{+}\rangle = |{+}\rangle$ (since $|{+}\rangle$ is a $+1$ eigenstate of $X$) — so $H$ followed by $X$ takes $|0\rangle$ to $|{+}\rangle$. The two results are different states with different phases. Order matters.
+**Order matters.** Matrix multiplication is not commutative in general, and neither is gate composition. Applying $X$ then $H$ is not the same as $H$ then $X$. As a worked example: $X|0\rangle = |1\rangle$, then $H|1\rangle = |{-}\rangle$, so $X$ followed by $H$ takes $|0\rangle$ to $|{-}\rangle$. Compare that with $H|0\rangle = |{+}\rangle$, then $X|{+}\rangle = |{+}\rangle$ (since $|{+}\rangle$ is a $+1$ eigenstate of $X$), so $H$ followed by $X$ takes $|0\rangle$ to $|{+}\rangle$. The two results are different states with different phases. Order matters.
 
 ---
 
-$H$ creates superposition, but superposition alone does not explain why quantum algorithms work. What matters is what happens to the *phase* — the longitude $\varphi$ on the Bloch sphere — before measurement. $|{+}\rangle$ and $|{-}\rangle$ have the same measurement probabilities but different phases. That difference becomes visible when you apply another gate before measuring. Two paths can reinforce each other or cancel out, depending on their relative phase.
+$H$ creates superposition, but superposition alone does not explain why quantum algorithms work. What matters is what happens to the *phase*, the longitude $\varphi$ on the Bloch sphere, before measurement. $|{+}\rangle$ and $|{-}\rangle$ have the same measurement probabilities but different phases. That difference becomes visible when we apply another gate before measuring. Two paths can reinforce each other or cancel out, depending on their relative phase.
 
-That mechanism is **quantum interference**, and it is the subject of the next post.
+That mechanism is **quantum interference**.
+
+<div class="post-references">
 
 ## Further reading
 
-[1] Nielsen, M. A. & Chuang, I. L. (2000). *Quantum Computation and Quantum Information*. Cambridge University Press. — the standard reference for quantum computing; chapters 1–4 cover the full arc of this series, including unitarity, gates, and circuit notation.
+- Nielsen, M. A. & Chuang, I. L. (2000). [*Quantum Computation and Quantum Information*](https://www.cambridge.org/highereducation/books/quantum-computation-and-quantum-information/01E10196D0A682A6AEFFEA52D53BE9AE). Cambridge University Press. The standard reference for quantum computing; chapters 1–4 cover the full arc of this series, including unitarity, gates, and circuit notation.
+- Mermin, N. D. (2007). [*Quantum Computer Science: An Introduction*](https://www.cambridge.org/core/books/quantum-computer-science/66462590D10C8010017CF1D7C45708D7). Cambridge University Press. A gentler introduction written for computer scientists, with careful attention to the classical analogy.
+- Hadamard, J. (1893). [Résolution d'une question relative aux déterminants](https://gallica.bnf.fr/ark:/12148/bpt6k486252g). *Bulletin des Sciences Mathématiques*, 17, 240–246. The original paper introducing Hadamard's determinant bound and the matrices that bear his name.
+- Preskill, J. (1998). [*Lecture Notes for Physics 229: Quantum Information and Computation*](https://www.preskill.caltech.edu/ph229/). California Institute of Technology. Preskill's comprehensive course notes; the treatment of unitary evolution and the circuit model in chapter 1 is particularly clear.
 
-[2] Mermin, N. D. (2007). *Quantum Computer Science: An Introduction*. Cambridge University Press. — a gentler introduction written for computer scientists, with careful attention to the classical analogy.
-
-[3] Hadamard, J. (1893). Résolution d'une question relative aux déterminants. *Bulletin des Sciences Mathématiques*, 17, 240–246. — the original paper introducing Hadamard's determinant bound and the matrices that bear his name.
-
-[4] Preskill, J. (1998). *Lecture Notes for Physics 229: Quantum Information and Computation*. California Institute of Technology. — Preskill's comprehensive course notes; the treatment of unitary evolution and the circuit model in chapter 1 is particularly clear.
+</div>
