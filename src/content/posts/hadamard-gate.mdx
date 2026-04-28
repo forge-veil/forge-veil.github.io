@@ -119,7 +119,7 @@ A **meter symbol** at the end of a wire is a measurement. It collapses the qubit
 
 Gates in sequence **compose**: the output of one gate is the input to the next. The widget shows $|0\rangle \to H \to H \to$ measure. The first H creates superposition; the second H undoes it. Stepping through makes H·H = I visible.
 
-**Order matters.** Matrix multiplication is not commutative in general, and neither is gate composition. Applying $X$ then $H$ is not the same as $H$ then $X$. As a worked example: $X|0\rangle = |1\rangle$, then $H|1\rangle = |{-}\rangle$ — so $X$ followed by $H$ takes $|0\rangle$ to $|{-}\rangle$. Compare that with $H|0\rangle = |{+}\rangle$, then $X|{+}\rangle = |{-}\rangle$ — in this particular case the result is the same, but that is a coincidence of these specific gates and this starting state.
+**Order matters.** Matrix multiplication is not commutative in general, and neither is gate composition. Applying $X$ then $H$ is not the same as $H$ then $X$. As a worked example: $X|0\rangle = |1\rangle$, then $H|1\rangle = |{-}\rangle$ — so $X$ followed by $H$ takes $|0\rangle$ to $|{-}\rangle$. Compare that with $H|0\rangle = |{+}\rangle$, then $X|{+}\rangle = |{+}\rangle$ (since $|{+}\rangle$ is a $+1$ eigenstate of $X$) — so $H$ followed by $X$ takes $|0\rangle$ to $|{+}\rangle$. The two results are different states with different phases. Order matters.
 
 ---
 
