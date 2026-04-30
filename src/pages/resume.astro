@@ -14,7 +14,10 @@ const updatedAt = 'April 2026';
 
         <div class="resume-topbar">
           <a href="/" class="article-back">← Home</a>
-          <span class="resume-updated">Updated {updatedAt}</span>
+          <div class="resume-topbar-right">
+            <a href="/vatsal-bakshi-resume.pdf" download class="resume-download">↓ Resume PDF</a>
+            <span class="resume-updated">Updated {updatedAt}</span>
+          </div>
         </div>
 
         <!-- Work Experience -->
@@ -52,7 +55,7 @@ const updatedAt = 'April 2026';
                       <span class="role-annotation-glyph">↗</span>
                       <span class="role-annotation-text">Domain expertise grown to architectural scale — the technical foundation others build on.</span>
                     </div>
-                    <div class="exp-bullet" data-mode="both"><span class="exp-dash">—</span><span class="exp-text">Help with the architectural direction of Apple's cryptographic infrastructure — PKI, encryption, code signing, and secrets management — establishing the technical standards and multi-year roadmap downstream engineering teams build on</span></div>
+                    <div class="exp-bullet" data-mode="both"><span class="exp-dash">—</span><span class="exp-text">Own the architectural direction of Apple's cryptographic infrastructure — PKI, encryption, code signing, and secrets management — setting the standards and multi-year roadmap that downstream engineering teams execute against</span></div>
                   </div>
                 </div>
 
@@ -66,14 +69,16 @@ const updatedAt = 'April 2026';
                     </div>
                     <div class="role-annotation">
                       <span class="role-annotation-glyph">↑</span>
-                      <span class="role-annotation-text">First org-level leadership. Grew two teams to 20 engineers over six years.</span>
+                      <span class="role-annotation-text">Built Apple's GRC Engineering function from scratch — grew two teams to 20 engineers over six years.</span>
                     </div>
                     <div class="role-team-label">Infrastructure Data Platform</div>
-                    <div class="exp-bullet" data-mode="both"><span class="exp-dash">—</span><span class="exp-text">Led GRC Engineering for Apple's IS&amp;T — building the data platforms and access control systems that security, compliance, and finance teams relied on for audit readiness and incident response</span></div>
-                    <div class="exp-bullet" data-mode="both"><span class="exp-dash">—</span><span class="exp-text">Owned the infrastructure catalog platform covering Apple's on-prem data centers and third-party cloud — providing security, compliance, and finance teams with asset inventory, ownership, and spend data used for PCI and SOX audit scoping and incident response</span></div>
-                    <div class="exp-bullet" data-mode="both"><span class="exp-dash">—</span><span class="exp-text">Shipped Pluggable Authentication Modules (PAM) operationalizing critical SOX access controls on Apple's server fleet</span></div>
+                    <div class="exp-bullet" data-mode="both"><span class="exp-dash">—</span><span class="exp-text">Owned IS&amp;T's GRC Engineering function — data platforms and access controls that security, compliance, and finance relied on for audit readiness, risk posture, and incident response</span></div>
+                    <div class="exp-bullet" data-mode="both"><span class="exp-dash">—</span><span class="exp-text">Built Apple's compliance scoping engine — correlating OSQuery telemetry, artifact ownership, DAST/SAST, and SG/ACL network graphs across 1.7M servers and petabytes of infrastructure signal to dynamically bound PCI and SOX audit scope</span></div>
+                    <div class="exp-bullet" data-mode="both"><span class="exp-dash">—</span><span class="exp-text">Shipped a PAM module as the change management gate on Apple's server fleet — blocking SSH access unless backed by an approved ServiceNow change ticket, layered with SELinux policies to enforce SOX access controls at the login boundary</span></div>
+                    <div class="exp-bullet" data-mode="both"><span class="exp-dash">—</span><span class="exp-text">Built MCP servers and AI chatbots for each platform service — enabling semantic search and natural-language discovery across compliance, asset, and audit data</span></div>
+                    <div class="exp-bullet" data-mode="leadership"><span class="exp-dash">—</span><span class="exp-text">Established Claude-powered code assist, PR review, and security checks as the team's default development workflow</span></div>
                     <div class="role-team-label">Business Planning</div>
-                    <div class="exp-bullet" data-mode="leadership"><span class="exp-dash">—</span><span class="exp-text">Scaled the budget planning application to 200+ finance stakeholders, supporting annual capex and opex planning cycles and Total Cost of Ownership tracking across Apple's technology portfolio</span></div>
+                    <div class="exp-bullet" data-mode="leadership"><span class="exp-dash">—</span><span class="exp-text">Scaled the budget planning platform to 200+ finance stakeholders — supporting Apple's annual capex/opex planning cycles and TCO tracking across the technology portfolio</span></div>
                   </div>
                 </div>
 
@@ -85,7 +90,7 @@ const updatedAt = 'April 2026';
                       <span class="role-dates">Apr 2018 – Jul 2019</span>
                       <span class="role-duration">1 yr 3 mos</span>
                     </div>
-                    <div class="exp-bullet" data-mode="technical"><span class="exp-dash">—</span><span class="exp-text">Designed and deployed a compliance enforcement component that closed a critical SOX control gap across Apple's server fleet</span></div>
+                    <div class="exp-bullet" data-mode="technical"><span class="exp-dash">—</span><span class="exp-text">Designed and shipped Apple's PAM-based change management gate — requiring an approved ServiceNow change ticket at SSH login, enforced with SELinux policies, to close a critical SOX access control gap across the server fleet</span></div>
                   </div>
                 </div>
 
@@ -97,7 +102,8 @@ const updatedAt = 'April 2026';
                       <span class="role-dates">Mar 2017 – Apr 2018</span>
                       <span class="role-duration">1 yr 1 mo</span>
                     </div>
-                    <div class="exp-bullet" data-mode="technical"><span class="exp-dash">—</span><span class="exp-text">Built the secure data pipeline powering FaceID model training, handling high-volume biometric data under strict privacy and integrity requirements</span></div>
+                    <div class="exp-bullet" data-mode="technical"><span class="exp-dash">—</span><span class="exp-text">Built the secure data pipeline for FaceID model training — handling high-volume biometric data under strict privacy controls and end-to-end integrity requirements</span></div>
+                    <div class="exp-bullet" data-mode="technical"><span class="exp-dash">—</span><span class="exp-text">Provisioned training infrastructure with Terraform and Ansible, and built Jenkins CI/CD pipelines to validate model drops before promotion to production</span></div>
                   </div>
                 </div>
 
@@ -115,7 +121,7 @@ const updatedAt = 'April 2026';
                     </div>
                     <div class="exp-bullet" data-mode="technical"><span class="exp-dash">—</span><span class="exp-text">Payments: Built DUKPT-based cryptography libraries securing Point of Sale transactions across Apple Retail</span></div>
                     <div class="exp-bullet" data-mode="technical"><span class="exp-dash">—</span><span class="exp-text">Payments: Designed and deployed HSM infrastructure for Apple's Payment Gateway, enabling hardware-backed end-to-end transaction security</span></div>
-                    <div class="exp-bullet" data-mode="technical"><span class="exp-dash">—</span><span class="exp-text">Conducted goal-based penetration tests as a core member of the Retail Engineering Red Team</span></div>
+                    <div class="exp-bullet" data-mode="technical"><span class="exp-dash">—</span><span class="exp-text">Ran goal-based penetration tests on Apple's Retail Engineering Red Team</span></div>
                   </div>
                 </div>
 
@@ -139,8 +145,8 @@ const updatedAt = 'April 2026';
                       <span class="role-dates">Oct 2013 – Mar 2015</span>
                       <span class="role-duration">1 yr 5 mos</span>
                     </div>
-                    <div class="exp-bullet" data-mode="both"><span class="exp-dash">—</span><span class="exp-text">Managed bug bounty remediation and web application penetration testing program for eBay's Marketplaces vertical</span></div>
-                    <div class="exp-bullet" data-mode="technical"><span class="exp-dash">—</span><span class="exp-text">Built components in Raptor, eBay's internal security framework, to systematically close XSS and other high-frequency web vulnerabilities</span></div>
+                    <div class="exp-bullet" data-mode="both"><span class="exp-dash">—</span><span class="exp-text">Ran bug bounty remediation and web application penetration testing for eBay Marketplaces</span></div>
+                    <div class="exp-bullet" data-mode="technical"><span class="exp-dash">—</span><span class="exp-text">Extended Raptor, eBay's internal security framework, to systematically close XSS and other high-frequency web vulnerabilities</span></div>
                   </div>
                 </div>
 
@@ -206,30 +212,27 @@ const updatedAt = 'April 2026';
         <section class="resume-section resume-section--constrained">
           <div class="resume-section-title">Skills</div>
 
+          <div class="skills-body">
           <div class="skills-group">
             <div class="skills-group-label">Cryptography</div>
             <div class="skills-pills">
               <span class="skill-pill">PKI / X.509</span>
               <span class="skill-pill">HSM / PKCS#11</span>
-              <span class="skill-pill">Post-Quantum Cryptography (PQC)</span>
               <span class="skill-pill">Key Management</span>
-              <span class="skill-pill">TLS 1.3</span>
-              <span class="skill-pill">FIPS 140-2/3</span>
               <span class="skill-pill">Code Signing</span>
-              <span class="skill-pill">DUKPT</span>
             </div>
           </div>
 
           <div class="skills-group">
             <div class="skills-group-label">Security &amp; Compliance</div>
             <div class="skills-pills">
+              <span class="skill-pill">GRC Engineering</span>
+              <span class="skill-pill">PCI DSS</span>
               <span class="skill-pill">SOX Compliance</span>
+              <span class="skill-pill">Vulnerability Management</span>
+              <span class="skill-pill">ServiceNow / CMDB</span>
               <span class="skill-pill">PAM</span>
               <span class="skill-pill">Zero Trust</span>
-              <span class="skill-pill">SOC 2</span>
-              <span class="skill-pill">Penetration Testing</span>
-              <span class="skill-pill">Threat Modeling</span>
-              <span class="skill-pill">OWASP</span>
             </div>
           </div>
 
@@ -239,19 +242,24 @@ const updatedAt = 'April 2026';
               <span class="skill-pill">Engineering Management</span>
               <span class="skill-pill">Technical Roadmap</span>
               <span class="skill-pill">Org Design</span>
-              <span class="skill-pill">Headcount Planning</span>
               <span class="skill-pill">Cross-functional Leadership</span>
-              <span class="skill-pill">OKRs</span>
             </div>
           </div>
 
           <div class="skills-group">
             <div class="skills-group-label">Languages</div>
             <div class="skills-pills">
-              <span class="skill-pill">Java</span>
               <span class="skill-pill">Go</span>
               <span class="skill-pill">Python</span>
-              <span class="skill-pill">JavaScript</span>
+            </div>
+          </div>
+
+          <div class="skills-group">
+            <div class="skills-group-label">AI &amp; Automation</div>
+            <div class="skills-pills">
+              <span class="skill-pill">Agentic Workflows</span>
+              <span class="skill-pill">MCP Servers</span>
+              <span class="skill-pill">LLM Integration</span>
             </div>
           </div>
 
@@ -260,12 +268,11 @@ const updatedAt = 'April 2026';
             <div class="skills-pills">
               <span class="skill-pill">Cloud Security (AWS / GCP / Azure)</span>
               <span class="skill-pill">Data Pipelines</span>
-              <span class="skill-pill">Distributed Systems</span>
-              <span class="skill-pill">Kubernetes</span>
+              <span class="skill-pill">Terraform / Ansible</span>
               <span class="skill-pill">Enterprise Architecture</span>
-              <span class="skill-pill">CI/CD</span>
             </div>
           </div>
+          </div><!-- /.skills-body -->
         </section>
 
       </div>
@@ -277,17 +284,20 @@ const updatedAt = 'April 2026';
 const DATA = [
   /* 0 */ { nodes: [{ label: 'Domains', value: 'PKI · encryption · code signing · secrets' }, { label: 'Output', value: 'Standards & multi-year roadmap' }] },
   /* 1 */ { nodes: [{ label: 'Function', value: 'GRC Engineering for IS&T' }, { label: 'Products', value: 'Infra catalog · access controls · audit data' }] },
-  /* 2 */ { nodes: [{ label: 'Customers', value: 'Security · Compliance · Finance' }, { label: 'Use cases', value: 'PCI/SOX scoping · incident response' }] },
-  /* 3 */ { nodes: [{ label: 'Standard', value: 'Pluggable Authentication Modules' }, { label: 'Mandate', value: 'SOX access controls on server fleet' }] },
-  /* 4 */ { nodes: [{ label: 'Users', value: '200+ finance stakeholders' }, { label: 'Scope', value: 'Capex · opex · TCO across portfolio' }] },
-  /* 5 */ { nodes: [{ label: 'Context', value: 'Access gap on critical server fleet' }, { label: 'Result', value: 'SOX control fully operationalized' }] },
-  /* 6 */ { nodes: [{ label: 'Constraint', value: 'Biometric data, strict privacy reqs' }, { label: 'Outcome', value: 'Secure model training pipeline' }] },
-  /* 7 */ { nodes: [{ label: 'Standard', value: 'DUKPT per-transaction key derivation' }, { label: 'Scope', value: 'Apple Retail POS fleet' }] },
-  /* 8 */ { nodes: [{ label: 'System', value: 'Apple Pay Payment Gateway' }, { label: 'Infra', value: 'Hardware Security Module fleet' }] },
-  /* 9 */ { nodes: [{ label: 'Team', value: 'Retail Engineering Red Team' }, { label: 'Method', value: 'Goal-based penetration testing' }] },
-  /* 10 */ { nodes: [{ label: 'Vertical', value: 'eBay Marketplaces' }, { label: 'Programs', value: 'Bug bounty · web app pentesting' }] },
-  /* 11 */ { nodes: [{ label: 'Framework', value: 'Raptor — eBay internal security layer' }, { label: 'Scope', value: 'XSS, CSRF, injection vulnerabilities' }] },
-  /* 12 */ { nodes: [{ label: 'Clients', value: 'Major financial institutions' }, { label: 'Deliverables', value: 'Pentest reports · security code reviews' }] },
+  /* 2 */ { nodes: [{ label: 'Signal', value: 'OSQuery · DAST/SAST vulns · SG/ACL graphs · artifact declarations' }, { label: 'Scale', value: '1.7M servers · petabytes of data' }, { label: 'Output', value: 'Dynamic PCI/SOX scope · VM requirements' }] },
+  /* 3 */ { nodes: [{ label: 'Mechanism', value: 'SSH gate · ServiceNow ticket check · SELinux' }, { label: 'Mandate', value: 'SOX change management at login boundary' }] },
+  /* 4 */ { nodes: [{ label: 'Interface', value: 'MCP servers · semantic chatbots' }, { label: 'Use case', value: 'Natural-language discovery over compliance data' }] },
+  /* 5 */ { nodes: [{ label: 'Tools', value: 'Claude · code assist · PR review · security checks' }, { label: 'Outcome', value: 'AI-forward dev culture established' }] },
+  /* 6 */ { nodes: [{ label: 'Users', value: '200+ finance stakeholders' }, { label: 'Scope', value: 'Capex · opex · TCO across portfolio' }] },
+  /* 7 */ { nodes: [{ label: 'System', value: 'PAM + SSH gate + ServiceNow ticket check' }, { label: 'Result', value: 'Critical SOX access control gap closed' }] },
+  /* 8 */ { nodes: [{ label: 'Constraint', value: 'Biometric data, strict privacy reqs' }, { label: 'Outcome', value: 'Secure model training pipeline' }] },
+  /* 9 */ { nodes: [{ label: 'IaC', value: 'Terraform · Ansible' }, { label: 'CI/CD', value: 'Jenkins model-drop validation pipeline' }] },
+  /* 10 */ { nodes: [{ label: 'Standard', value: 'DUKPT per-transaction key derivation' }, { label: 'Scope', value: 'Apple Retail POS fleet' }] },
+  /* 11 */ { nodes: [{ label: 'System', value: 'Apple Pay Payment Gateway' }, { label: 'Infra', value: 'Hardware Security Module fleet' }] },
+  /* 12 */ { nodes: [{ label: 'Team', value: 'Retail Engineering Red Team' }, { label: 'Method', value: 'Goal-based penetration testing' }] },
+  /* 13 */ { nodes: [{ label: 'Vertical', value: 'eBay Marketplaces' }, { label: 'Programs', value: 'Bug bounty · web app pentesting' }] },
+  /* 14 */ { nodes: [{ label: 'Framework', value: 'Raptor — eBay internal security layer' }, { label: 'Scope', value: 'XSS, CSRF, injection vulnerabilities' }] },
+  /* 15 */ { nodes: [{ label: 'Clients', value: 'Major financial institutions' }, { label: 'Deliverables', value: 'Pentest reports · security code reviews' }] },
 ];
 
 // Dynamic Apple tenure

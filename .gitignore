@@ -1,5 +1,9 @@
 # build output
 dist/
+
+# LaTeX build artifacts
+resume/*.pdf
+resume/*.log
 # generated types
 .astro/
 

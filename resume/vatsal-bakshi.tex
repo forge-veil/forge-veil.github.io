@@ -1,0 +1,176 @@
+% !TEX program = xelatex
+\documentclass[10pt, letterpaper]{article}
+
+\usepackage[top=0.6in, bottom=0.6in, left=0.75in, right=0.75in]{geometry}
+\usepackage{fontspec}
+\setmainfont{Newsreader}[
+  Path           = fonts/,
+  Extension      = .ttf,
+  UprightFont    = *-Regular,
+  BoldFont       = *-SemiBold,
+  ItalicFont     = *-Italic,
+  BoldItalicFont = *-SemiBoldItalic,
+  Ligatures      = TeX
+]
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{xcolor}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage[hidelinks]{hyperref}
+
+\definecolor{navy}{RGB}{26, 39, 68}
+\definecolor{muted}{RGB}{110, 110, 110}
+\definecolor{rule}{RGB}{210, 210, 210}
+
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0pt}
+
+% Section headers: tracked uppercase in navy, navy rule beneath
+\titleformat{\section}
+  {\normalfont\small\bfseries\color{navy}\addfontfeatures{LetterSpace=8}}
+  {}{0em}{\MakeUppercase}
+  [\vspace{2pt}{\color{navy!40}\hrule height 0.5pt}\vspace{5pt}]
+\titlespacing{\section}{0pt}{10pt}{0pt}
+
+% Bullet list
+\setlist[itemize]{
+  leftmargin=1.1em,
+  itemsep=1.5pt,
+  parsep=0pt,
+  topsep=3pt,
+  label={\small\textendash}
+}
+
+% Role entry: \role{Title}{Dept}{Date range}{Duration}
+\newcommand{\role}[4]{%
+  \vspace{5pt}%
+  \nopagebreak[4]%
+  {\small\textbf{#1}\hfill\textcolor{muted}{\small #3}}\\[-1pt]
+  {\footnotesize\textcolor{muted}{#2\ifx&#4&\else\hfill #4\fi}}%
+  \vspace{2pt}%
+  \nopagebreak[4]%
+}
+
+% Company header: \company{Name}{Tenure}
+\newcommand{\company}[2]{%
+  \vspace{7pt}%
+  \nopagebreak[4]%
+  {\normalsize\textbf{#1}\hfill\textcolor{muted}{\small #2}}%
+  \vspace{1pt}%
+  \nopagebreak[4]%
+}
+
+% Sub-team label
+\newcommand{\teamlabel}[1]{%
+  \vspace{4pt}%
+  {\footnotesize\textsc{\textcolor{muted}{#1}}}%
+  \vspace{1pt}%
+}
+
+% ─────────────────────────────────────────────────────────────────
+\begin{document}
+
+% ── Header ───────────────────────────────────────────────────────
+\begin{center}
+  {\LARGE\textbf{\textcolor{navy}{Vatsal Bakshi}}}\\[5pt]
+  {\small\textcolor{muted}{%
+    San Francisco, CA\enspace\textperiodcentered\enspace
+    \href{mailto:vatsalbakshi@gmail.com}{vatsalbakshi@gmail.com}\enspace\textperiodcentered\enspace
+    \href{https://forge-veil.github.io}{forge-veil.github.io}%
+  }}
+\end{center}
+
+\vspace{2pt}
+
+% ── Experience ───────────────────────────────────────────────────
+\section{Experience}
+
+\company{Apple Inc.}{Mar 2015 – Present\enspace\textperiodcentered\enspace 11 yrs 1 mo}
+
+\role{Senior Engineering Manager}{Architecture \& Strategic Initiatives, Crypto Services}{Mar 2026 – Present}{}
+\begin{itemize}
+  \item Own the architectural direction of Apple's cryptographic infrastructure --- PKI, encryption, code signing, and secrets management --- setting the standards and multi-year roadmap that downstream engineering teams execute against
+\end{itemize}
+
+\role{Senior Engineering Manager}{IT Governance \& Planning, Office of the CIO}{Jul 2019 – Mar 2026}{6 yrs 8 mos}
+\teamlabel{Infrastructure Data Platform}
+\begin{itemize}
+  \item Owned IS\&T's GRC Engineering function --- data platforms and access controls that security, compliance, and finance relied on for audit readiness, risk posture, and incident response
+  \item Built Apple's compliance scoping engine --- correlating OSQuery telemetry, artifact ownership, DAST\slash SAST, and SG\slash ACL network graphs across 1.7M servers and petabytes of infrastructure signal to dynamically bound PCI and SOX audit scope
+  \item Shipped a PAM module as the change management gate on Apple's server fleet --- blocking SSH access unless backed by an approved ServiceNow change ticket, with SELinux policies enforcing SOX access controls at login
+  \item Built MCP servers and AI chatbots for each platform service --- enabling semantic search and natural-language discovery across compliance, asset, and audit data
+  \item Established Claude-powered code assist, PR review, and security checks as the team's default development workflow
+\end{itemize}
+\teamlabel{Business Planning}
+\begin{itemize}
+  \item Scaled the budget planning platform to 200+ finance stakeholders --- supporting Apple's annual capex/opex planning cycles and TCO tracking across the technology portfolio
+\end{itemize}
+
+\role{Senior Software Engineer}{IT Governance \& Planning, Office of the CIO}{Apr 2018 – Jul 2019}{1 yr 3 mos}
+\begin{itemize}
+  \item Designed and shipped Apple's PAM-based change management gate --- requiring an approved ServiceNow change ticket at SSH login, enforced with SELinux policies, to close a critical SOX access control gap across the server fleet
+\end{itemize}
+
+\role{Security Software Engineer}{Video Engineering}{Mar 2017 – Apr 2018}{1 yr 1 mo}
+\begin{itemize}
+  \item Built the secure data pipeline for FaceID model training --- handling high-volume biometric data under strict privacy controls and end-to-end integrity requirements
+  \item Provisioned training infrastructure with Terraform and Ansible, and built Jenkins CI/CD pipelines to validate model drops before promotion to production
+\end{itemize}
+
+\role{Security Engineer}{Apple Online Store}{Mar 2015 – Mar 2017}{2 yrs}
+\begin{itemize}
+  \item Built DUKPT-based cryptography libraries securing Point of Sale transactions across Apple Retail
+  \item Designed and deployed HSM infrastructure for Apple's Payment Gateway, enabling hardware-backed end-to-end transaction security
+  \item Ran goal-based penetration tests on Apple's Retail Engineering Red Team
+\end{itemize}
+
+\company{eBay Inc.}{Oct 2013 – Mar 2015\enspace\textperiodcentered\enspace 1 yr 5 mos}
+
+\role{Information Security Engineer}{}{Oct 2013 – Mar 2015}{1 yr 5 mos}
+\begin{itemize}
+  \item Ran bug bounty remediation and web application penetration testing for eBay Marketplaces
+  \item Extended Raptor, eBay's internal security framework, to systematically close XSS and other high-frequency web vulnerabilities
+\end{itemize}
+
+\newpage
+\company{McAfee Inc.}{Jan 2012 – Oct 2013\enspace\textperiodcentered\enspace 1 yr 9 mos}
+
+\role{Security Consultant}{}{Jan 2012 – Oct 2013}{1 yr 9 mos}
+\begin{itemize}
+  \item Delivered penetration testing and security code reviews for major financial institutions, surfacing critical vulnerabilities across web and application layers
+\end{itemize}
+
+% ── Education ────────────────────────────────────────────────────
+\section{Education}
+
+\vspace{3pt}
+{\small\textbf{Johns Hopkins University}\hfill\textcolor{muted}{\small 2011\,--\,2012}}\\[1pt]
+{\footnotesize\textcolor{muted}{M.S. Security Informatics}}
+
+\vspace{6pt}
+{\small\textbf{Birla Institute of Technology and Science}\hfill\textcolor{muted}{\small 2007\,--\,2011}}\\[1pt]
+{\footnotesize\textcolor{muted}{B.E. Computer Science}}
+
+% ── Skills ───────────────────────────────────────────────────────
+\section{Skills}
+
+\vspace{3pt}
+\begin{tabular}{@{}p{1.55in}@{\hspace{6pt}}p{\dimexpr\textwidth-1.55in-6pt\relax}@{}}
+  {\footnotesize\textcolor{muted}{Cryptography}}
+    & {\small PKI\,/\,X.509 · HSM\,/\,PKCS\#11 · Key Management · Code Signing} \\[3pt]
+  {\footnotesize\textcolor{muted}{Security \& Compliance}}
+    & {\small GRC Engineering · PCI DSS · SOX Compliance · Vulnerability Management · ServiceNow\,/\,CMDB · PAM · Zero Trust} \\[3pt]
+  {\footnotesize\textcolor{muted}{Engineering Leadership}}
+    & {\small Engineering Management · Technical Roadmap · Org Design · Cross-functional Leadership} \\[3pt]
+  {\footnotesize\textcolor{muted}{AI \& Automation}}
+    & {\small Agentic Workflows · MCP Servers · LLM Integration} \\[3pt]
+  {\footnotesize\textcolor{muted}{Languages}}
+    & {\small Go · Python} \\[3pt]
+  {\footnotesize\textcolor{muted}{Infrastructure}}
+    & {\small Cloud Security (AWS\,/\,GCP\,/\,Azure) · Data Pipelines · Terraform\,/\,Ansible · Enterprise Architecture} \\
+\end{tabular}
+
+\end{document}

@@ -444,12 +444,27 @@ body {
   margin-bottom: 32px;
 }
 
+.resume-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
 .resume-updated {
   font-size: 11px;
   font-weight: 300;
   color: var(--color-ink-5);
   font-family: var(--font-sans);
 }
+
+.resume-download {
+  font-size: 12px;
+  font-weight: 300;
+  color: var(--color-ink-4);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.resume-download:hover { color: var(--color-ink); }
 
 .article-header {
   margin-bottom: 0;
@@ -2228,7 +2243,12 @@ a.external-link::after {
 
   /* Hide interactive chrome */
   #curvesSvg,
-  #detailPanel { display: none !important; }
+  #detailPanel,
+  .exp-mode-seg,
+  .resume-topbar { display: none !important; }
+
+  /* Suppress URL annotations on links */
+  a[href]:after { content: none !important; }
 
   /* Kill animations */
   .company-block { animation: none; }
@@ -2250,13 +2270,22 @@ a.external-link::after {
   .exp-text      { color: #1c1c1e; font-size: 11.5px; }
   .exp-dash      { color: #aaa; }
 
-  /* Skills */
+  /* Skills — two-column grid, compact */
+  .skills-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 28px;
+    row-gap: 10px;
+  }
+  .skills-group { margin-bottom: 0; }
+  .skills-group-label { margin-bottom: 5px; }
+  .skills-pills { gap: 4px; }
   .skill-pill {
     background: none;
     border-color: #bbb;
     color: #333;
-    font-size: 10.5px;
-    padding: 3px 9px;
+    font-size: 10px;
+    padding: 2px 7px;
   }
 
   /* Education */
