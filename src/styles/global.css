@@ -431,17 +431,25 @@ body {
   color: var(--color-ink-4);
   text-decoration: none;
   transition: color 0.15s;
-  padding-top: 4px;
-  margin-bottom: 24px;
 }
 
 .article-back:hover { color: var(--color-ink); }
 
+.feed--resume {
+  padding-top: 0;
+}
+
 .resume-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 32px;
+  padding: 14px 0;
+  margin-bottom: 24px;
+  background: var(--color-panel);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .resume-topbar-right {
@@ -468,11 +476,11 @@ body {
 
 .article-header {
   margin-bottom: 0;
-  padding-bottom: 36px;
+  padding-bottom: 20px;
   border-bottom: 0.5px solid var(--color-border);
 }
 
-.article-top + .prose { margin-top: 52px; }
+.article-top + .prose { margin-top: 32px; }
 
 .article-series {
   font-size: 10.5px;
@@ -480,6 +488,7 @@ body {
   letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--color-ink-4);
+  margin-top: 20px;
   margin-bottom: 14px;
 }
 
@@ -490,7 +499,7 @@ body {
   color: var(--color-ink);
   letter-spacing: -0.8px;
   line-height: 1.12;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
 }
 
 .article-meta {
