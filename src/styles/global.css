@@ -499,7 +499,12 @@ body {
   color: var(--color-ink);
   letter-spacing: -0.8px;
   line-height: 1.12;
+  margin-top: 20px;
   margin-bottom: 8px;
+}
+
+.article-series + .article-title {
+  margin-top: 0;
 }
 
 .article-meta {
