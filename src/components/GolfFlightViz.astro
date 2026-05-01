@@ -65,8 +65,7 @@
   .gfv-label {
     position: absolute;
     top: 14px;
-    left: 50%;
-    transform: translateX(-50%);
+    left: 14px;
     z-index: 2;
     white-space: nowrap;
     background: rgba(0, 0, 0, 0.82);
@@ -83,9 +82,8 @@
 
   .gfv-sub {
     position: absolute;
-    top: 54px;
-    left: 50%;
-    transform: translateX(-50%);
+    top: 64px;
+    left: 14px;
     z-index: 2;
     white-space: nowrap;
     color: rgba(255, 255, 255, 0.48);
@@ -329,9 +327,9 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x1b3d6e);
 scene.fog = new THREE.FogExp2(0x1b3d6e, 0.02);
 
-const cam = new THREE.PerspectiveCamera(52, W / H, 0.1, 200);
-cam.position.set(0, 0.42, 2.8);
-cam.lookAt(0, 0.18, -10);
+const cam = new THREE.PerspectiveCamera(62, W / H, 0.1, 200);
+cam.position.set(0, 0.1, 2.8);
+cam.lookAt(0, 1.2, -10);
 
 // Lights
 scene.add(new THREE.AmbientLight(0xffffff, 0.5));
