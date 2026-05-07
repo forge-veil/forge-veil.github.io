@@ -37,7 +37,7 @@ sequenceDiagram
 </div>
 
 <script is:inline>
-  (async () => {
+  const renderMermaid = async () => {
     const { default: mermaid } = await import(
       'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs'
     );
@@ -63,7 +63,13 @@ sequenceDiagram
       },
     });
     await mermaid.run({ querySelector: '.mermaid' });
-  })();
+  };
+
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(renderMermaid);
+  } else {
+    setTimeout(renderMermaid, 200);
+  }
 </script>
 
 <style>
