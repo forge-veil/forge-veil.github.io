@@ -2,6 +2,7 @@
 import { defineConfig } from 'astro/config';
 import tailwindcss from '@tailwindcss/vite';
 import mdx from '@astrojs/mdx';
+import sitemap from '@astrojs/sitemap';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import rehypeExternalLinks from 'rehype-external-links';
@@ -12,6 +13,7 @@ export default defineConfig({
     plugins: [tailwindcss()],
   },
   integrations: [
+    sitemap(),
     mdx({
       remarkPlugins: [remarkMath],
       rehypePlugins: [
