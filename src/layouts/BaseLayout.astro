@@ -28,15 +28,23 @@ const {
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
     <link
+      rel="preload"
+      as="style"
       href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;1,6..72,300;1,6..72,400&family=Geist:wght@200;300;400;500&display=swap"
-      rel="stylesheet"
+      onload="this.onload=null;this.rel='stylesheet'"
     />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;1,6..72,300;1,6..72,400&family=Geist:wght@200;300;400;500&display=swap"
+      />
+    </noscript>
   </head>
   <body>
     <slot />
     <footer class="fixed bottom-2 left-3 text-xs text-neutral-400 select-none font-[Geist,sans-serif]">
       v{import.meta.env.VITE_APP_VERSION ?? 'dev'}
     </footer>
-    <script is:inline src="https://cdn.counter.dev/script.js" data-id="b1d6b475-3d01-4417-9605-c1239f2d11a0" data-utcoffset="-7"></script>
+    <script async is:inline src="https://cdn.counter.dev/script.js" data-id="b1d6b475-3d01-4417-9605-c1239f2d11a0" data-utcoffset="-7"></script>
   </body>
 </html>
