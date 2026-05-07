@@ -1,0 +1,85 @@
+---
+---
+
+<div class="seq-wrap">
+  <pre class="mermaid">
+sequenceDiagram
+    participant MT as Main Thread (Verifier)
+    participant WW as Web Worker (Enclave)
+
+    rect rgb(255,251,235)
+    Note over MT,WW: ① Boot
+    MT->>WW: init(engine)
+    Note over WW: sk, pk ← generateKey(P-256)
+    Note over WW: m ← SHA-256(source)
+    end
+
+    rect rgb(240,253,244)
+    Note over MT,WW: ② Attest
+    Note over WW: σ ← Sign(sk, m ‖ pk ‖ t)
+    WW->>MT: Quote(m, pk, t, σ)
+    Note over MT: Verify(pk, m ‖ pk ‖ t, σ) = 1 ✓
+    end
+
+    rect rgb(239,246,255)
+    Note over MT,WW: ③ Query
+    MT->>WW: query(text)
+    Note over WW: r ← model.generate(text)
+    end
+
+    rect rgb(253,244,255)
+    Note over MT,WW: ④ Respond
+    Note over WW: σᵣ ← Sign(sk, H(q) ‖ H(r) ‖ t)
+    WW->>MT: Receipt(H(q), H(r), t, σᵣ)
+    Note over MT: Verify(pk, H(q) ‖ H(r) ‖ t, σᵣ) = 1 ✓
+    end
+  </pre>
+</div>
+
+<script>
+  import mermaid from 'mermaid';
+
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: 'base',
+    themeVariables: {
+      primaryColor: '#f6f8fa',
+      primaryTextColor: '#1f2328',
+      primaryBorderColor: '#d0d7de',
+      lineColor: '#6e7681',
+      actorBkg: '#f6f8fa',
+      actorBorder: '#d0d7de',
+      actorTextColor: '#1f2328',
+      actorLineColor: '#d0d7de',
+      signalColor: '#57606a',
+      signalTextColor: '#1f2328',
+      noteBkgColor: '#fff8f0',
+      noteBorderColor: '#d0d7de',
+      noteTextColor: '#444',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      fontSize: '13px',
+    },
+  });
+
+  await mermaid.run({ querySelector: '.mermaid' });
+</script>
+
+<style>
+  .seq-wrap {
+    margin: 1.75rem 0;
+    border: 1px solid #e1e4e8;
+    border-radius: 10px;
+    overflow-x: auto;
+    background: #fff;
+    padding: 1.25rem 1rem;
+    display: flex;
+    justify-content: center;
+  }
+
+  .seq-wrap pre {
+    margin: 0;
+    background: transparent;
+    border: none;
+    padding: 0;
+  }
+</style>

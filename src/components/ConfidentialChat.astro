@@ -1,0 +1,686 @@
+---
+// No props — self-contained
+---
+
+<div class="cc-wrap" id="cc-root">
+
+  <!-- ── Phase 1: engine selector ──────────────────────────────────────── -->
+  <div class="cc-phase" id="cc-phase-select">
+    <div class="cc-select-inner">
+      <p class="cc-select-title">Choose an inference engine</p>
+      <p class="cc-select-sub">Both run entirely in your browser. No data leaves your device.</p>
+      <div class="cc-engine-cards">
+        <button class="cc-engine-card" data-engine="transformers">
+          <span class="cc-engine-icon">🧠</span>
+          <span class="cc-engine-info">
+            <span class="cc-engine-name">Transformers.js <span class="cc-engine-meta">· SmolLM2 135M · CPU/WASM</span></span>
+            <span class="cc-engine-desc">~300 MB · works in any modern browser</span>
+          </span>
+        </button>
+        <button class="cc-engine-card" data-engine="webllm" id="cc-webllm-card">
+          <span class="cc-engine-icon">⚡</span>
+          <span class="cc-engine-info">
+            <span class="cc-engine-name">WebLLM <span class="cc-engine-meta">· Llama 3.2 1B · WebGPU</span></span>
+            <span class="cc-engine-desc">~800 MB · requires WebGPU (Chrome 113+)</span>
+            <span class="cc-engine-warn" id="cc-webgpu-warn" hidden>⚠ WebGPU not detected in your browser</span>
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Phase 2: boot log + attestation ───────────────────────────────── -->
+  <div class="cc-phase" id="cc-phase-boot" hidden>
+    <div class="cc-boot-back" id="cc-boot-back" hidden>
+      <button id="cc-back-to-chat">← Back to chat</button>
+    </div>
+    <div class="cc-boot-log" id="cc-boot-log"></div>
+    <div class="cc-attest-banner" id="cc-attest-banner" hidden>
+      <div class="cc-attest-status">
+        <span class="cc-attest-dot"></span>
+        <span class="cc-attest-label">Enclave attested ✓</span>
+      </div>
+      <div class="cc-attest-hash" id="cc-attest-hash"></div>
+      <button class="cc-attest-expand" id="cc-attest-toggle">expand quote ▾</button>
+      <pre class="cc-attest-quote" id="cc-attest-quote" hidden></pre>
+    </div>
+  </div>
+
+  <!-- ── Phase 3: chat ─────────────────────────────────────────────────── -->
+  <div class="cc-phase cc-chat-layout" id="cc-phase-chat" hidden>
+    <div class="cc-chat-col">
+      <div class="cc-messages" id="cc-messages"></div>
+      <div class="cc-input-row">
+        <input class="cc-input" id="cc-input" type="text" placeholder="Ask the enclave…" />
+        <button class="cc-send" id="cc-send">Send</button>
+      </div>
+    </div>
+    <div class="cc-sidebar">
+      <p class="cc-sidebar-heading">Enclave</p>
+      <div class="cc-sidebar-status" id="cc-sidebar-status">
+        <span class="cc-sidebar-dot cc-dot-verified"></span>
+        <span>Verified</span>
+      </div>
+      <div class="cc-sidebar-hash" id="cc-sidebar-hash"></div>
+      <div class="cc-sidebar-meta" id="cc-sidebar-meta"></div>
+      <div class="cc-sidebar-links">
+        <button class="cc-sidebar-link" id="cc-view-quote">View attestation quote</button>
+        <button class="cc-sidebar-link" id="cc-view-code">View enclave code</button>
+        <button class="cc-sidebar-link" id="cc-dl-receipts">Download receipts</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<style>
+  /* Template-rendered elements — Astro scoping is fine here */
+  .cc-wrap {
+    border: 0.5px solid var(--color-border, #e0e0e0);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 2rem 0;
+    font-family: inherit;
+    background: var(--color-bg, #fff);
+  }
+  .cc-phase { display: block; }
+
+  /* Phase 1 */
+  .cc-select-inner { padding: 2rem; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
+  .cc-select-title { font-weight: 600; font-size: 1rem; margin: 0; }
+  .cc-select-sub { color: #666; font-size: 0.8rem; margin: 0 0 0.75rem; }
+  .cc-engine-cards { display: flex; flex-direction: column; gap: 0.625rem; width: 100%; max-width: 420px; }
+  .cc-engine-card {
+    display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--color-border, #e0e0e0); border-radius: 8px;
+    background: none; cursor: pointer; text-align: left; transition: border-color 0.15s;
+  }
+  .cc-engine-card:hover { border-color: #6366f1; }
+  .cc-engine-card:disabled { opacity: 0.5; cursor: not-allowed; }
+  .cc-engine-icon { font-size: 1.25rem; }
+  .cc-engine-info { display: flex; flex-direction: column; gap: 2px; }
+  .cc-engine-name { font-weight: 600; font-size: 0.8rem; }
+  .cc-engine-meta { font-weight: 400; color: #888; }
+  .cc-engine-desc { font-size: 0.72rem; color: #666; }
+  .cc-engine-warn { font-size: 0.68rem; color: #d97706; }
+
+  /* Phase 2 container */
+  .cc-boot-back {
+    padding: 0.5rem 1rem;
+    border-bottom: 0.5px solid #21262d;
+    background: #0d1117;
+  }
+  .cc-boot-back button {
+    background: none; border: none; color: #6e7681;
+    font-size: 0.72rem; cursor: pointer; padding: 0;
+    font-family: 'SF Mono','Fira Mono',ui-monospace,monospace;
+  }
+  .cc-boot-back button:hover { color: #c9d1d9; }
+  .cc-boot-log {
+    padding: 0.875rem 1.125rem;
+    background: #0d1117;
+    border-bottom: 0.5px solid #21262d;
+    font-family: 'SF Mono', 'JetBrains Mono', 'Fira Mono', ui-monospace, monospace;
+    font-size: 0.72rem;
+    line-height: 1.7;
+    min-height: 100px;
+  }
+  .cc-attest-banner {
+    margin: 0.75rem 1rem 1rem; padding: 0.75rem 1rem;
+    background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;
+  }
+  .cc-attest-status { display: flex; align-items: center; gap: 0.5rem; }
+  .cc-attest-dot { width: 8px; height: 8px; border-radius: 50%; background: #2d9c5f; display: inline-block; }
+  .cc-attest-label { font-weight: 600; color: #166534; font-size: 0.8rem; }
+  .cc-attest-hash { font-family: monospace; font-size: 0.7rem; color: #555; margin-top: 4px; }
+  .cc-attest-expand { background: none; border: none; color: #2563eb; font-size: 0.72rem; cursor: pointer; padding: 4px 0; }
+  .cc-attest-quote {
+    margin-top: 0.5rem; padding: 0.625rem;
+    background: #fff; border: 1px solid #dcfce7; border-radius: 6px;
+    font-size: 0.68rem; line-height: 1.6; overflow-x: auto;
+    white-space: pre-wrap; word-break: break-all;
+  }
+
+  /* Phase 3 layout */
+  .cc-chat-layout { display: flex; height: 480px; }
+  .cc-chat-col { flex: 3; display: flex; flex-direction: column; border-right: 0.5px solid var(--color-border, #e0e0e0); }
+  .cc-messages { flex: 1; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; overflow-y: auto; }
+  .cc-input-row { display: flex; gap: 0.5rem; padding: 0.75rem 1rem; border-top: 0.5px solid var(--color-border, #e0e0e0); }
+  .cc-input {
+    flex: 1; padding: 0.5rem 0.75rem;
+    border: 1px solid var(--color-border, #e0e0e0); border-radius: 6px;
+    font-size: 0.8rem; font-family: inherit; background: var(--color-bg, #fff); color: inherit;
+  }
+  .cc-send { padding: 0.5rem 1rem; background: #6366f1; color: #fff; border: none; border-radius: 6px; font-size: 0.8rem; cursor: pointer; }
+  .cc-send:disabled { opacity: 0.5; cursor: not-allowed; }
+  .cc-sidebar { flex: 1; padding: 1rem; background: #fafafa; font-size: 0.78rem; }
+  .cc-sidebar-heading { font-weight: 700; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; color: #888; margin: 0 0 0.625rem; }
+  .cc-sidebar-status { display: flex; align-items: center; gap: 0.4rem; font-weight: 600; margin-bottom: 4px; }
+  .cc-dot-verified { width: 7px; height: 7px; border-radius: 50%; background: #2d9c5f; display: inline-block; }
+  .cc-sidebar-hash { font-family: monospace; font-size: 0.65rem; color: #888; word-break: break-all; margin-bottom: 0.75rem; }
+  .cc-sidebar-meta { color: #888; line-height: 1.8; margin-bottom: 0.75rem; }
+  .cc-sidebar-links { display: flex; flex-direction: column; gap: 4px; border-top: 1px solid #e8e8e8; padding-top: 0.625rem; }
+  .cc-sidebar-link { background: none; border: none; color: #2563eb; font-size: 0.72rem; cursor: pointer; text-align: left; padding: 0; }
+</style>
+
+<style is:global>
+  /* Dynamically created elements — must be global to bypass Astro scoping */
+
+  /* Boot steps */
+  .cc-boot-step { display: flex; flex-direction: row; align-items: center; gap: 0.6rem; }
+  .cc-step-num { color: #6e7681; flex-shrink: 0; min-width: 0.8rem; user-select: none; }
+  .cc-boot-step .done { color: #3fb950; display: flex; align-items: center; gap: 0.35rem; }
+  .cc-boot-step .done::before { content: '✓'; }
+  .cc-boot-step .pending { color: #e3b341; display: flex; align-items: center; gap: 0.4rem; }
+  .cc-boot-step .pending::before {
+    content: '';
+    display: inline-block;
+    width: 8px; height: 8px; min-width: 8px;
+    border: 1.5px solid #e3b341; border-top-color: transparent;
+    border-radius: 50%;
+    animation: cc-spin 0.75s linear infinite;
+  }
+  @keyframes cc-spin { to { transform: rotate(360deg); } }
+  .cc-model-bar {
+    height: 3px; background: #21262d; border-radius: 1px;
+    overflow: hidden; max-width: 180px; margin: 2px 0 3px 1.3rem;
+  }
+  .cc-model-fill { height: 100%; background: #388bfd; border-radius: 1px; transition: width 0.4s ease; width: 0%; }
+
+  /* Chat bubbles */
+  .cc-msg-user {
+    align-self: flex-end;
+    background: #6366f1; color: #fff;
+    border-radius: 18px 18px 4px 18px;
+    padding: 0.55rem 0.875rem;
+    font-size: 0.82rem; line-height: 1.5; max-width: 75%;
+  }
+  .cc-msg-enclave-wrap { align-self: flex-start; max-width: 80%; display: flex; flex-direction: column; gap: 3px; }
+  .cc-msg-enclave {
+    background: #f0f0f0; color: #1a1a1a;
+    border-radius: 18px 18px 18px 4px;
+    padding: 0.55rem 0.875rem;
+    font-size: 0.82rem; line-height: 1.5; white-space: pre-wrap;
+  }
+  .cc-msg-receipt-bar { display: flex; align-items: center; gap: 5px; padding-left: 6px; font-size: 0.63rem; color: #b0b0b0; }
+  .cc-receipt-valid { color: #2d9c5f; }
+  .cc-receipt-expand { color: #2563eb; cursor: pointer; background: none; border: none; font-size: 0.63rem; padding: 0; text-decoration: underline; text-underline-offset: 2px; }
+  .cc-receipt-detail {
+    margin-top: 4px; padding: 0.5rem; background: #f0fdf4;
+    border: 1px solid #bbf7d0; border-radius: 10px;
+    font-family: monospace; font-size: 0.63rem; line-height: 1.6;
+    overflow-x: auto; white-space: pre-wrap; word-break: break-all;
+  }
+  .cc-msg-thinking { align-self: flex-start; color: #aaa; font-size: 0.75rem; font-style: italic; padding-left: 6px; }
+</style>
+
+<script>
+  import EnclaveWorker from '../workers/enclave.worker.ts?worker';
+  import enclaveSource from '../workers/enclave.worker.ts?raw';
+  import {
+    importPublicKey,
+    verifyQuote,
+    verifyReceipt,
+    sha256base64,
+  } from '../lib/attestation';
+  import type { AttestationQuote, ResponseReceipt, EnclaveState } from '../lib/attestation';
+
+  // ── DOM refs ──────────────────────────────────────────────────────────────
+  const phaseSelect = document.getElementById('cc-phase-select')!;
+  const phaseBoot   = document.getElementById('cc-phase-boot')!;
+  const phaseChat   = document.getElementById('cc-phase-chat')!;
+  const bootLog     = document.getElementById('cc-boot-log')!;
+  const attestBanner = document.getElementById('cc-attest-banner')!;
+  const attestHash  = document.getElementById('cc-attest-hash')!;
+  const attestQuote = document.getElementById('cc-attest-quote')!;
+  const attestToggle = document.getElementById('cc-attest-toggle')!;
+  const messages    = document.getElementById('cc-messages')!;
+  const input       = document.getElementById('cc-input') as HTMLInputElement;
+  const sendBtn     = document.getElementById('cc-send') as HTMLButtonElement;
+  const sidebarHash = document.getElementById('cc-sidebar-hash')!;
+  const sidebarMeta = document.getElementById('cc-sidebar-meta')!;
+  const webgpuWarn  = document.getElementById('cc-webgpu-warn')!;
+  const webllmCard  = document.getElementById('cc-webllm-card') as HTMLButtonElement;
+  const viewQuoteBtn = document.getElementById('cc-view-quote') as HTMLButtonElement;
+  const viewCodeBtn  = document.getElementById('cc-view-code') as HTMLButtonElement;
+  const dlReceiptsBtn = document.getElementById('cc-dl-receipts') as HTMLButtonElement;
+  const bootBack = document.getElementById('cc-boot-back')!;
+  const backToChatBtn = document.getElementById('cc-back-to-chat') as HTMLButtonElement;
+
+  // ── Code modal (appended to body to escape overflow:hidden) ───────────────
+  const codeModal = document.createElement('div');
+  Object.assign(codeModal.style, {
+    position: 'fixed', inset: '0', background: 'rgba(0,0,0,0.55)',
+    display: 'none', alignItems: 'center', justifyContent: 'center',
+    zIndex: '9999', padding: '1.5rem',
+  });
+  codeModal.addEventListener('click', (e) => { if (e.target === codeModal) closeCodeModal(); });
+
+  const codeBox = document.createElement('div');
+  Object.assign(codeBox.style, {
+    background: '#0d1117', borderRadius: '12px',
+    maxWidth: '760px', width: '100%', maxHeight: '80vh',
+    display: 'flex', flexDirection: 'column', overflow: 'hidden',
+    boxShadow: '0 24px 80px rgba(0,0,0,0.5)',
+  });
+
+  const codeHeader = document.createElement('div');
+  Object.assign(codeHeader.style, {
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+    padding: '0.75rem 1rem', borderBottom: '1px solid #21262d', background: '#161b22', flexShrink: '0',
+  });
+
+  const codeTitleWrap = document.createElement('div');
+  Object.assign(codeTitleWrap.style, { display: 'flex', flexDirection: 'column', gap: '2px' });
+
+  const codeTitle = document.createElement('span');
+  Object.assign(codeTitle.style, { color: '#c9d1d9', fontSize: '0.78rem', fontWeight: '600', fontFamily: 'monospace' });
+  codeTitle.textContent = 'enclave.worker.ts';
+
+  const codeSub = document.createElement('span');
+  Object.assign(codeSub.style, { color: '#6e7681', fontSize: '0.63rem', fontFamily: 'monospace' });
+  codeSub.textContent = 'SHA-256 of compiled output → mrenclave';
+
+  codeTitleWrap.appendChild(codeTitle);
+  codeTitleWrap.appendChild(codeSub);
+
+  const codeClose = document.createElement('button');
+  Object.assign(codeClose.style, { background: 'none', border: 'none', color: '#6e7681', cursor: 'pointer', fontSize: '1.1rem', lineHeight: '1', padding: '2px 4px' });
+  codeClose.textContent = '✕';
+  codeClose.addEventListener('click', closeCodeModal);
+
+  codeHeader.appendChild(codeTitleWrap);
+  codeHeader.appendChild(codeClose);
+
+  const codeContainer = document.createElement('div');
+  Object.assign(codeContainer.style, { overflow: 'auto', flex: '1', background: '#0d1117' });
+  // Placeholder shown while Shiki loads
+  codeContainer.innerHTML = `<pre style="margin:0;padding:1rem 1.25rem;font-family:'SF Mono','Fira Mono',monospace;font-size:0.7rem;line-height:1.65;color:#6e7681">${enclaveSource.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>`;
+
+  codeBox.appendChild(codeHeader);
+  codeBox.appendChild(codeContainer);
+  codeModal.appendChild(codeBox);
+  document.body.appendChild(codeModal);
+
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeCodeModal(); });
+
+  function closeCodeModal() { codeModal.style.display = 'none'; }
+
+  let shikiLoaded = false;
+  viewCodeBtn.addEventListener('click', async () => {
+    codeModal.style.display = 'flex';
+    if (!shikiLoaded) {
+      shikiLoaded = true;
+      const { codeToHtml } = await import('shiki');
+      const html = await codeToHtml(enclaveSource, { lang: 'typescript', theme: 'github-dark' });
+      codeContainer.innerHTML = html;
+      const pre = codeContainer.querySelector('pre');
+      if (pre) Object.assign(pre.style, {
+        margin: '0', padding: '1rem 1.25rem',
+        fontFamily: "'SF Mono','JetBrains Mono','Fira Mono',ui-monospace,monospace",
+        fontSize: '0.7rem', lineHeight: '1.65', borderRadius: '0',
+      });
+    }
+  });
+
+  // ── State ─────────────────────────────────────────────────────────────────
+  let worker: Worker | null = null;
+  let state: EnclaveState = {
+    status: 'idle', verified: false, queryCount: 0, validReceipts: 0,
+  };
+  const receipts: Array<{ query: string; response: string; receipt: ResponseReceipt }> = [];
+  let thinkingEl: HTMLElement | null = null;
+
+  // ── WebGPU detection ──────────────────────────────────────────────────────
+  if (!('gpu' in navigator)) {
+    webgpuWarn.hidden = false;
+    webllmCard.disabled = true;
+  }
+
+  // ── Phase 1: engine selection ─────────────────────────────────────────────
+  document.querySelectorAll<HTMLButtonElement>('.cc-engine-card').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (btn.disabled) return;
+      startEnclave(btn.dataset.engine as 'transformers' | 'webllm');
+    });
+  });
+
+  function startEnclave(engine: 'transformers' | 'webllm') {
+    phaseSelect.hidden = true;
+    phaseBoot.hidden = false;
+    state = { ...state, status: 'booting', engine };
+    worker = new EnclaveWorker();
+    worker.onmessage = handleWorkerMessage;
+    worker.postMessage({ type: 'init', engine });
+  }
+
+  // ── Boot log helpers ──────────────────────────────────────────────────────
+  const BOOT_LABELS: Record<number, string> = {
+    1: 'Generate ECDSA P-256 keypair',
+    2: 'Hash Worker source (SHA-256) → mrenclave',
+    3: 'Sign attestation quote',
+    4: 'Load model weights',
+  };
+  const bootStepEls: Record<number, HTMLElement> = {};
+
+  function addBootStep(step: number, label: string) {
+    const el = document.createElement('div');
+    css(el, { display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.6rem' });
+    const numSpan = document.createElement('span');
+    css(numSpan, { color: '#6e7681', flexShrink: '0', userSelect: 'none', minWidth: '0.8rem' });
+    numSpan.textContent = String(step);
+    const labelSpan = document.createElement('span');
+    labelSpan.className = 'pending';
+    css(labelSpan, { color: '#e3b341', display: 'flex', alignItems: 'center', gap: '0.4rem' });
+    labelSpan.textContent = label;
+    el.appendChild(numSpan);
+    el.appendChild(labelSpan);
+    bootStepEls[step] = el;
+    bootLog.appendChild(el);
+  }
+
+  function completeBootStep(step: number) {
+    const el = bootStepEls[step];
+    if (!el) return;
+    const span = el.querySelector('.pending') as HTMLElement | null;
+    if (!span) return;
+    span.className = 'done';
+    css(span, { color: '#3fb950' });
+    span.textContent = '✓ ' + span.textContent;
+  }
+
+  // ── Worker message handler ────────────────────────────────────────────────
+  async function handleWorkerMessage(e: MessageEvent) {
+    const msg = e.data;
+
+    if (msg.type === 'boot-step') {
+      addBootStep(msg.step, BOOT_LABELS[msg.step] ?? msg.label);
+      if (msg.step > 1) completeBootStep(msg.step - 1);
+    }
+
+    if (msg.type === 'quote') {
+      completeBootStep(3);
+      const quote: AttestationQuote = msg.quote;
+      const pubkey = await importPublicKey(quote.pubkey);
+      const valid = await verifyQuote(quote, pubkey);
+      state = { ...state, quote, pubkey, mrenclave: quote.mrenclave, verified: valid };
+      if (valid) {
+        attestHash.textContent = `mrenclave: ${quote.mrenclave.slice(0, 20)}…`;
+        attestQuote.textContent = JSON.stringify(quote, null, 2);
+        attestBanner.hidden = false;
+      }
+    }
+
+    if (msg.type === 'model-progress') {
+      const step4 = bootStepEls[4];
+      if (step4) {
+        const span = step4.querySelector('.pending');
+        if (span) span.textContent = `Loading model… ${msg.progress}%`;
+      }
+      let fill = bootLog.querySelector('.cc-model-fill') as HTMLElement | null;
+      if (!fill) {
+        const track = document.createElement('div');
+        track.className = 'cc-model-bar';
+        fill = document.createElement('div');
+        fill.className = 'cc-model-fill';
+        track.appendChild(fill);
+        bootLog.appendChild(track);
+      }
+      fill.style.width = `${msg.progress}%`;
+    }
+
+    if (msg.type === 'ready') {
+      completeBootStep(4);
+      state = { ...state, status: 'ready' };
+      // transition to chat
+      setTimeout(() => {
+        phaseBoot.hidden = true;
+        phaseChat.hidden = false;
+        sidebarHash.textContent = (state.mrenclave?.slice(0, 20) ?? '') + '…';
+        updateSidebarMeta();
+        sendBtn.disabled = false;
+      }, 600);
+    }
+
+    if (msg.type === 'response') {
+      thinkingEl?.remove();
+      thinkingEl = null;
+      const { text, receipt }: { text: string; receipt: ResponseReceipt } = msg;
+      const valid = state.pubkey ? await verifyReceipt(receipt, state.pubkey) : false;
+      state = {
+        ...state,
+        queryCount: state.queryCount + 1,
+        validReceipts: state.validReceipts + (valid ? 1 : 0),
+      };
+      const lastQuery = input.dataset.lastQuery ?? '';
+      receipts.push({ query: lastQuery, response: text, receipt });
+      appendResponse(text, receipt, valid, lastQuery);
+      updateSidebarMeta();
+      sendBtn.disabled = false;
+    }
+
+    if (msg.type === 'error') {
+      thinkingEl?.remove();
+      thinkingEl = null;
+      const errEl = document.createElement('div');
+      css(errEl, { alignSelf: 'flex-start', color: '#dc2626', fontSize: '0.75rem', fontStyle: 'italic', paddingLeft: '6px' });
+      errEl.textContent = `⚠ ${msg.message}`;
+      messages.appendChild(errEl);
+      sendBtn.disabled = false;
+    }
+  }
+
+  // ── Chat UI ───────────────────────────────────────────────────────────────
+  function css(el: HTMLElement, styles: Partial<CSSStyleDeclaration>) {
+    Object.assign(el.style, styles);
+  }
+
+  function renderMarkdown(text: string): string {
+    return text
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/`(.+?)`/g, '<code style="background:#e8e8e8;border-radius:3px;padding:0 3px;font-size:0.9em">$1</code>')
+      .replace(/\n/g, '<br>');
+  }
+
+  function appendUserMessage(text: string) {
+    const el = document.createElement('div');
+    css(el, {
+      alignSelf: 'flex-end', background: '#6366f1', color: '#fff',
+      borderRadius: '18px 18px 4px 18px', padding: '0.55rem 0.875rem',
+      fontSize: '0.82rem', lineHeight: '1.5', maxWidth: '75%',
+    });
+    el.textContent = text;
+    messages.appendChild(el);
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  function appendResponse(text: string, receipt: ResponseReceipt, valid: boolean, queryText: string) {
+    const wrap = document.createElement('div');
+    css(wrap, { alignSelf: 'flex-start', maxWidth: '80%', display: 'flex', flexDirection: 'column', gap: '3px' });
+
+    const bubble = document.createElement('div');
+    css(bubble, {
+      background: '#f0f0f0', color: '#1a1a1a',
+      borderRadius: '18px 18px 18px 4px', padding: '0.55rem 0.875rem',
+      fontSize: '0.82rem', lineHeight: '1.5', whiteSpace: 'pre-wrap',
+    });
+    bubble.innerHTML = renderMarkdown(text);
+
+    const bar = document.createElement('div');
+    css(bar, { display: 'flex', alignItems: 'center', gap: '5px', paddingLeft: '6px', fontSize: '0.63rem', color: '#b0b0b0' });
+
+    const statusSpan = document.createElement('span');
+    css(statusSpan, { color: valid ? '#2d9c5f' : '#dc2626' });
+    statusSpan.textContent = valid ? '✓ Signed by enclave' : '✗ Invalid receipt';
+
+    const expandBtn = document.createElement('button');
+    css(expandBtn, { color: '#2563eb', cursor: 'pointer', background: 'none', border: 'none', fontSize: '0.63rem', padding: '0', textDecoration: 'underline', textUnderlineOffset: '2px' });
+    expandBtn.textContent = 'verify receipt ▾';
+
+    // ── Verification panel ──────────────────────────────────────────────────
+    const panel = document.createElement('div');
+    css(panel, {
+      marginTop: '4px', padding: '0.625rem 0.75rem',
+      background: '#f8f9fa', border: '1px solid #e0e0e0', borderRadius: '10px',
+      fontFamily: "'SF Mono','Fira Mono',monospace", fontSize: '0.63rem', lineHeight: '1.7',
+    });
+    panel.hidden = true;
+
+    // Receipt fields header
+    const header = document.createElement('div');
+    css(header, { color: '#888', fontSize: '0.58rem', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' });
+    header.textContent = 'Receipt';
+    panel.appendChild(header);
+
+    for (const [k, v] of Object.entries(receipt)) {
+      const row = document.createElement('div');
+      css(row, { display: 'flex', gap: '6px', marginBottom: '1px' });
+      const key = document.createElement('span');
+      css(key, { color: '#888', flexShrink: '0' });
+      key.textContent = k;
+      const val = document.createElement('span');
+      css(val, { color: '#374151', wordBreak: 'break-all' });
+      val.textContent = typeof v === 'string' ? (v.length > 32 ? v.slice(0, 32) + '…' : v) : String(v);
+      row.appendChild(key);
+      row.appendChild(val);
+      panel.appendChild(row);
+    }
+
+    // Divider + verify button
+    const divider = document.createElement('div');
+    css(divider, { borderTop: '1px solid #e0e0e0', margin: '8px 0' });
+    panel.appendChild(divider);
+
+    const verifyBtn = document.createElement('button');
+    css(verifyBtn, {
+      padding: '3px 10px', background: '#6366f1', color: '#fff',
+      border: 'none', borderRadius: '5px', fontSize: '0.63rem', cursor: 'pointer',
+    });
+    verifyBtn.textContent = 'Run verification ▶';
+    panel.appendChild(verifyBtn);
+
+    const stepsEl = document.createElement('div');
+    css(stepsEl, { marginTop: '8px' });
+    panel.appendChild(stepsEl);
+
+    verifyBtn.addEventListener('click', async () => {
+      verifyBtn.disabled = true;
+      verifyBtn.textContent = 'Verifying…';
+      stepsEl.innerHTML = '';
+
+      const qh = await sha256base64(queryText);
+      addVerifyStep(stepsEl, '① SHA-256(query)', qh, qh === receipt.queryHash,
+        qh === receipt.queryHash ? 'matches receipt.queryHash ✓' : 'mismatch ✗');
+
+      const rh = await sha256base64(text);
+      addVerifyStep(stepsEl, '② SHA-256(response)', rh, rh === receipt.responseHash,
+        rh === receipt.responseHash ? 'matches receipt.responseHash ✓' : 'mismatch ✗');
+
+      const sigValid = state.pubkey ? await verifyReceipt(receipt, state.pubkey) : false;
+      addVerifyStep(stepsEl,
+        '③ SubtleCrypto.verify(ECDSA·P-256, pubkey, queryHash|responseHash|timestamp)',
+        '', sigValid,
+        sigValid ? 'signature valid — response is authentic ✓' : 'signature invalid ✗');
+
+      verifyBtn.textContent = 'Run again ↺';
+      verifyBtn.disabled = false;
+    });
+
+    expandBtn.addEventListener('click', () => {
+      panel.hidden = !panel.hidden;
+      expandBtn.textContent = panel.hidden ? 'verify receipt ▾' : 'hide receipt ▴';
+    });
+
+    bar.appendChild(statusSpan);
+    bar.appendChild(expandBtn);
+    wrap.appendChild(bubble);
+    wrap.appendChild(bar);
+    wrap.appendChild(panel);
+    messages.appendChild(wrap);
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  function addVerifyStep(container: HTMLElement, label: string, value: string, ok: boolean, result: string) {
+    const step = document.createElement('div');
+    css(step, { marginTop: '6px', paddingTop: '6px', borderTop: '1px solid #ebebeb' });
+
+    const labelEl = document.createElement('div');
+    css(labelEl, { color: '#555', marginBottom: '2px' });
+    labelEl.textContent = label;
+    step.appendChild(labelEl);
+
+    if (value) {
+      const valEl = document.createElement('div');
+      css(valEl, { color: '#888', wordBreak: 'break-all', marginBottom: '2px' });
+      valEl.textContent = '→ ' + value;
+      step.appendChild(valEl);
+    }
+
+    const resultEl = document.createElement('div');
+    css(resultEl, { color: ok ? '#059669' : '#dc2626', fontWeight: '600' });
+    resultEl.textContent = result;
+    step.appendChild(resultEl);
+
+    container.appendChild(step);
+  }
+
+  function updateSidebarMeta() {
+    sidebarMeta.innerHTML = `
+      Engine: ${state.engine ?? '—'}<br>
+      Queries: ${state.queryCount}<br>
+      Receipts valid: ${state.validReceipts}/${state.queryCount}
+    `;
+  }
+
+  sendBtn.addEventListener('click', sendQuery);
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendQuery(); });
+
+  function sendQuery() {
+    const text = input.value.trim();
+    if (!text || !worker || state.status !== 'ready') return;
+    input.dataset.lastQuery = text;
+    input.value = '';
+    sendBtn.disabled = true;
+    appendUserMessage(text);
+    thinkingEl = document.createElement('div');
+    css(thinkingEl, { alignSelf: 'flex-start', color: '#aaa', fontSize: '0.75rem', fontStyle: 'italic', paddingLeft: '6px' });
+    thinkingEl.textContent = 'Enclave is thinking…';
+    messages.appendChild(thinkingEl);
+    messages.scrollTop = messages.scrollHeight;
+    worker.postMessage({ type: 'query', text });
+  }
+
+  // ── Attestation quote toggle ───────────────────────────────────────────────
+  attestToggle.addEventListener('click', () => {
+    attestQuote.hidden = !attestQuote.hidden;
+    attestToggle.textContent = attestQuote.hidden ? 'expand quote ▾' : 'hide quote ▴';
+  });
+
+  // ── Sidebar: view quote ───────────────────────────────────────────────────
+  viewQuoteBtn.addEventListener('click', () => {
+    phaseBoot.hidden = false;
+    attestBanner.hidden = false;
+    bootBack.hidden = false;
+    phaseChat.hidden = true;
+  });
+
+  backToChatBtn.addEventListener('click', () => {
+    phaseBoot.hidden = true;
+    bootBack.hidden = true;
+    phaseChat.hidden = false;
+  });
+
+  // ── Sidebar: download receipts ────────────────────────────────────────────
+  dlReceiptsBtn.addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(receipts, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'enclave-receipts.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+</script>

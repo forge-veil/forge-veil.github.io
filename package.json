@@ -16,9 +16,13 @@
   "dependencies": {
     "@astrojs/check": "^0.9.8",
     "@astrojs/mdx": "^5.0.4",
+    "@huggingface/transformers": "^4.2.0",
+    "@mlc-ai/web-llm": "^0.2.83",
     "@observablehq/plot": "^0.6.16",
     "@tailwindcss/vite": "^4.2.4",
     "astro": "^6.1.9",
+    "highlight.js": "^11.11.1",
+    "mermaid": "^11.14.0",
     "rehype-katex": "^7.0.1",
     "remark-math": "^6.0.0",
     "tailwindcss": "^4.2.4",
