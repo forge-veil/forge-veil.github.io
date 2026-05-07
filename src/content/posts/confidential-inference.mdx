@@ -1,0 +1,60 @@
+---
+title: "Can You Trust an AI Endpoint? Simulating Confidential Inference in the Browser"
+description: "Trusted execution environments promise cryptographic proof that an AI model hasn't been tampered with. Here's how they work — and a live simulation you can verify yourself."
+topic: security
+tags: [security, tee, trusted-execution, cryptography, web-crypto, ai]
+publishedAt: 2026-05-06
+published: true
+postLayout: longform
+---
+
+import ConfidentialChat from '../../components/ConfidentialChat.astro';
+
+When you send a query to an AI API, consider what you're actually trusting. You're trusting that the provider is running the model they claim. That your prompt isn't being logged. That the response you receive is what the model actually produced — not something filtered, modified, or replaced. This trust is entirely reputational. There is no mechanism for you to verify any of it.
+
+For most queries, this is fine. For some — medical questions, proprietary business logic, whistleblower communications — it isn't. And as AI handles higher-stakes decisions, the question of how to verify what's running on the other side becomes less theoretical.
+
+## What TEEs Promise
+
+A trusted execution environment is a hardware-isolated region of a processor with two guarantees. First, **isolation**: code running inside the TEE has its own encrypted memory that even the host operating system — and the cloud provider operating that machine — cannot read. Second, **attestation**: the TEE can produce cryptographic proof of exactly which code is running inside it, signed by the CPU manufacturer.
+
+The major production TEEs are Intel SGX (Software Guard Extensions), AMD SEV (Secure Encrypted Virtualization), and AWS Nitro Enclaves. Each has a different architecture, but the trust model is the same: an enclave makes a claim about what it is, and you can verify that claim without trusting the infrastructure it runs on.
+
+## Attestation: The Key Primitive
+
+Attestation is how a TEE proves its identity. At boot, the TEE measures its own code — typically a SHA-256 hash of the executable, called `mrenclave` on SGX — and signs a document containing that measurement, a public key, and a timestamp. This document is called the attestation quote.
+
+Anyone who receives the quote can:
+
+1. Check the signature against the CPU vendor's certificate chain — proving the TEE is real hardware, not a software fake.
+2. Check that `mrenclave` matches the expected hash of the intended software — proving the right code is running.
+3. Use the public key in the quote to verify signatures on every subsequent response — proving those responses came from the same measured code.
+
+The chain of trust runs from the CPU vendor, through the code measurement, to every response. If anything in that chain breaks — the code is swapped, the key is stolen, the signature fails — the verification fails. No reputable attestation, no trust.
+
+## Try It: A Browser Simulation
+
+The demo below simulates this protocol using browser-native primitives. A Web Worker plays the role of the enclave: it's a genuinely isolated execution context with its own heap and no access to the DOM. The Worker generates an ECDSA P-256 keypair, hashes its own compiled source code as `mrenclave`, and signs an attestation quote. You can verify that signature yourself with a single click — the browser's SubtleCrypto API does the verification.
+
+Once attested, you can query the enclave. Each response comes with a signed receipt: an ECDSA signature over the hash of your query and the response, produced inside the Worker with a key that has never left it.
+
+Choose an engine to start. Transformers.js runs SmolLM2 (135M parameters) in WebAssembly — no GPU required. WebLLM uses WebGPU for faster inference if your browser supports it.
+
+<ConfidentialChat />
+
+## Honest Limits
+
+This simulation teaches the protocol correctly. The isolation model, the keypair generation, the self-measurement, the signature verification — all of it uses real cryptography and a genuinely isolated execution context.
+
+What it doesn't do is hardware attestation. In a real TEE, the attestation quote is signed by a key fused into the CPU by the manufacturer — Intel, AMD, or AWS. That signature proves the enclave is running on real hardware that has been cryptographically endorsed. In this simulation, the signing key was generated in software inside the Worker. A privileged browser process or OS-level tool could, in principle, kill the Worker and inspect its memory, or replace the Worker script before it runs.
+
+The simulation is also a self-measurement: the Worker hashes its own source after it's already running. In a real TEE, the measurement happens before the code starts, under hardware control. The distinction matters for security proofs; it doesn't change what the demo illustrates.
+
+The gap between simulation and reality is not incidental. It's precisely the gap that hardware TEEs fill. The simulation is useful because it makes the protocol legible; hardware TEEs are useful because they make the protocol enforceable.
+
+## Where to Go From Here
+
+- **AWS Nitro Enclaves** — the lowest-friction path to a real TEE. Any EC2 instance with Nitro support can run an enclave. AWS signs the attestation document. Good Python SDK.
+- **Gramine + Intel SGX** — run unmodified applications inside an SGX enclave on Azure DCsv3 or Alibaba instances. Gramine handles the porting work so you don't need to rewrite for SGX.
+- **Confidential Containers** — an emerging standard (via CNCF) for running container workloads in hardware-isolated TEEs on Kubernetes.
+- **Confidential Computing Consortium** — the industry group coordinating standards across Intel, AMD, ARM, and cloud providers. [confidentialcomputing.io](https://confidentialcomputing.io)

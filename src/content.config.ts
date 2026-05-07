@@ -17,6 +17,11 @@ export const TOPICS = [
     name: 'Mathematics',
     description: '',
   },
+  {
+    slug: 'security',
+    name: 'Security',
+    description: '',
+  },
 ] as const;
 
 export type TopicSlug = (typeof TOPICS)[number]['slug'];
