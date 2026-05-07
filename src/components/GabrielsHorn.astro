@@ -84,125 +84,138 @@ pondere non magni, quod interim helluo nullus ebibat"</pre>
 </dialog>
 
 <script>
-import * as THREE from 'three';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { ParametricGeometry } from 'three/addons/geometries/ParametricGeometry.js';
+import type * as THREE from 'three';
 
 const canvas = document.getElementById('gabriel-canvas') as HTMLCanvasElement;
-
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.setClearColor(0x000000, 0);
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.15;
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-
-const scene = new THREE.Scene();
-
-const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 200);
-camera.position.set(0, 0, 8);
-camera.lookAt(0, 0, 0);
-
-const pmrem = new THREE.PMREMGenerator(renderer);
-pmrem.compileEquirectangularShader();
-scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
-
-function makeHorn(u: number, v: number, target: THREE.Vector3) {
-  const t = Math.pow(40, u);        // t ∈ [1, 40] — extended range, needle-thin tip
-  const r = 1 / t;
-  const angle = v * 2 * Math.PI;
-  target.set(t, r * Math.cos(angle), r * Math.sin(angle));
-}
-
-const geo = new ParametricGeometry(
-  (u: number, v: number, t: THREE.Vector3) => makeHorn(u, v, t),
-  200, 60
-);
-geo.computeBoundingBox();
-const center = new THREE.Vector3();
-geo.boundingBox!.getCenter(center);
-geo.translate(-center.x, -center.y, -center.z);
-geo.computeBoundingBox();
-const sz = new THREE.Vector3();
-geo.boundingBox!.getSize(sz);
-const s = 7.0 / Math.max(sz.x, sz.y, sz.z);
-
-// Alpha gradient: opaque at opening (u=0), dissolves to transparent at tip (u=1)
-const alphaCanvas = document.createElement('canvas');
-alphaCanvas.width = 256;
-alphaCanvas.height = 4;
-const alphaCtx = alphaCanvas.getContext('2d')!;
-const grad = alphaCtx.createLinearGradient(0, 0, 256, 0);
-grad.addColorStop(0.0, 'rgba(255,255,255,1)');
-grad.addColorStop(0.5, 'rgba(255,255,255,1)');
-grad.addColorStop(1.0, 'rgba(0,0,0,1)');
-alphaCtx.fillStyle = grad;
-alphaCtx.fillRect(0, 0, 256, 4);
-const alphaTex = new THREE.CanvasTexture(alphaCanvas);
-
-const mat = new THREE.MeshStandardMaterial({
-  color: 0xb07d3a,
-  metalness: 0.85,
-  roughness: 0.18,
-  side: THREE.DoubleSide,
-  alphaMap: alphaTex,
-  transparent: true,
-});
-
-const horn = new THREE.Mesh(geo, mat);
-horn.scale.setScalar(s);
-
-const group = new THREE.Group();
-group.add(horn);
-group.position.y = 0.6;
-group.rotation.x = 0.25;
-group.rotation.z = 0.48;
-scene.add(group);
-
-scene.add(new THREE.AmbientLight(0xffffff, 0.4));
-const key = new THREE.DirectionalLight(0xffffff, 4.5);
-key.position.set(5, 10, 8);
-scene.add(key);
-const fill = new THREE.DirectionalLight(0xffd4aa, 1.4);
-fill.position.set(-6, -3, 4);
-scene.add(fill);
-const rim = new THREE.DirectionalLight(0xfff8f0, 0.8);
-rim.position.set(2, -8, -6);
-scene.add(rim);
-
-function resize() {
-  const w = canvas.clientWidth;
-  const h = canvas.clientHeight;
-  if (w === 0 || h === 0) return;
-  renderer.setSize(w, h, false);
-  camera.aspect = w / h;
-  camera.updateProjectionMatrix();
-}
-resize();
-
 let animId: number | null = null;
-let t = 0;
+let initialized = false;
 
-function tick() {
-  animId = requestAnimationFrame(tick);
-  t += 0.004;
-  group.rotation.y = t;
-  renderer.render(scene, camera);
+async function init() {
+  const THREE = await import('three');
+  const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironment.js');
+  const { ParametricGeometry } = await import('three/addons/geometries/ParametricGeometry.js');
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setClearColor(0x000000, 0);
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.15;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+  const scene = new THREE.Scene();
+
+  const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 200);
+  camera.position.set(0, 0, 8);
+  camera.lookAt(0, 0, 0);
+
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  pmrem.compileEquirectangularShader();
+  scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
+
+  function makeHorn(u: number, v: number, target: THREE.Vector3) {
+    const t = Math.pow(40, u);
+    const r = 1 / t;
+    const angle = v * 2 * Math.PI;
+    target.set(t, r * Math.cos(angle), r * Math.sin(angle));
+  }
+
+  const geo = new ParametricGeometry(
+    (u: number, v: number, t: THREE.Vector3) => makeHorn(u, v, t),
+    200, 60
+  );
+  geo.computeBoundingBox();
+  const center = new THREE.Vector3();
+  geo.boundingBox!.getCenter(center);
+  geo.translate(-center.x, -center.y, -center.z);
+  geo.computeBoundingBox();
+  const sz = new THREE.Vector3();
+  geo.boundingBox!.getSize(sz);
+  const s = 7.0 / Math.max(sz.x, sz.y, sz.z);
+
+  const alphaCanvas = document.createElement('canvas');
+  alphaCanvas.width = 256;
+  alphaCanvas.height = 4;
+  const alphaCtx = alphaCanvas.getContext('2d')!;
+  const grad = alphaCtx.createLinearGradient(0, 0, 256, 0);
+  grad.addColorStop(0.0, 'rgba(255,255,255,1)');
+  grad.addColorStop(0.5, 'rgba(255,255,255,1)');
+  grad.addColorStop(1.0, 'rgba(0,0,0,1)');
+  alphaCtx.fillStyle = grad;
+  alphaCtx.fillRect(0, 0, 256, 4);
+  const alphaTex = new THREE.CanvasTexture(alphaCanvas);
+
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0xb07d3a,
+    metalness: 0.85,
+    roughness: 0.18,
+    side: THREE.DoubleSide,
+    alphaMap: alphaTex,
+    transparent: true,
+  });
+
+  const horn = new THREE.Mesh(geo, mat);
+  horn.scale.setScalar(s);
+
+  const group = new THREE.Group();
+  group.add(horn);
+  group.position.y = 0.6;
+  group.rotation.x = 0.25;
+  group.rotation.z = 0.48;
+  scene.add(group);
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+  const key = new THREE.DirectionalLight(0xffffff, 4.5);
+  key.position.set(5, 10, 8);
+  scene.add(key);
+  const fill = new THREE.DirectionalLight(0xffd4aa, 1.4);
+  fill.position.set(-6, -3, 4);
+  scene.add(fill);
+  const rim = new THREE.DirectionalLight(0xfff8f0, 0.8);
+  rim.position.set(2, -8, -6);
+  scene.add(rim);
+
+  function resize() {
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    if (w === 0 || h === 0) return;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+  resize();
+
+  let t = 0;
+
+  function tick() {
+    animId = requestAnimationFrame(tick);
+    t += 0.004;
+    group.rotation.y = t;
+    renderer.render(scene, camera);
+  }
+
+  const animObserver = new IntersectionObserver(([entry]) => {
+    if (entry.isIntersecting) {
+      if (animId === null) tick();
+    } else {
+      if (animId !== null) {
+        cancelAnimationFrame(animId);
+        animId = null;
+      }
+    }
+  }, { threshold: 0 });
+
+  animObserver.observe(canvas);
+  window.addEventListener('resize', resize);
 }
 
-const observer = new IntersectionObserver(([entry]) => {
-  if (entry.isIntersecting) {
-    if (animId === null) tick();
-  } else {
-    if (animId !== null) {
-      cancelAnimationFrame(animId);
-      animId = null;
-    }
-  }
+const initObserver = new IntersectionObserver(([entry]) => {
+  if (!entry.isIntersecting || initialized) return;
+  initialized = true;
+  initObserver.disconnect();
+  init();
 }, { threshold: 0 });
 
-observer.observe(canvas);
-window.addEventListener('resize', resize);
+initObserver.observe(canvas);
 
 const dialog = document.getElementById('gabriel-source-dialog') as HTMLDialogElement;
 document.getElementById('gabriel-source-btn')!.addEventListener('click', () => dialog.showModal());

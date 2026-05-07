@@ -23,7 +23,6 @@
     "@tailwindcss/vite": "^4.2.4",
     "astro": "^6.1.9",
     "highlight.js": "^11.11.1",
-    "mermaid": "^11.14.0",
     "rehype-katex": "^7.0.1",
     "remark-math": "^6.0.0",
     "tailwindcss": "^4.2.4",

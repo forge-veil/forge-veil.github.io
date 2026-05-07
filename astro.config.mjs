@@ -11,6 +11,13 @@ export default defineConfig({
   site: 'https://forge-veil.github.io',
   vite: {
     plugins: [tailwindcss()],
+    build: {
+      modulePreload: {
+        polyfill: true,
+        resolveDependencies: (_url, deps) =>
+          deps.filter(dep => !dep.includes('three')),
+      },
+    },
   },
   integrations: [
     sitemap(),

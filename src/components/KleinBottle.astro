@@ -96,131 +96,145 @@ You'll get a weird bottle like mine."</pre>
 </dialog>
 
 <script>
-import * as THREE from 'three';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { ParametricGeometry } from 'three/addons/geometries/ParametricGeometry.js';
+import type * as THREE from 'three';
 
 const canvas = document.getElementById('klein-canvas') as HTMLCanvasElement;
-
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.setClearColor(0x000000, 0);
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.1;
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-
-const scene = new THREE.Scene();
-
-const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
-camera.position.set(0, 0, 14);
-
-const pmrem = new THREE.PMREMGenerator(renderer);
-pmrem.compileEquirectangularShader();
-scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
-
-function makeKlein(tubeScale: number, v: number, u: number, target: THREE.Vector3) {
-  u *= Math.PI; v *= 2 * Math.PI; u *= 2;
-  const r = 2 * (1 - Math.cos(u) / 2) * tubeScale;
-  let x: number, y: number, z: number;
-  if (u < Math.PI) {
-    x = 3*Math.cos(u)*(1+Math.sin(u)) + r*Math.cos(u)*Math.cos(v);
-    y = 8*Math.sin(u) + r*Math.sin(u)*Math.cos(v);
-  } else {
-    x = 3*Math.cos(u)*(1+Math.sin(u)) + r*Math.cos(v+Math.PI);
-    y = 8*Math.sin(u);
-  }
-  z = r * Math.sin(v);
-  target.set(x, y, z);
-}
-
-// ParametricGeometry calls fn(u, v, target) — swap to (v, u) to match the
-// Three.js figure-8 Klein convention from the approved prototype.
-const glassGeo = new ParametricGeometry((v: number, u: number, t: THREE.Vector3) => makeKlein(1.0, v, u, t), 100, 50);
-glassGeo.computeBoundingBox();
-const center = new THREE.Vector3();
-glassGeo.boundingBox!.getCenter(center);
-glassGeo.translate(-center.x, -center.y, -center.z);
-glassGeo.computeBoundingBox();
-const sz = new THREE.Vector3();
-glassGeo.boundingBox!.getSize(sz);
-const s = 8.0 / Math.max(sz.x, sz.y, sz.z);
-
-const glassMat = new THREE.MeshPhysicalMaterial({
-  color: 0xe8f0ff,
-  metalness: 0,
-  roughness: 0.0,
-  transmission: 0.88,
-  thickness: 2.5,
-  ior: 1.52,
-  reflectivity: 0.65,
-  side: THREE.DoubleSide,
-  envMapIntensity: 2.5,
-});
-const glass = new THREE.Mesh(glassGeo, glassMat);
-glass.scale.setScalar(s);
-
-const liquidGeo = new ParametricGeometry((v, u, t) => makeKlein(0.72, v, u, t), 100, 50);
-liquidGeo.translate(-center.x, -center.y, -center.z);
-const liquidMat = new THREE.MeshStandardMaterial({
-  color: 0x07070f,
-  metalness: 0.2,
-  roughness: 0.6,
-  side: THREE.FrontSide,
-});
-const liquid = new THREE.Mesh(liquidGeo, liquidMat);
-liquid.scale.setScalar(s);
-
-const group = new THREE.Group();
-group.add(liquid);  // opaque first — captured in glass transmission pass
-group.add(glass);
-group.rotation.x = 0.3;
-group.rotation.z = 0.1;
-scene.add(group);
-
-scene.add(new THREE.AmbientLight(0xffffff, 0.25));
-const key = new THREE.DirectionalLight(0xffffff, 3.5);
-key.position.set(5, 10, 8);
-scene.add(key);
-const fill = new THREE.DirectionalLight(0xaabbff, 0.8);
-fill.position.set(-6, -3, 4);
-scene.add(fill);
-const rim = new THREE.DirectionalLight(0xfff8f0, 0.45);
-rim.position.set(2, -8, -6);
-scene.add(rim);
-
-function resize() {
-  const w = canvas.clientWidth;
-  const h = canvas.clientHeight;
-  if (w === 0 || h === 0) return;
-  renderer.setSize(w, h, false);  // false = don't touch canvas style
-  camera.aspect = w / h;
-  camera.updateProjectionMatrix();
-}
-resize();
-
 let animId: number | null = null;
-let t = 0;
+let initialized = false;
 
-function tick() {
-  animId = requestAnimationFrame(tick);
-  t += 0.004;
-  group.rotation.y = t;
-  renderer.render(scene, camera);
+async function init() {
+  const THREE = await import('three');
+  const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironment.js');
+  const { ParametricGeometry } = await import('three/addons/geometries/ParametricGeometry.js');
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setClearColor(0x000000, 0);
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.1;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+  const scene = new THREE.Scene();
+
+  const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
+  camera.position.set(0, 0, 14);
+
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  pmrem.compileEquirectangularShader();
+  scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
+
+  function makeKlein(tubeScale: number, v: number, u: number, target: THREE.Vector3) {
+    u *= Math.PI; v *= 2 * Math.PI; u *= 2;
+    const r = 2 * (1 - Math.cos(u) / 2) * tubeScale;
+    let x: number, y: number, z: number;
+    if (u < Math.PI) {
+      x = 3*Math.cos(u)*(1+Math.sin(u)) + r*Math.cos(u)*Math.cos(v);
+      y = 8*Math.sin(u) + r*Math.sin(u)*Math.cos(v);
+    } else {
+      x = 3*Math.cos(u)*(1+Math.sin(u)) + r*Math.cos(v+Math.PI);
+      y = 8*Math.sin(u);
+    }
+    z = r * Math.sin(v);
+    target.set(x, y, z);
+  }
+
+  // ParametricGeometry calls fn(u, v, target) — swap to (v, u) to match the
+  // Three.js figure-8 Klein convention from the approved prototype.
+  const glassGeo = new ParametricGeometry((v: number, u: number, t: THREE.Vector3) => makeKlein(1.0, v, u, t), 100, 50);
+  glassGeo.computeBoundingBox();
+  const center = new THREE.Vector3();
+  glassGeo.boundingBox!.getCenter(center);
+  glassGeo.translate(-center.x, -center.y, -center.z);
+  glassGeo.computeBoundingBox();
+  const sz = new THREE.Vector3();
+  glassGeo.boundingBox!.getSize(sz);
+  const s = 8.0 / Math.max(sz.x, sz.y, sz.z);
+
+  const glassMat = new THREE.MeshPhysicalMaterial({
+    color: 0xe8f0ff,
+    metalness: 0,
+    roughness: 0.0,
+    transmission: 0.88,
+    thickness: 2.5,
+    ior: 1.52,
+    reflectivity: 0.65,
+    side: THREE.DoubleSide,
+    envMapIntensity: 2.5,
+  });
+  const glass = new THREE.Mesh(glassGeo, glassMat);
+  glass.scale.setScalar(s);
+
+  const liquidGeo = new ParametricGeometry((v, u, t) => makeKlein(0.72, v, u, t), 100, 50);
+  liquidGeo.translate(-center.x, -center.y, -center.z);
+  const liquidMat = new THREE.MeshStandardMaterial({
+    color: 0x07070f,
+    metalness: 0.2,
+    roughness: 0.6,
+    side: THREE.FrontSide,
+  });
+  const liquid = new THREE.Mesh(liquidGeo, liquidMat);
+  liquid.scale.setScalar(s);
+
+  const group = new THREE.Group();
+  group.add(liquid);  // opaque first — captured in glass transmission pass
+  group.add(glass);
+  group.rotation.x = 0.3;
+  group.rotation.z = 0.1;
+  scene.add(group);
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.25));
+  const key = new THREE.DirectionalLight(0xffffff, 3.5);
+  key.position.set(5, 10, 8);
+  scene.add(key);
+  const fill = new THREE.DirectionalLight(0xaabbff, 0.8);
+  fill.position.set(-6, -3, 4);
+  scene.add(fill);
+  const rim = new THREE.DirectionalLight(0xfff8f0, 0.45);
+  rim.position.set(2, -8, -6);
+  scene.add(rim);
+
+  function resize() {
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    if (w === 0 || h === 0) return;
+    renderer.setSize(w, h, false);  // false = don't touch canvas style
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+  resize();
+
+  let t = 0;
+
+  function tick() {
+    animId = requestAnimationFrame(tick);
+    t += 0.004;
+    group.rotation.y = t;
+    renderer.render(scene, camera);
+  }
+
+  const animObserver = new IntersectionObserver(([entry]) => {
+    if (entry.isIntersecting) {
+      if (animId === null) tick();
+    } else {
+      if (animId !== null) {
+        cancelAnimationFrame(animId);
+        animId = null;
+      }
+    }
+  }, { threshold: 0 });
+
+  animObserver.observe(canvas);
+  window.addEventListener('resize', resize);
 }
 
-const observer = new IntersectionObserver(([entry]) => {
-  if (entry.isIntersecting) {
-    if (animId === null) tick();
-  } else {
-    if (animId !== null) {
-      cancelAnimationFrame(animId);
-      animId = null;
-    }
-  }
+const initObserver = new IntersectionObserver(([entry]) => {
+  if (!entry.isIntersecting || initialized) return;
+  initialized = true;
+  initObserver.disconnect();
+  init();
 }, { threshold: 0 });
 
-observer.observe(canvas);
-window.addEventListener('resize', resize);
+initObserver.observe(canvas);
 
 const dialog = document.getElementById('klein-source-dialog') as HTMLDialogElement;
 document.getElementById('klein-source-btn')!.addEventListener('click', () => dialog.showModal());
