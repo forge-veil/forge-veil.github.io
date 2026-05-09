@@ -16,7 +16,7 @@ const {
   title = 'Vatsal Bakshi',
   description = 'Software engineer writing about cryptography and distributed systems.',
   canonicalUrl = Astro.url.href,
-  ogImage = new URL('/og-default.png', Astro.site).href,
+  ogImage = Astro.site ? new URL('/og-default.png', Astro.site).href : '/og-default.png',
   ogType = 'website',
   publishedAt,
   tags = [],
