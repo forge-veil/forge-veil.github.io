@@ -3,6 +3,7 @@ import { getCollection, render, type CollectionEntry } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import Sidebar from '../../components/Sidebar.astro';
 import BlochSphere from '../../components/BlochSphere.astro';
+import SchemaOrg from '../../components/SchemaOrg.astro';
 
 export async function getStaticPaths() {
   const posts = await getCollection('posts');
@@ -18,6 +19,24 @@ interface Props {
 
 const { post } = Astro.props;
 const { Content, headings } = await render(post);
+
+const postSlug = post.id.replace(/\.(md|mdx)$/, '');
+const canonicalUrl = new URL(`/blog/${postSlug}`, Astro.site).href;
+
+const articleSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  headline: post.data.title,
+  description: post.data.description,
+  datePublished: post.data.publishedAt.toISOString(),
+  url: canonicalUrl,
+  keywords: post.data.tags.join(', '),
+  author: {
+    '@type': 'Person',
+    name: 'Vatsal Bakshi',
+    url: 'https://forge-veil.github.io',
+  },
+};
 
 function formatDate(date: Date) {
   return date.toLocaleDateString('en-US', {
@@ -37,7 +56,12 @@ function readTime(body: string | undefined) {
 <BaseLayout
   title={`${post.data.title} — Vatsal Bakshi`}
   description={post.data.description}
+  canonicalUrl={canonicalUrl}
+  ogType="article"
+  publishedAt={post.data.publishedAt}
+  tags={post.data.tags}
 >
+  <SchemaOrg schema={articleSchema} />
   <div class="layout">
     <Sidebar activeTopic={post.data.topic} headings={headings} />
 
