@@ -2,9 +2,29 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Sidebar from '../components/Sidebar.astro';
 import ShapeCarousel from '../components/ShapeCarousel.astro';
+import SchemaOrg from '../components/SchemaOrg.astro';
+
+const personSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  name: 'Vatsal Bakshi',
+  url: 'https://forge-veil.github.io',
+  jobTitle: 'Engineering Manager',
+  worksFor: { '@type': 'Organization', name: 'Apple' },
+  alumniOf: [
+    { '@type': 'CollegeOrUniversity', name: 'Johns Hopkins University' },
+    { '@type': 'CollegeOrUniversity', name: 'Birla Institute of Technology & Science, Pilani' },
+  ],
+  sameAs: [
+    'https://github.com/forge-veil',
+    'https://www.linkedin.com/in/vatsalbakshi/',
+    'https://app.astrobin.com/u/primordialphotons',
+  ],
+};
 ---
 
 <BaseLayout title="Vatsal Bakshi" description="Engineering Manager at Apple, working on cryptographic architecture across PKI, post-quantum migration, and HSM infrastructure.">
+  <SchemaOrg schema={personSchema} />
   <div class="layout">
     <Sidebar />
 
