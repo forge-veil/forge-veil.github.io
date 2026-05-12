@@ -22,6 +22,11 @@ export const TOPICS = [
     name: 'Security',
     description: '',
   },
+  {
+    slug: 'finance',
+    name: 'Finance',
+    description: '',
+  },
 ] as const;
 
 export type TopicSlug = (typeof TOPICS)[number]['slug'];
