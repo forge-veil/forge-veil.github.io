@@ -235,7 +235,12 @@ const id = `ew-${Math.random().toString(36).slice(2, 9)}`
 </style>
 
 <script>
-import type { MergedQuarter } from '../lib/earnings'
+import {
+  timestampToQuarterKey,
+  mergeQuarterlyData,
+  computeStats,
+} from '../lib/earnings'
+import type { TickerData, QuarterPrice, EpsPoint, MergedQuarter } from '../lib/earnings'
 
 const NS = 'http://www.w3.org/2000/svg'
 
@@ -417,5 +422,163 @@ function renderPEChart(
   container.innerHTML = ''
   container.appendChild(svg)
 }
+
+const CORS_PROXY = 'https://api.allorigins.win/raw?url='
+
+async function fetchJSON(url: string): Promise<unknown> {
+  let res: Response
+  try {
+    res = await fetch(url)
+    if (res.status === 404) throw Object.assign(new Error('NOT_FOUND'), { code: 'NOT_FOUND' })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    return await res.json()
+  } catch (e: unknown) {
+    if ((e as { code?: string }).code === 'NOT_FOUND') throw e
+    // Network/CORS error — retry via public proxy
+    const proxied = await fetch(CORS_PROXY + encodeURIComponent(url))
+    if (proxied.status === 404) throw Object.assign(new Error('NOT_FOUND'), { code: 'NOT_FOUND' })
+    if (!proxied.ok) throw new Error(`Proxy HTTP ${proxied.status}`)
+    return proxied.json()
+  }
+}
+
+async function fetchTickerData(ticker: string): Promise<TickerData> {
+  const sym = ticker.trim().toUpperCase()
+  const chartURL = `https://query2.finance.yahoo.com/v8/finance/chart/${sym}?interval=3mo&range=4y`
+  const summaryURL = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${sym}?modules=incomeStatementHistoryQuarterly`
+
+  const [chartRaw, summaryRaw] = await Promise.all([
+    fetchJSON(chartURL),
+    fetchJSON(summaryURL),
+  ])
+
+  // Parse price data
+  const chartResult = (chartRaw as Record<string, unknown> & { chart?: { result?: unknown[] } })
+    .chart?.result?.[0] as Record<string, unknown> | undefined
+  if (!chartResult) throw Object.assign(new Error('NOT_FOUND'), { code: 'NOT_FOUND' })
+
+  const meta = chartResult.meta as Record<string, unknown>
+  const timestamps = (chartResult.timestamp as number[]) ?? []
+  const closes = ((chartResult.indicators as Record<string, unknown[]>)?.quote?.[0] as Record<string, (number | null)[]>)?.close ?? []
+
+  const prices: QuarterPrice[] = timestamps
+    .map((ts, i) => ({ quarter: timestampToQuarterKey(ts), price: closes[i] ?? null }))
+    .filter((p): p is QuarterPrice => p.price != null)
+
+  // Parse EPS data (newest-first from Yahoo — reverse to chronological)
+  const epsHistory = (
+    (summaryRaw as Record<string, unknown>)
+      ?.quoteSummary as Record<string, unknown[]> | undefined
+  )?.result?.[0] as Record<string, unknown> | undefined
+
+  const rawEps = (
+    (epsHistory?.incomeStatementHistoryQuarterly as Record<string, unknown[]> | undefined)
+      ?.incomeStatementHistory ?? []
+  ) as Array<Record<string, Record<string, unknown>>>
+
+  const eps: EpsPoint[] = rawEps
+    .map(entry => ({
+      quarter: timestampToQuarterKey((entry.endDate?.raw as number) ?? 0),
+      eps: (entry.dilutedEPS?.raw as number | null) ?? null,
+    }))
+    .filter((e): e is EpsPoint => e.eps != null)
+    .reverse()
+
+  const merged = mergeQuarterlyData(prices, eps)
+  const stats = computeStats(merged)
+
+  return {
+    meta: {
+      symbol: (meta.symbol as string) ?? sym,
+      name: (meta.longName as string) ?? (meta.shortName as string) ?? sym,
+      currentPrice: (meta.regularMarketPrice as number) ?? 0,
+    },
+    merged,
+    stats,
+  }
+}
+
+async function load(root: HTMLElement, sym: string): Promise<void> {
+  const statusEl = root.querySelector<HTMLElement>('.ew-status')!
+  const chartPriceEl = root.querySelector<HTMLElement>('.ew-chart-price')!
+  const chartPEEl = root.querySelector<HTMLElement>('.ew-chart-pe')!
+  const compact = root.classList.contains('ew--compact')
+
+  statusEl.textContent = 'Loading…'
+  statusEl.hidden = false
+  chartPriceEl.innerHTML = ''
+  chartPEEl.innerHTML = ''
+
+  root.querySelector('.ew-input')?.classList.remove('ew-input--error')
+
+  try {
+    const data = await fetchTickerData(sym)
+    statusEl.hidden = true
+
+    // Header
+    const nameEl = root.querySelector('.ew-name')
+    const priceEl = root.querySelector('.ew-price')
+    if (nameEl) nameEl.textContent = data.meta.name
+    if (priceEl) priceEl.textContent = data.meta.currentPrice
+      ? `$${data.meta.currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+      : ''
+
+    // Charts
+    renderPriceEpsChart(chartPriceEl, data.merged, compact)
+
+    const validPE = data.merged.filter(d => d.trailingPE != null)
+    const avgPE = validPE.length
+      ? validPE.reduce((s, d) => s + d.trailingPE!, 0) / validPE.length
+      : 0
+    renderPEChart(chartPEEl, data.merged, avgPE, compact)
+
+    // Stats
+    const s = data.stats
+    const peEl = root.querySelector<HTMLElement>('.ew-pe-val')
+    if (peEl) {
+      peEl.textContent = s.currentPE != null ? `${s.currentPE.toFixed(1)}×` : '—'
+      peEl.classList.toggle('ew-warn', s.currentPE != null && s.currentPE > 40)
+    }
+
+    const epsEl = root.querySelector('.ew-eps-val')
+    if (epsEl) epsEl.textContent = s.ttmEPS != null ? `$${s.ttmEPS.toFixed(2)}` : '—'
+
+    const growthEl = root.querySelector<HTMLElement>('.ew-growth-val')
+    if (growthEl) {
+      if (s.epsGrowthPct != null) {
+        const sign = s.epsGrowthPct >= 0 ? '+' : ''
+        growthEl.textContent = `${sign}${s.epsGrowthPct.toFixed(0)}%`
+        growthEl.classList.toggle('ew-up', s.epsGrowthPct >= 0)
+        growthEl.classList.toggle('ew-down', s.epsGrowthPct < 0)
+      } else {
+        growthEl.textContent = '—'
+      }
+    }
+
+    const deltaEl = root.querySelector<HTMLElement>('.ew-pricedelta-val')
+    if (deltaEl) {
+      const sign = s.priceChangePct >= 0 ? '+' : ''
+      deltaEl.textContent = `${sign}${s.priceChangePct.toFixed(0)}%`
+      deltaEl.classList.toggle('ew-up', s.priceChangePct >= 0)
+      deltaEl.classList.toggle('ew-down', s.priceChangePct < 0)
+    }
+  } catch (err: unknown) {
+    const msg = (err as { code?: string; message?: string }).code === 'NOT_FOUND'
+      ? `"${sym}" not found`
+      : 'Unable to load data'
+    statusEl.innerHTML = `<span>${msg}</span><button class="ew-retry">Retry</button>`
+    statusEl.hidden = false
+    statusEl.querySelector('.ew-retry')?.addEventListener('click', () => load(root, sym), { once: true })
+    if ((err as { code?: string }).code === 'NOT_FOUND') {
+      root.querySelector('.ew-input')?.classList.add('ew-input--error')
+    }
+  }
+}
+
+function initWidget(root: HTMLElement): void {
+  load(root, root.dataset.ticker!)
+}
+
+document.querySelectorAll<HTMLElement>('[data-ew-id]').forEach(initWidget)
 
 </script>
