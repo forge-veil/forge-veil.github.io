@@ -519,9 +519,9 @@ async function load(root: HTMLElement, sym: string): Promise<void> {
     const nameEl = root.querySelector('.ew-name')
     const priceEl = root.querySelector('.ew-price')
     if (nameEl) nameEl.textContent = data.meta.name
-    if (priceEl) priceEl.textContent = data.meta.currentPrice
+    if (priceEl) priceEl.textContent = (data.meta.currentPrice
       ? `$${data.meta.currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-      : ''
+      : '')
 
     // Charts
     renderPriceEpsChart(chartPriceEl, data.merged, compact)
@@ -576,7 +576,8 @@ async function load(root: HTMLElement, sym: string): Promise<void> {
 }
 
 function initWidget(root: HTMLElement): void {
-  load(root, root.dataset.ticker!)
+  const ticker = root.dataset.ticker
+  if (ticker) load(root, ticker)
 }
 
 document.querySelectorAll<HTMLElement>('[data-ew-id]').forEach(initWidget)
