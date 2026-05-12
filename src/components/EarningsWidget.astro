@@ -1,0 +1,234 @@
+---
+interface Props {
+  ticker: string
+  interactive?: boolean
+  label?: string
+}
+
+const { ticker, interactive = false, label } = Astro.props
+const id = `ew-${Math.random().toString(36).slice(2, 9)}`
+---
+
+{label && <div class="ew-label">{label}</div>}
+
+<div
+  class:list={['ew', !interactive && 'ew--compact']}
+  data-ew-id={id}
+  data-ticker={ticker}
+  data-interactive={interactive ? 'true' : 'false'}
+>
+  <div class="ew-header">
+    {interactive ? (
+      <input
+        class="ew-input"
+        type="text"
+        value={ticker}
+        autocomplete="off"
+        spellcheck="false"
+        aria-label="Stock ticker"
+      />
+    ) : (
+      <span class="ew-ticker-static">{ticker}</span>
+    )}
+    <span class="ew-name"></span>
+    <span class="ew-price"></span>
+  </div>
+
+  <div class="ew-charts">
+    <div class="ew-panel-price">
+      <div class="ew-legend">
+        <span class="ew-legend-price">— Price</span>
+        <span class="ew-legend-eps">- - EPS (quarterly)</span>
+      </div>
+      <div class="ew-chart-price"></div>
+    </div>
+    <div class="ew-panel-pe">
+      <div class="ew-legend">
+        <span class="ew-legend-pe">— P/E (trailing)</span>
+        <span class="ew-legend-avg">- - 4yr avg</span>
+      </div>
+      <div class="ew-chart-pe"></div>
+    </div>
+  </div>
+
+  <div class="ew-stats">
+    <div class="ew-stat">
+      <div class="ew-stat-lbl">Current P/E</div>
+      <div class="ew-stat-val ew-pe-val">—</div>
+    </div>
+    <div class="ew-stat ew-stat--full-only">
+      <div class="ew-stat-lbl">EPS (TTM)</div>
+      <div class="ew-stat-val ew-eps-val">—</div>
+    </div>
+    <div class="ew-stat">
+      <div class="ew-stat-lbl">EPS growth</div>
+      <div class="ew-stat-val ew-growth-val">—</div>
+    </div>
+    <div class="ew-stat ew-stat--full-only">
+      <div class="ew-stat-lbl">16Q price Δ</div>
+      <div class="ew-stat-val ew-pricedelta-val">—</div>
+    </div>
+  </div>
+
+  <div class="ew-status" hidden></div>
+</div>
+
+<style>
+  .ew-label {
+    font-family: var(--font-sans);
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-ink-5);
+    margin-bottom: 6px;
+    margin-top: 20px;
+  }
+
+  .ew {
+    border: 0.5px solid var(--color-border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--color-panel);
+    font-family: var(--font-sans);
+  }
+
+  /* ── Header ── */
+  .ew-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    border-bottom: 0.5px solid var(--color-border);
+  }
+
+  .ew-input {
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border: 0.5px solid var(--color-border);
+    border-radius: 6px;
+    padding: 4px 10px;
+    background: var(--color-tag-bg);
+    color: var(--color-ink);
+    width: 88px;
+    outline: none;
+    transition: border-color 0.12s;
+  }
+  .ew-input:focus { border-color: var(--color-ink-4); }
+  .ew-input--error { border-color: #ff3b30 !important; }
+
+  .ew-ticker-static {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--color-ink);
+  }
+
+  .ew-name {
+    font-size: 12px;
+    color: var(--color-ink-4);
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .ew-price {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-ink);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  /* ── Charts ── */
+  .ew-panel-price { padding: 12px 16px 4px; }
+  .ew-panel-pe {
+    padding: 4px 16px 10px;
+    border-top: 0.5px solid var(--color-border-soft);
+  }
+
+  .ew-legend {
+    font-size: 9px;
+    letter-spacing: 0.04em;
+    margin-bottom: 6px;
+    display: flex;
+    gap: 16px;
+  }
+  .ew-legend-price { color: var(--color-ink-2); }
+  .ew-legend-eps   { color: var(--color-ink-5); }
+  .ew-legend-pe    { color: var(--color-ink-4); }
+  .ew-legend-avg   { color: #ff9500; }
+
+  .ew-chart-price,
+  .ew-chart-pe { width: 100%; min-height: 4px; }
+
+  /* ── Stats bar ── */
+  .ew-stats {
+    display: flex;
+    border-top: 0.5px solid var(--color-border);
+  }
+
+  .ew-stat {
+    flex: 1;
+    padding: 9px 12px;
+    border-right: 0.5px solid var(--color-border);
+    text-align: center;
+  }
+  .ew-stat:last-child { border-right: none; }
+
+  .ew-stat-lbl {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-ink-5);
+    margin-bottom: 3px;
+  }
+
+  .ew-stat-val {
+    font-family: var(--font-display);
+    font-size: 15px;
+    color: var(--color-ink-2);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ew-up   { color: #34c759; }
+  .ew-down { color: #ff3b30; }
+  .ew-warn { color: #ff9500; }
+
+  /* ── Status (loading / error) ── */
+  .ew-status {
+    padding: 18px 16px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--color-ink-5);
+    border-top: 0.5px solid var(--color-border);
+  }
+
+  :global(.ew-retry) {
+    margin: 6px auto 0;
+    display: block;
+    font-family: var(--font-sans);
+    font-size: 11px;
+    padding: 4px 12px;
+    border: 0.5px solid var(--color-border);
+    border-radius: 5px;
+    background: var(--color-tag-bg);
+    color: var(--color-ink-3);
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+  :global(.ew-retry:hover) { background: var(--color-border); }
+
+  /* ── Compact mode (non-interactive / sector grid) ── */
+  .ew--compact .ew-stat--full-only { display: none; }
+  .ew--compact .ew-header  { padding: 7px 12px; }
+  .ew--compact .ew-panel-price { padding: 8px 10px 2px; }
+  .ew--compact .ew-panel-pe    { padding: 2px 10px 6px; }
+  .ew--compact .ew-legend      { display: none; }
+  .ew--compact .ew-stat        { padding: 6px 8px; }
+  .ew--compact .ew-stat-val    { font-size: 13px; }
+</style>
