@@ -35,6 +35,7 @@ export interface TickerData {
   stats: WidgetStats
 }
 
+// Yahoo Finance timestamps are UTC-aligned to quarter start dates
 export function timestampToQuarterKey(ts: number): string {
   const date = new Date(ts * 1000)
   const year = date.getUTCFullYear()
@@ -58,13 +59,14 @@ export function mergeQuarterlyData(
   return prices.map((p, i) => {
     const quarterEps = epsMap.get(p.quarter) ?? null
 
+    // TTM window assumes prices are chronologically consecutive quarters; gaps in price data produce incorrect TTM sums
     // TTM EPS: need 4 consecutive quarters in the window ending at i
-    const window: number[] = []
+    const ttmWindow: number[] = []
     for (let j = Math.max(0, i - 3); j <= i; j++) {
       const e = epsMap.get(prices[j].quarter)
-      if (e != null) window.push(e)
+      if (e != null) ttmWindow.push(e)
     }
-    const ttmEPS = window.length === 4 ? window.reduce((a, b) => a + b, 0) : null
+    const ttmEPS = ttmWindow.length === 4 ? ttmWindow.reduce((a, b) => a + b, 0) : null
     const trailingPE = ttmEPS != null && ttmEPS > 0 ? p.price / ttmEPS : null
 
     return { quarter: p.quarter, price: p.price, eps: quarterEps, ttmEPS, trailingPE }
@@ -72,6 +74,10 @@ export function mergeQuarterlyData(
 }
 
 export function computeStats(data: MergedQuarter[]): WidgetStats {
+  if (data.length === 0) {
+    return { currentPE: null, ttmEPS: null, epsGrowthPct: null, priceChangePct: 0 }
+  }
+
   const last = data[data.length - 1]
   const first = data[0]
 

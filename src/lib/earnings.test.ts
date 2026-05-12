@@ -98,4 +98,10 @@ describe('computeStats', () => {
   it('returns null epsGrowthPct when fewer than 5 data points', () => {
     expect(computeStats(data.slice(0, 4)).epsGrowthPct).toBeNull()
   })
+
+  it('returns zero priceChangePct and null stats for empty array', () => {
+    const s = computeStats([])
+    expect(s.currentPE).toBeNull()
+    expect(s.priceChangePct).toBe(0)
+  })
 })
