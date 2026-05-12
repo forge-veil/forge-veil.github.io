@@ -1,0 +1,141 @@
+---
+title: "Is This Time Different? Earnings vs. Price in the AI Rally"
+description: "The bulls say today's high valuations are justified by real earnings growth — unlike the dot-com bubble. We pull 16 quarters of data for every major AI stock and let you decide."
+topic: finance
+postLayout: longform
+tags: [finance, markets, AI, bubble, earnings, data]
+publishedAt: 2026-05-11
+published: false
+---
+
+import EarningsWidget from '../../components/EarningsWidget.astro'
+
+The market is expensive by any historical measure. The price-to-earnings ratio of the S&P 500 has sat above 40 on the Shiller cyclically-adjusted basis — a level not seen since the dot-com crash. The top five stocks now account for roughly 30% of the entire index, the highest concentration in half a century. The obvious question is whether we have been here before.
+
+The obvious answer, for many observers, is yes. They point to 1999. They point to Cisco. They point to the Nasdaq. The comparison is intuitive and feels airtight: prices detached from fundamentals, valuations that assumed the future had already arrived, and then a collapse that erased trillions and took fifteen years to recover.
+
+But serious investors are pushing back on that comparison with data. The argument is not that the market is cheap. It is that the dot-com analogy is the wrong one — because the mechanism of that bubble was specific, and today's situation does not share it.
+
+---
+
+<div class="toc-card">
+  <p class="toc-card-heading">In this post</p>
+  <ol class="toc-card-list">
+    <li><a class="toc-card-item" href="#the-dot-com-reference-point"><span class="toc-n">1</span>The dot-com reference point — what the data actually looked like</a></li>
+    <li><a class="toc-card-item" href="#the-bull-case"><span class="toc-n">2</span>The bull case — why this time might be different</a></li>
+    <li><a class="toc-card-item" href="#explore-any-ticker"><span class="toc-n">3</span>Explore any ticker — price and earnings over 16 quarters</a></li>
+    <li><a class="toc-card-item" href="#the-bear-case"><span class="toc-n">4</span>The bear case — the harder question earnings cannot answer</a></li>
+    <li><a class="toc-card-item" href="#sector-by-sector"><span class="toc-n">5</span>Sector by sector — who is justified, who is stretched</a></li>
+    <li><a class="toc-card-item" href="#what-the-data-shows"><span class="toc-n">6</span>What the data shows</a></li>
+  </ol>
+</div>
+
+## The dot-com reference point {#the-dot-com-reference-point}
+
+In 1999, Cisco Systems traded at a trailing P/E above 200. Amazon had no earnings at all. The Nasdaq composite as a whole traded at over 100 times earnings — a level that required decades of perfect execution to justify. It did not get them.
+
+The mechanism of the dot-com crash was not simply that prices were high. It was that earnings were fictional. The companies commanding astronomical valuations were, in many cases, burning cash at catastrophic rates. Revenue was often illusory — companies selling to each other, booking circular transactions, projecting growth curves that assumed every person on earth would use their product every day. When the earnings never materialised, there was nothing underneath the prices.
+
+According to BlackRock's analysis, the seven largest stocks in the S&P 500 in 1999 traded at roughly 66 times forward earnings. That is the number to hold in mind. It is the denominator against which to measure the present.
+
+## The bull case {#the-bull-case}
+
+The bull case is not a story about sentiment or narrative. It is a story about earnings.
+
+Today's largest companies — the ones driving the index to record highs — are, without exception, printing record profits. NVIDIA's earnings per share grew by more than 100% year-on-year for multiple consecutive quarters. Microsoft, Meta, Alphabet, and Amazon all reported operating margins at or near historic highs through 2024 and 2025. These are not stories. They are audited financial statements.
+
+BlackRock's research puts the forward P/E of today's top seven at roughly 28 times earnings — less than half the 66 times commanded by 1999's top seven. Howard Marks at Oaktree Capital has argued that comparisons to the dot-com bubble are intellectually lazy precisely because they ignore this distinction: today's leaders are, in fact, highly profitable businesses. iShares notes that the current boom is largely equity-financed rather than debt-driven — companies are spending what they earn, not what they borrow.
+
+The stronger version of the bull case goes further. If earnings are growing faster than prices — if the profit denominator is expanding faster than the price numerator — then the valuation is actually getting *cheaper* even as the stock rises. For some names in this cycle, that has been true.
+
+The chart below is the test. Price on the left axis. Earnings per share on the right. Sixteen quarters of data. Enter any ticker.
+
+## Explore any ticker {#explore-any-ticker}
+
+<EarningsWidget ticker="NVDA" interactive />
+
+NVDA is the default because it sits at the centre of the AI trade. But the question generalises to every name in the rally. The tool pulls live data directly from Yahoo Finance — enter any stock symbol and it will update.
+
+## The bear case {#the-bear-case}
+
+None of the above means the market is not expensive. It means the *mechanism* of a potential correction would be different from 2000.
+
+The bear case begins with concentration. The top five stocks now represent 30% of the S&P 500 — a level of index concentration not seen in fifty years. When a handful of companies represent that much of a broad market index, the fate of the index is essentially the fate of five balance sheets. That is a structural fragility that did not exist in quite the same form in 1999.
+
+The Shiller CAPE ratio — price divided by ten-year average earnings, which smooths out cyclical distortions — has crossed 40 for only the second time in the post-war era. The first time was 1999. A high CAPE does not predict a crash; it predicts lower returns over the subsequent decade. The correlation is persistent.
+
+And then there is the question that no trailing earnings chart can answer: how much of the future is already in the price? A company trading at 40 times earnings is not just paying for today's profits. It is paying for the earnings of 2030 and 2035 and beyond. If AI productivity gains materialise at the scale currently implied by semiconductor valuations, the prices are reasonable. If they are slower, or more diffuse, or commoditised faster than expected, the correction is a valuation re-rating, not an earnings collapse. That is a subtler and harder risk to quantify — but it is a real one.
+
+## Sector by sector {#sector-by-sector}
+
+The same question — are prices tracking earnings, or running ahead of them? — looks different across sectors. The grid below shows every major name in the current rally, grouped by sector. The solid line is price. The dashed line is earnings per share. The bottom panel is the trailing P/E over time, with a reference line at the 4-year average.
+
+Semiconductors are where the AI rally began and where the earnings story is strongest. Big Tech shows strong earnings across the board but elevated multiples in several names. Healthcare has the most sober valuations in this set — steady earnings, reasonable prices. Financials tell a different story altogether: low P/E, traditional value dynamics. EV and high-multiple software is where the dot-com comparison most clearly applies.
+
+### Semiconductors
+
+<div class="sector-grid">
+  <EarningsWidget ticker="NVDA" label="NVIDIA" />
+  <EarningsWidget ticker="AMD" label="Advanced Micro Devices" />
+  <EarningsWidget ticker="AVGO" label="Broadcom" />
+  <EarningsWidget ticker="TSM" label="TSMC" />
+  <EarningsWidget ticker="ASML" label="ASML" />
+  <EarningsWidget ticker="ARM" label="Arm Holdings" />
+</div>
+
+### Big Tech & Cloud
+
+<div class="sector-grid">
+  <EarningsWidget ticker="MSFT" label="Microsoft" />
+  <EarningsWidget ticker="GOOGL" label="Alphabet" />
+  <EarningsWidget ticker="AMZN" label="Amazon" />
+  <EarningsWidget ticker="META" label="Meta" />
+  <EarningsWidget ticker="AAPL" label="Apple" />
+</div>
+
+### Healthcare
+
+<div class="sector-grid">
+  <EarningsWidget ticker="LLY" label="Eli Lilly" />
+  <EarningsWidget ticker="UNH" label="UnitedHealth" />
+  <EarningsWidget ticker="ABBV" label="AbbVie" />
+  <EarningsWidget ticker="JNJ" label="Johnson & Johnson" />
+</div>
+
+### Financials
+
+<div class="sector-grid">
+  <EarningsWidget ticker="JPM" label="JPMorgan Chase" />
+  <EarningsWidget ticker="GS" label="Goldman Sachs" />
+  <EarningsWidget ticker="BAC" label="Bank of America" />
+</div>
+
+### EV & High-Multiple
+
+<div class="sector-grid">
+  <EarningsWidget ticker="TSLA" label="Tesla" />
+  <EarningsWidget ticker="PLTR" label="Palantir" />
+  <EarningsWidget ticker="SNOW" label="Snowflake" />
+</div>
+
+## What the data shows {#what-the-data-shows}
+
+This is not a post with a conclusion. The point of the tool is to let the data speak for itself.
+
+What it tends to show: in semiconductors, the earnings story is largely real. NVDA's price chart is extraordinary, but its EPS chart is not far behind — the two lines have moved together in a way that is genuinely unusual in market history. The same is broadly true of the large cloud platforms: revenue and earnings growth have been strong enough to absorb significant price appreciation without the P/E ratio expanding dramatically.
+
+Healthcare is the quiet outlier. Eli Lilly's earnings growth has been driven by genuine product success in a way that makes the valuation look more conservative than the headline price suggests.
+
+Financials look cheap on trailing earnings. The P/E charts are low. Whether that reflects genuine value or justified caution about a credit cycle is a separate question.
+
+The EV and high-multiple software names are where the doubt concentrates. Price lines that have risen sharply while earnings lines have moved much more slowly — or not at all. This is the part of the market where the dot-com comparison has genuine traction.
+
+The question that the data cannot settle is whether the companies currently earning enormous profits will continue to do so at the pace implied by their prices. That depends on competition, on regulation, on whether AI becomes a commodity or stays a moat, on things that have not happened yet. Trailing earnings charts are evidence about the past. They are not a guarantee of the future.
+
+The data gives you the foundation. The rest is judgement.
+
+---
+
+*Data fetched live from Yahoo Finance. Price data reflects quarterly closing prices over the preceding 16 quarters. EPS reflects diluted earnings per share from filed income statements. P/E is trailing twelve months.*
+
+*Sources: [BlackRock — Are we in a bubble?](https://www.blackrock.com/us/financial-professionals/insights/ai-tech-bubble) · [Howard Marks / Oaktree — Is It a Bubble?](https://www.oaktreecapital.com/insights/memo/is-it-a-bubble) · [iShares — Why This Isn't a Dot-Com Redux](https://www.ishares.com/us/insights/ai-stocks-bubble-2025-valuation-outlook) · [Wikipedia — AI bubble](https://en.wikipedia.org/wiki/AI_bubble) · [IR Impact — AI bubble or a soft landing?](https://www.ir-impact.com/2025/11/ai-bubble-or-a-soft-landing-looking-at-the-data-behind-technology-company-valuations/) · [Fortune — Is the AI boom a bubble waiting to pop?](https://fortune.com/2026/01/04/is-ai-boom-bubble-pop-tech-stocks-sp500-bull-run/)*

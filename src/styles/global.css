@@ -2310,3 +2310,23 @@ a.external-link::after {
   /* Section titles */
   .resume-section-title { color: #888; letter-spacing: 0.1em; }
 }
+
+/* ── Sector grid (used in earnings-vs-price post) ── */
+.sector-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 0 0 24px;
+}
+
+@media (max-width: 700px) {
+  .sector-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .sector-grid {
+    grid-template-columns: 1fr;
+  }
+}
