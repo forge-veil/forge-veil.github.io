@@ -320,16 +320,27 @@ function renderPriceEpsChart(
     fill: 'none', stroke: '#1c1c1e', 'stroke-width': 1.5, 'stroke-linejoin': 'round',
   }))
 
-  // EPS polyline (dashed, only where data exists)
+  // Split EPS into contiguous non-null runs to avoid bridging gaps
   if (epsPts.length >= 2) {
-    svg.appendChild(svgEl('polyline', {
-      points: valid
-        .map((d, i) => d.eps != null ? `${xOf(i)},${eyOf(d.eps)}` : null)
-        .filter(Boolean)
-        .join(' '),
-      fill: 'none', stroke: '#8e8e93', 'stroke-width': 1.5,
-      'stroke-dasharray': '3,2', 'stroke-linejoin': 'round',
-    }))
+    const runs: string[][] = []
+    let current: string[] = []
+    valid.forEach((d, i) => {
+      if (d.eps != null) {
+        current.push(`${xOf(i)},${eyOf(d.eps)}`)
+      } else if (current.length > 0) {
+        runs.push(current)
+        current = []
+      }
+    })
+    if (current.length > 0) runs.push(current)
+    for (const run of runs) {
+      if (run.length < 2) continue
+      svg.appendChild(svgEl('polyline', {
+        points: run.join(' '),
+        fill: 'none', stroke: '#8e8e93', 'stroke-width': 1.5,
+        'stroke-dasharray': '3,2', 'stroke-linejoin': 'round',
+      }))
+    }
   }
 
   container.innerHTML = ''
