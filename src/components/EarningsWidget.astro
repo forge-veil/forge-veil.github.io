@@ -577,7 +577,31 @@ async function load(root: HTMLElement, sym: string): Promise<void> {
 
 function initWidget(root: HTMLElement): void {
   const ticker = root.dataset.ticker
-  if (ticker) load(root, ticker)
+  if (!ticker) return
+  const isInteractive = root.dataset.interactive === 'true'
+  const inputEl = root.querySelector<HTMLInputElement>('.ew-input')
+  let lastLoaded = ticker
+
+  if (isInteractive && inputEl) {
+    inputEl.addEventListener('input', () => {
+      inputEl.value = inputEl.value.toUpperCase()
+      inputEl.classList.remove('ew-input--error')
+    })
+
+    inputEl.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Enter') inputEl.blur()
+    })
+
+    inputEl.addEventListener('blur', () => {
+      const sym = inputEl.value.trim().toUpperCase()
+      if (sym && sym !== lastLoaded) {
+        lastLoaded = sym
+        load(root, sym)
+      }
+    })
+  }
+
+  load(root, lastLoaded)
 }
 
 document.querySelectorAll<HTMLElement>('[data-ew-id]').forEach(initWidget)
