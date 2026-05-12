@@ -233,3 +233,178 @@ const id = `ew-${Math.random().toString(36).slice(2, 9)}`
   .ew--compact .ew-stat-val    { font-size: 13px; }
   .ew--compact .ew-stat:nth-child(3) { border-right: none; }
 </style>
+
+<script>
+import type { MergedQuarter } from '../lib/earnings'
+
+const NS = 'http://www.w3.org/2000/svg'
+
+function svgEl(tag: string, attrs: Record<string, string | number>): SVGElement {
+  const e = document.createElementNS(NS, tag)
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, String(v))
+  return e
+}
+
+function scale(vMin: number, vMax: number, pxLow: number, pxHigh: number) {
+  return (v: number) => pxLow + ((v - vMin) / (vMax - vMin)) * (pxHigh - pxLow)
+}
+
+function renderPriceEpsChart(
+  container: HTMLElement,
+  data: MergedQuarter[],
+  compact: boolean
+): void {
+  const H = compact ? 68 : 172
+  const P = compact
+    ? { t: 4, r: 6, b: 4, l: 6 }
+    : { t: 10, r: 44, b: 24, l: 44 }
+
+  const W = container.clientWidth || 640
+  const pw = W - P.l - P.r
+  const ph = H - P.t - P.b
+
+  const valid = data.filter(d => d.price != null)
+  if (valid.length < 2) return
+
+  const prices = valid.map(d => d.price)
+  const epsPts = valid.filter(d => d.eps != null)
+
+  const pMin = Math.min(...prices) * 0.92
+  const pMax = Math.max(...prices) * 1.06
+  const eMin = epsPts.length ? Math.min(0, ...epsPts.map(d => d.eps!)) * 1.1 : 0
+  const eMax = epsPts.length ? Math.max(...epsPts.map(d => d.eps!)) * 1.2 : 1
+
+  const xOf = (i: number) => P.l + (i / (valid.length - 1)) * pw
+  const pyOf = scale(pMin, pMax, P.t + ph, P.t)
+  const eyOf = scale(eMin, eMax, P.t + ph, P.t)
+
+  const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}` })
+  ;(svg as unknown as HTMLElement).style.cssText = 'display:block;width:100%'
+
+  if (!compact) {
+    // Horizontal grid lines
+    for (let t = 0; t <= 3; t++) {
+      const y = P.t + (t / 3) * ph
+      svg.appendChild(svgEl('line', { x1: P.l, x2: P.l + pw, y1: y, y2: y, stroke: 'rgba(0,0,0,0.04)', 'stroke-width': 1 }))
+    }
+    // Price y-axis labels (left)
+    for (let t = 0; t <= 3; t++) {
+      const v = pMin + (t / 3) * (pMax - pMin)
+      const y = P.t + ph - (t / 3) * ph + 3
+      const label = v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${Math.round(v)}`
+      const txt = svgEl('text', { x: P.l - 5, y, 'text-anchor': 'end', 'font-size': 8, fill: '#aeaeb2', 'font-family': 'sans-serif' })
+      txt.textContent = label
+      svg.appendChild(txt)
+    }
+    // EPS y-axis labels (right)
+    for (let t = 0; t <= 3; t++) {
+      const v = eMin + (t / 3) * (eMax - eMin)
+      const y = P.t + ph - (t / 3) * ph + 3
+      const txt = svgEl('text', { x: P.l + pw + 5, y, 'text-anchor': 'start', 'font-size': 8, fill: '#aeaeb2', 'font-family': 'sans-serif' })
+      txt.textContent = `$${v.toFixed(1)}`
+      svg.appendChild(txt)
+    }
+    // X-axis quarter labels (every 4th + last)
+    valid.forEach((d, i) => {
+      if (i % 4 !== 0 && i !== valid.length - 1) return
+      const [yr, q] = d.quarter.split('-')
+      const txt = svgEl('text', { x: xOf(i), y: H - 3, 'text-anchor': 'middle', 'font-size': 7.5, fill: '#aeaeb2', 'font-family': 'sans-serif' })
+      txt.textContent = `${q}'${yr.slice(2)}`
+      svg.appendChild(txt)
+    })
+  }
+
+  // Price polyline
+  svg.appendChild(svgEl('polyline', {
+    points: valid.map((d, i) => `${xOf(i)},${pyOf(d.price)}`).join(' '),
+    fill: 'none', stroke: '#1c1c1e', 'stroke-width': 1.5, 'stroke-linejoin': 'round',
+  }))
+
+  // EPS polyline (dashed, only where data exists)
+  if (epsPts.length >= 2) {
+    svg.appendChild(svgEl('polyline', {
+      points: valid
+        .map((d, i) => d.eps != null ? `${xOf(i)},${eyOf(d.eps)}` : null)
+        .filter(Boolean)
+        .join(' '),
+      fill: 'none', stroke: '#8e8e93', 'stroke-width': 1.5,
+      'stroke-dasharray': '3,2', 'stroke-linejoin': 'round',
+    }))
+  }
+
+  container.innerHTML = ''
+  container.appendChild(svg)
+}
+
+function renderPEChart(
+  container: HTMLElement,
+  data: MergedQuarter[],
+  avgPE: number,
+  compact: boolean
+): void {
+  const H = compact ? 48 : 92
+  const P = compact
+    ? { t: 4, r: 6, b: 4, l: 6 }
+    : { t: 8, r: 44, b: 8, l: 44 }
+
+  const W = container.clientWidth || 640
+  const pw = W - P.l - P.r
+  const ph = H - P.t - P.b
+
+  const withPE = data.filter(d => d.trailingPE != null)
+  if (withPE.length < 2) {
+    if (!compact) {
+      container.innerHTML = `<div style="height:${H}px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#aeaeb2">Insufficient EPS data for P/E</div>`
+    }
+    return
+  }
+
+  const peVals = withPE.map(d => d.trailingPE!)
+  const peMin = Math.min(...peVals) * 0.85
+  const peMax = Math.max(Math.max(...peVals) * 1.1, avgPE > 0 ? avgPE * 1.1 : 0)
+
+  const xOf = (d: MergedQuarter) => P.l + (data.indexOf(d) / (data.length - 1)) * pw
+  const pyOf = scale(peMin, peMax, P.t + ph, P.t)
+
+  const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}` })
+  ;(svg as unknown as HTMLElement).style.cssText = 'display:block;width:100%'
+
+  if (!compact) {
+    for (let t = 0; t <= 2; t++) {
+      const y = P.t + (t / 2) * ph
+      svg.appendChild(svgEl('line', { x1: P.l, x2: P.l + pw, y1: y, y2: y, stroke: 'rgba(0,0,0,0.04)', 'stroke-width': 1 }))
+    }
+    for (let t = 0; t <= 2; t++) {
+      const v = peMin + (t / 2) * (peMax - peMin)
+      const y = P.t + ph - (t / 2) * ph + 3
+      const txt = svgEl('text', { x: P.l - 5, y, 'text-anchor': 'end', 'font-size': 8, fill: '#aeaeb2', 'font-family': 'sans-serif' })
+      txt.textContent = `${Math.round(v)}×`
+      svg.appendChild(txt)
+    }
+  }
+
+  // 4yr average reference line
+  if (avgPE > peMin && avgPE < peMax) {
+    const avgY = pyOf(avgPE)
+    svg.appendChild(svgEl('line', {
+      x1: P.l, x2: P.l + pw, y1: avgY, y2: avgY,
+      stroke: '#ff9500', 'stroke-width': 1, 'stroke-dasharray': '4,3', opacity: 0.7,
+    }))
+    if (!compact) {
+      const txt = svgEl('text', { x: P.l + pw + 5, y: avgY + 3, 'text-anchor': 'start', 'font-size': 7.5, fill: '#ff9500', 'font-family': 'sans-serif' })
+      txt.textContent = `${Math.round(avgPE)}×`
+      svg.appendChild(txt)
+    }
+  }
+
+  // P/E polyline
+  svg.appendChild(svgEl('polyline', {
+    points: withPE.map(d => `${xOf(d)},${pyOf(d.trailingPE!)}`).join(' '),
+    fill: 'none', stroke: '#6e6e73', 'stroke-width': 1.5, 'stroke-linejoin': 'round',
+  }))
+
+  container.innerHTML = ''
+  container.appendChild(svg)
+}
+
+</script>
