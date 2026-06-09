@@ -1,0 +1,140 @@
+---
+const { ariaLabel = 'A solitary figure pushes a boulder up an endless slope, the summit lost in haze' } = Astro.props;
+---
+
+<div class="essay-hero" aria-hidden="true">
+  <svg
+    viewBox="0 0 700 1200"
+    xmlns="http://www.w3.org/2000/svg"
+    preserveAspectRatio="xMidYMid slice"
+    role="img"
+    aria-label={ariaLabel}
+  >
+    <defs>
+      <!-- Sky: cool pale grey, slightly warmer toward the horizon -->
+      <linearGradient id="sh-sky" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#ecebe6" />
+        <stop offset="50%" stop-color="#d7d5cf" />
+        <stop offset="100%" stop-color="#b8b5af" />
+      </linearGradient>
+
+      <!-- Slope: one confident gradient, lit on the upper face, deepening to the foot -->
+      <linearGradient id="sh-slope" x1="0.3" y1="0" x2="0.7" y2="1">
+        <stop offset="0%" stop-color="#a09b94" />
+        <stop offset="40%" stop-color="#6b665f" />
+        <stop offset="100%" stop-color="#1c1a17" />
+      </linearGradient>
+
+      <!-- Warm summit glow -->
+      <radialGradient id="sh-summit" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="#f0dcb4" stop-opacity="0.55" />
+        <stop offset="55%" stop-color="#f0dcb4" stop-opacity="0.08" />
+        <stop offset="100%" stop-color="#f0dcb4" stop-opacity="0" />
+      </radialGradient>
+
+      <!-- Distant atmospheric fade -->
+      <linearGradient id="sh-far" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#94908a" stop-opacity="0.4" />
+        <stop offset="100%" stop-color="#94908a" stop-opacity="0" />
+      </linearGradient>
+
+      <!-- Horizontal mist band -->
+      <linearGradient id="sh-mist" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#f1efea" stop-opacity="0" />
+        <stop offset="35%" stop-color="#f1efea" stop-opacity="0.7" />
+        <stop offset="65%" stop-color="#f1efea" stop-opacity="0.7" />
+        <stop offset="100%" stop-color="#f1efea" stop-opacity="0" />
+      </linearGradient>
+
+      <!-- Boulder: spherical shading -->
+      <radialGradient id="sh-boulder" cx="35%" cy="30%" r="80%">
+        <stop offset="0%" stop-color="#5a554e" />
+        <stop offset="60%" stop-color="#2a2722" />
+        <stop offset="100%" stop-color="#0e0c0a" />
+      </radialGradient>
+
+      <!-- Atmospheric perspective blur -->
+      <filter id="sh-haze" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="3.5" />
+      </filter>
+    </defs>
+
+    <!-- Sky -->
+    <rect width="700" height="1200" fill="url(#sh-sky)" />
+
+    <!-- Summit glow: a warm halo at the unreachable top of the climb -->
+    <ellipse cx="660" cy="360" rx="280" ry="200" fill="url(#sh-summit)" />
+
+    <!-- Two layered distant ridges, deeply blurred -->
+    <path
+      d="M0,530 Q170,500 340,520 Q510,540 700,510 L700,640 L0,640 Z"
+      fill="url(#sh-far)"
+      filter="url(#sh-haze)"
+    />
+    <path
+      d="M0,600 Q180,575 360,595 Q540,620 700,590 L700,720 L0,720 Z"
+      fill="#7e7a73"
+      opacity="0.2"
+      filter="url(#sh-haze)"
+    />
+
+    <!-- High mist band cutting across the upper slope -->
+    <rect x="0" y="540" width="700" height="120" fill="url(#sh-mist)" opacity="0.9" />
+
+    <!-- The slope: one bold curve, the summit dissolving into the upper-right -->
+    <path
+      d="M-60,1200
+         L-60,1070
+         Q90,990 280,890
+         Q460,775 600,650
+         Q670,575 750,460
+         L750,1200 Z"
+      fill="url(#sh-slope)"
+    />
+
+    <!-- Soft mid-slope mist band integrating the figure into the atmosphere -->
+    <rect x="0" y="760" width="700" height="80" fill="url(#sh-mist)" opacity="0.45" />
+
+    <!-- A long faint trail down the slope, suggesting endless repetition -->
+    <path
+      d="M270,1050 Q330,975 390,910 Q420,876 432,855"
+      stroke="#100e0c"
+      stroke-width="2.2"
+      stroke-linecap="round"
+      fill="none"
+      opacity="0.22"
+    />
+
+    <!-- The boulder: larger and more present, a single round mass -->
+    <g>
+      <!-- Soft contact shadow on the slope -->
+      <ellipse cx="478" cy="862" rx="54" ry="13" fill="#0a0907" opacity="0.5" />
+      <!-- Boulder body -->
+      <circle cx="478" cy="820" r="48" fill="url(#sh-boulder)" />
+    </g>
+
+    <!-- Sisyphus: a confident iconic silhouette, not over-detailed.
+         Head + body+arms wedge + two leg paths. The body leans into the stone. -->
+    <g transform="translate(380, 880)" fill="#15130f">
+      <!-- Back leg: planted down-slope behind -->
+      <path d="M 4,-2 L 14,-2 L 6,18 L -10,42 L -22,56 L -32,56 L -20,38 L -4,16 Z" />
+      <!-- Front leg: bent forward up-slope -->
+      <path d="M 14,-2 L 24,-2 L 28,18 L 38,40 L 44,56 L 34,58 L 24,40 L 16,20 Z" />
+      <!-- Torso + both arms in one wedge, reaching to the boulder -->
+      <path
+        d="M 0,-2
+           L 24,-36
+           L 64,-44
+           L 70,-38
+           L 38,-26
+           L 18,-2 Z"
+      />
+      <!-- Head: round, set forward, gently bowed -->
+      <circle cx="48" cy="-46" r="9" />
+    </g>
+
+    <!-- Low mist gathering at the foot of the slope -->
+    <ellipse cx="340" cy="1100" rx="420" ry="38" fill="#dad6cf" opacity="0.55" />
+    <ellipse cx="540" cy="1140" rx="280" ry="22" fill="#dad6cf" opacity="0.4" />
+  </svg>
+</div>

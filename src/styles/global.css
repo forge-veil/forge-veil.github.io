@@ -638,6 +638,130 @@ a.external-link::after {
   clear: both;
 }
 
+/* Essay typography: preface, stanzas, ornamental dividers, hero */
+.prose:has(.essay-preface) p {
+  margin-bottom: 14px;
+  line-height: 1.58;
+}
+.prose:has(.essay-preface) hr {
+  margin: 36px 0;
+}
+
+.prose .essay-preface {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--color-ink-3);
+  margin: 0 0 6px;
+}
+.prose .essay-preface p { margin-bottom: 10px; }
+.prose .essay-preface em { color: var(--color-ink-2); }
+.prose .essay-preface p:first-child em:first-child {
+  display: block;
+  margin-bottom: 14px;
+  color: var(--color-ink-3);
+  letter-spacing: 0.01em;
+}
+
+.prose .stanza { margin: 0 0 14px; }
+.prose .stanza > p { margin-bottom: 3px; }
+.prose .stanza > p:last-child { margin-bottom: 0; }
+
+.prose .essay-divider {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  margin: 36px auto 30px;
+  max-width: 320px;
+  color: var(--color-ink-3);
+  font-size: 17px;
+  letter-spacing: 0.55em;
+  text-indent: 0.55em;
+  line-height: 1;
+  user-select: none;
+}
+.prose .essay-divider::before,
+.prose .essay-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+}
+.prose .essay-divider::before {
+  background: linear-gradient(
+    to left,
+    var(--color-ink-5) 0%,
+    var(--color-ink-6) 65%,
+    transparent 100%
+  );
+}
+.prose .essay-divider::after {
+  background: linear-gradient(
+    to right,
+    var(--color-ink-5) 0%,
+    var(--color-ink-6) 65%,
+    transparent 100%
+  );
+}
+
+/* Essay hero panel: fixed muted scene anchored to right edge */
+.essay-hero {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  height: 100svh;
+  width: clamp(320px, 36vw, 580px);
+  z-index: -1;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(0, 0, 0, 0.18) 18%,
+    rgba(0, 0, 0, 0.55) 42%,
+    rgba(0, 0, 0, 0.88) 70%,
+    #000 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(0, 0, 0, 0.18) 18%,
+    rgba(0, 0, 0, 0.55) 42%,
+    rgba(0, 0, 0, 0.88) 70%,
+    #000 100%
+  );
+}
+.essay-hero svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+@media (max-width: 900px) {
+  .essay-hero { display: none; }
+}
+
+/* Body bg removal on essay pages so the silhouette behind body shows through.
+   The html element keeps the panel color, so the rest of the page still
+   sits on the proper background. */
+html:has(.essay-hero) {
+  background: var(--color-panel);
+}
+body:has(.essay-hero) {
+  background: transparent;
+}
+
+/* Extend the sticky article header's background to the viewport right edge
+   on essay pages so it doesn't cut a hard rectangle into the silhouette. */
+.article-wrap:has(.essay-hero) .article-top::after {
+  content: '';
+  position: absolute;
+  top: -100vh;
+  bottom: 0;
+  left: 0;
+  right: -100vw;
+  background: var(--color-panel);
+  pointer-events: none;
+  z-index: -1;
+}
+
 .prose .post-references {
   font-size: 12px;
   line-height: 1.7;
