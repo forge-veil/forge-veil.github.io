@@ -5,8 +5,9 @@ import Sidebar from '../../components/Sidebar.astro';
 import { TOPICS } from '../../content.config';
 
 const allPosts = await getCollection('posts', ({ data }: CollectionEntry<'posts'>) => data.published);
+// Reverse chronological: newest first
 allPosts.sort((a: CollectionEntry<'posts'>, b: CollectionEntry<'posts'>) =>
-  a.data.publishedAt.valueOf() - b.data.publishedAt.valueOf()
+  b.data.publishedAt.valueOf() - a.data.publishedAt.valueOf()
 );
 
 type SeriesGroup = {
@@ -44,6 +45,13 @@ for (const topic of TOPICS) {
     }
   }
 
+  // Within each series, restore part order so readers see Part 1 → Part N
+  for (const series of seriesMap.values()) {
+    series.posts.sort(
+      (a, b) => (a.data.series?.part ?? 0) - (b.data.series?.part ?? 0)
+    );
+  }
+
   topicGroups.push({
     topicSlug: topic.slug as string,
     topicName: topic.name,
@@ -51,6 +59,13 @@ for (const topic of TOPICS) {
     standalonePosts,
   });
 }
+
+// Sort topic groups themselves so the topic with the newest post comes first
+function mostRecentInGroup(g: TopicGroup): number {
+  const all = [...g.standalonePosts, ...g.seriesGroups.flatMap((s) => s.posts)];
+  return Math.max(...all.map((p) => p.data.publishedAt.valueOf()));
+}
+topicGroups.sort((a, b) => mostRecentInGroup(b) - mostRecentInGroup(a));
 
 function formatDate(date: Date) {
   return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
