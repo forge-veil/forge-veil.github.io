@@ -21,7 +21,7 @@ const { post } = Astro.props;
 const { Content, headings } = await render(post);
 
 const postSlug = post.id.replace(/\.(md|mdx)$/, '');
-const canonicalUrl = new URL(`/blog/${postSlug}`, Astro.site).href;
+const canonicalUrl = new URL(`/blog/${postSlug}/`, Astro.site).href;
 
 const articleSchema = {
   '@context': 'https://schema.org',
