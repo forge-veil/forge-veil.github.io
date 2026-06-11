@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://forge-veil.github.io/sitemap-index.xml
+Sitemap: https://vatsalbakshi.com/sitemap-index.xml

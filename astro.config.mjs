@@ -8,7 +8,7 @@ import rehypeKatex from 'rehype-katex';
 import rehypeExternalLinks from 'rehype-external-links';
 
 export default defineConfig({
-  site: 'https://forge-veil.github.io',
+  site: 'https://vatsalbakshi.com',
   vite: {
     plugins: [tailwindcss()],
     build: {
