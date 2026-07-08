@@ -41,6 +41,8 @@ export const collections = {
     loader: glob({ pattern: '**/*.{md,mdx}', base: './src/content/posts' }),
     schema: z.object({
       title: z.string(),
+      // Optional keyword-focused title for the <title>/OG tags; the visible H1 still uses `title`.
+      seoTitle: z.string().optional(),
       description: z.string(),
       topic: z.enum(TOPICS.map((t) => t.slug) as [TopicSlug, ...TopicSlug[]]),
       series: z
@@ -53,6 +55,7 @@ export const collections = {
         .optional(),
       tags: z.array(z.string()).default([]),
       publishedAt: z.coerce.date(),
+      updatedAt: z.coerce.date().optional(),
       published: z.boolean().default(false),
       wip: z.boolean().default(false),
       postLayout: z.enum(['longform']).optional(),

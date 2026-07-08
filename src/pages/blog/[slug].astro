@@ -6,7 +6,11 @@ import BlochSphere from '../../components/BlochSphere.astro';
 import SchemaOrg from '../../components/SchemaOrg.astro';
 
 export async function getStaticPaths() {
-  const posts = await getCollection('posts');
+  const posts = await getCollection(
+    'posts',
+    // Build drafts in dev for preview, but never emit them in production
+    ({ data }: CollectionEntry<'posts'>) => data.published || import.meta.env.DEV,
+  );
   return posts.map((post: CollectionEntry<'posts'>) => ({
     params: { slug: post.id.replace(/\.(md|mdx)$/, '') },
     props: { post },
@@ -22,6 +26,7 @@ const { Content, headings } = await render(post);
 
 const postSlug = post.id.replace(/\.(md|mdx)$/, '');
 const canonicalUrl = new URL(`/blog/${postSlug}/`, Astro.site).href;
+const articleImage = new URL('/og-default.png', Astro.site).href;
 
 const articleSchema = {
   '@context': 'https://schema.org',
@@ -29,13 +34,32 @@ const articleSchema = {
   headline: post.data.title,
   description: post.data.description,
   datePublished: post.data.publishedAt.toISOString(),
+  dateModified: (post.data.updatedAt ?? post.data.publishedAt).toISOString(),
   url: canonicalUrl,
+  mainEntityOfPage: { '@type': 'WebPage', '@id': canonicalUrl },
+  image: articleImage,
   keywords: post.data.tags.join(', '),
   author: {
     '@type': 'Person',
+    '@id': 'https://vatsalbakshi.com/#person',
     name: 'Vatsal Bakshi',
-    url: 'https://forge-veil.github.io',
+    url: 'https://vatsalbakshi.com',
   },
+  publisher: {
+    '@type': 'Person',
+    '@id': 'https://vatsalbakshi.com/#person',
+    name: 'Vatsal Bakshi',
+  },
+};
+
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: new URL('/', Astro.site).href },
+    { '@type': 'ListItem', position: 2, name: 'Writing', item: new URL('/blog/', Astro.site).href },
+    { '@type': 'ListItem', position: 3, name: post.data.title, item: canonicalUrl },
+  ],
 };
 
 function formatDate(date: Date) {
@@ -54,7 +78,7 @@ function readTime(body: string | undefined) {
 ---
 
 <BaseLayout
-  title={`${post.data.title} — Vatsal Bakshi`}
+  title={`${post.data.seoTitle ?? post.data.title} — Vatsal Bakshi`}
   description={post.data.description}
   canonicalUrl={canonicalUrl}
   ogType="article"
@@ -62,6 +86,7 @@ function readTime(body: string | undefined) {
   tags={post.data.tags}
 >
   <SchemaOrg schema={articleSchema} />
+  <SchemaOrg schema={breadcrumbSchema} />
   <div class="layout">
     <Sidebar activeTopic={post.data.topic} headings={headings} />
 
