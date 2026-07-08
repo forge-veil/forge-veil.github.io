@@ -1,0 +1,170 @@
+---
+title: "The Shape of Gravity"
+seoTitle: "The Schwarzschild Solution: How Mass Curves Spacetime"
+description: "The Schwarzschild solution explained visually: how mass curves spacetime, why gravity is the curvature of time, and how orbits and bending light are geodesics of general relativity."
+topic: mathematics
+postLayout: longform
+series:
+  slug: geometry-curved-spaces
+  name: Geometry of Curved Spaces
+  part: 2
+  total: 4
+tags: [schwarzschild-metric, general-relativity, geodesics, spacetime-curvature, gravity, black-holes]
+publishedAt: 2026-07-07
+published: true
+---
+
+import SchwarzschildViz from '../../components/SchwarzschildViz.astro';
+
+<SchwarzschildViz mode="well" side />
+
+The [first post](/blog/riemannian-geometry) in this series built the visual intuition behind the math: a manifold is a space that looks flat up close but curves globally, a metric tensor $g_{\mu\nu}$ is a ruler that measures real distance at every point, and a geodesic is the straightest path that curved geometry allows. That post was all machinery and no payload. It ended with a promise: a real metric was coming, one sign flipped from everything built there, and the geometry of that single change is what makes gravity work.
+
+This post is the math behind the physics: Riemannian geometry applied to the real world. But before we can read the geometry of gravity, we have to unlearn what gravity is. You have almost certainly seen the picture on the right: a heavy mass denting a rubber sheet, smaller things rolling into the well. It is the most famous image in physics, and it is quietly circular. It explains things falling by showing them roll downhill, which is just gravity explaining gravity. By the end of this post we will replace it with the honest picture. To get there, start by throwing away the idea of gravity as a force.
+
+<div class="toc-card">
+  <p class="toc-card-heading">In this post</p>
+  <ol class="toc-card-list">
+    <li><a class="toc-card-item" href="#gravity-is-not-a-force"><span class="toc-n">1</span>Gravity is not a force</a></li>
+    <li><a class="toc-card-item" href="#the-schwarzschild-metric"><span class="toc-n">2</span>The Schwarzschild metric</a></li>
+    <li><a class="toc-card-item" href="#why-things-fall-the-curvature-of-time"><span class="toc-n">3</span>Why things fall: the curvature of time</a></li>
+    <li><a class="toc-card-item" href="#orbits-as-geodesics"><span class="toc-n">4</span>Orbits as geodesics</a></li>
+    <li><a class="toc-card-item" href="#light-bends-too"><span class="toc-n">5</span>Light bends too</a></li>
+    <li><a class="toc-card-item" href="#the-factor-that-hits-zero"><span class="toc-n">6</span>The factor that hits zero</a></li>
+  </ol>
+</div>
+
+---
+
+## Gravity is not a force
+
+<div class="intuition">
+  <p class="intuition-label">Intuition</p>
+  <p class="intuition-text">Step off a diving board and, for the moment you are falling, gravity vanishes. No pull, no weight, nothing. Astronauts float for exactly this reason: they are in endless free fall around the Earth, not beyond gravity's reach. That weightlessness is the clue Einstein chased. If falling feels like nothing, perhaps gravity is not a force acting on you at all. Perhaps the faller is the one moving naturally, in a straight line, and it is the ground underfoot, shoving you off that line, that you actually feel.</p>
+</div>
+
+We feel gravity as a pull, and Newton made that feeling exact: every mass attracts every other with a force $F = GMm/r^2$. The formula is superb; it lands probes on comets. But it hides a coincidence so perfect it should have kept everyone awake. Drop a feather and a cannonball in a vacuum and they fall together, side by side, landing at the same instant. A force that pulled harder on more massive things would have to pull *exactly* harder in proportion, for every object, of every size and substance, so that the extra pull and the extra sluggishness cancel with infinite precision, always. Newton's law arranges this cancellation by hand. It never explains why the universe bothers.
+
+Einstein saw that the cancellation is not a coincidence to be explained but a signpost to be followed. Here is the thought he called the happiest of his life. Seal yourself in a windowless box. If the box floats and everything in it drifts weightless, you cannot tell whether you are in deep space far from any mass, or plunging in free fall toward a planet: the two are *identical*. And if the box presses up against your feet, you cannot tell whether it rests on the ground or is a rocket accelerating through empty space. Gravity and acceleration are not similar; locally they are the same thing. Which means gravity cannot be a force carried by objects, since a free-falling observer feels none. It must belong to the arena itself. Everything falls the same way because falling is not a response to a force at all. It is simply what moving freely through spacetime looks like.
+
+But *why* does moving freely, in a straight line, carry you toward a planet? For that, recall the ant from the last post. Two travelers stand on the equator, a few miles apart, and both set off due north walking perfectly straight, never turning, never steering. On a flat map their paths are parallel and should never meet. On the curved surface of the globe they draw together with every step and collide at the pole. No force reached between them. The *curvature* of the surface bent two straight lines into a convergence. That is the whole idea of gravity, and it is genuinely one of the great leaps in the history of thought: **mass curves the spacetime around it, and free objects, moving as straight as they can, are drawn together by the curvature, exactly as if a force pulled them.** John Wheeler compressed the theory into one line: *spacetime tells matter how to move; matter tells spacetime how to curve.*
+
+This is why the first post had to come first. To describe gravity, Einstein did not reach for a better force law. He reached for **geometry**. The gravitational field is not a field of forces; it is a metric tensor $g_{\mu\nu}$, a curved spacetime, and objects trace out its geodesics. So the question "what is the Sun's gravity?" becomes a question in pure Riemannian geometry: *what is the metric around a spherical mass?* That is precisely the problem Karl Schwarzschild solved in 1916, in the trenches of the First World War, months before his death. It was the first exact solution to Einstein's equations.
+
+---
+
+## The Schwarzschild metric
+
+<div class="intuition">
+  <p class="intuition-label">Intuition</p>
+  <p class="intuition-text">Far from a star, spacetime is empty and flat: clocks everywhere tick together, rulers agree. Move closer and the mass distorts the geometry: clocks near it run slow, radial distances stretch. The Schwarzschild metric is the exact bookkeeping of that distortion, a single tensor that says, at every distance from the mass, how much time slows and space stretches. It is the shape of the gravitational field, written as geometry.</p>
+</div>
+
+<SchwarzschildViz mode="wheeler" side />
+
+The animation alongside is that whole relationship in miniature. The mass dimples the grid of spacetime, and a body set loose on it, pushed by nothing, is swept along the curve the mass has made. Matter tells spacetime how to curve; spacetime tells matter how to move. The metric is the ledger that holds both halves at once, and the Schwarzschild solution is that ledger for a single spherical mass.
+
+If gravity is a metric, then the gravity of a star is a specific metric, and here it is. Outside a spherical mass $M$, the geometry of spacetime is:
+
+$$ds^2 = -\left(1 - \frac{2GM}{rc^2}\right)c^2\,dt^2 + \left(1 - \frac{2GM}{rc^2}\right)^{-1} dr^2 + r^2\,d\Omega^2$$
+
+In the first post we learned to *read* a metric, to look at $g_{\mu\nu}$ and see how it measures distance. Read this one the same way, term by term:
+
+- The signature is Lorentzian, $(-,+,+,+)$: one minus sign for time, three pluses for space. This is the flipped sign we promised at the end of the last post, the single change that separates spacetime from an ordinary curved surface.
+- The factor $\left(1 - \tfrac{2GM}{rc^2}\right)$ appears twice: once multiplying the time term $dt^2$, and once, inverted, multiplying the radial term $dr^2$. Everything interesting in this post happens to that one factor.
+- The last piece $r^2 d\Omega^2$ is just the ordinary geometry of a sphere of radius $r$, the angular part, unchanged from flat space.
+
+Notice the far field. As $r \to \infty$, the factor $\left(1 - \tfrac{2GM}{rc^2}\right) \to 1$ and the metric collapses to flat Minkowski spacetime, with no curvature and no gravity. Step far enough from the mass and general relativity hands you back special relativity. The curvature is local, and it fades with distance exactly as gravity does, which is the first sign we are reading the right object.
+
+We will not derive this metric; deriving it means solving Einstein's field equations in a vacuum, a post of its own. As promised in part 1, it is enough to hold a real metric and read what it says. And what it says, once we look at where all of gravity actually lives, is stranger than the rubber sheet ever let on.
+
+---
+
+## Why things fall: the curvature of time
+
+<div class="intuition">
+  <p class="intuition-label">Intuition</p>
+  <p class="intuition-text">Throw a ball. It traces a parabola and falls back, the path we call gravity. But plot that same motion on a graph of space against time and something surprising emerges: the ball is following the straightest line available. It only looks curved because time itself is curved. Nothing pushes the ball down. It falls because the straightest path through warped time bends back toward the ground.</p>
+</div>
+
+<SchwarzschildViz mode="time-tilt" side />
+
+Here is the payoff, and the reason the funnel misleads. Look again at the metric. Of the two places that factor appears, the one that matters for everyday gravity is the one multiplying *time*, $-\left(1 - \tfrac{2GM}{rc^2}\right)c^2 dt^2$. Not the space terms, the time term. Clocks run slower closer to the mass, and objects left alone drift toward where their own time runs slowest. Gravity, for anything moving far slower than light, is almost entirely the curvature of *time*.
+
+The diagram above makes it concrete. The horizontal axis is time, the vertical axis is space; the sheet is spacetime itself. A thrown ball's worldline arcs across it, the familiar parabola of falling, while the sheet lies flat. That is the everyday picture: curvature living in the *path*. Then, as the animation cycles, the sheet inflates upward to meet the arc. The motion never changes, but once the geometry is curved the worldline lies straight within it, a **geodesic**, the straightest path the last post taught us to expect. The curvature has moved out of the path and into spacetime, which is where it always was.
+
+This is exactly why the rubber-sheet funnel is quietly wrong. It shows *space* dimpling and a ball rolling into the dip, and it explains the fall by appealing to gravity pulling the ball down the slope, which is circular. The real mechanism is the curvature of *time*, which the funnel cannot show at all. Strip the spatial curvature away entirely and, for a falling apple or an orbiting planet, almost nothing would change. You do not fall because something pulls you. You fall because you are taking the straightest road through curved time.
+
+The physicist Derek Muller lays this out beautifully in the Veritasium video **[What Everyone Gets Wrong About Gravity](https://www.youtube.com/watch?v=XRr1kaXKBsU)**, the thrown-ball-as-geodesic argument in motion.
+
+---
+
+## Orbits as geodesics
+
+<div class="intuition">
+  <p class="intuition-label">Intuition</p>
+  <p class="intuition-text">A planet does not orbit because a rope of gravity swings it in a loop. It coasts freely, following the straightest available path through the curved spacetime around the star, and in that geometry the straightest path closes into an orbit. Mercury's orbit, though, does not quite close: each pass, the whole ellipse rotates a little. That slow turn is curvature revealing itself, and Newton could never explain it.</p>
+</div>
+
+<SchwarzschildViz mode="orbit" side />
+
+If falling is following a geodesic, so is orbiting. A planet in orbit is in free fall, nothing pushes it, so it traces a geodesic of the Schwarzschild metric, the straightest path this spacetime offers. In Newton's picture that path is a perfect, endlessly repeating ellipse. In Einstein's, it is almost an ellipse, but not quite.
+
+Toggle the animation between Newton and Einstein. The Newtonian orbit closes on itself, the same ellipse forever. The relativistic orbit **precesses**: each time the planet swings past its closest approach, the whole ellipse has rotated a little, tracing a slowly turning rosette. The extra turning comes from the same connection terms $\Gamma^\mu_{\nu\rho}$ in the geodesic equation we wrote down in part 1, now sourced by a real metric instead of a toy surface.
+
+This is not a toy effect. Mercury's orbit precesses by 43 arcseconds per century more than Newtonian gravity can explain, even after accounting for the tug of every other planet. That tiny, stubborn discrepancy went unexplained for decades. When Einstein computed it straight from the Schwarzschild geometry and the number came out exactly right, he said it gave him heart palpitations. The orbit that does not quite close is the fingerprint of curved spacetime.
+
+---
+
+## Light bends too
+
+<div class="intuition">
+  <p class="intuition-label">Intuition</p>
+  <p class="intuition-text">Light has no mass, so a force-based gravity should leave it dead straight, with nothing to pull on. Yet starlight grazing the Sun bends. It has no choice: curvature is a property of spacetime itself, and everything that moves through it, massive or not, follows its geodesics. Light simply takes the straightest path available, and near a mass the straightest path is bent.</p>
+</div>
+
+<SchwarzschildViz mode="light" side />
+
+A beam of light carries no mass. In a force picture of gravity there is nothing to grab, and the beam should sail past a star dead straight. But geodesics do not care about mass; that was the whole lesson of the falling ball. Curvature acts on the geometry, and light, like everything else, follows the geometry's straightest paths. For light these are **null geodesics**, the paths along which $ds^2 = 0$, the special case we flagged when we first met the Lorentzian signature.
+
+The animation shows several rays passing the mass at different distances. Each one bends, and the ones passing closer bend more, deflected as they cross the region where spacetime is most sharply curved. The faint shell marks the photon sphere, the radius where the curvature is strong enough to bend light into a complete circle.
+
+On 29 May 1919, Arthur Eddington photographed stars near the edge of the Sun during a total eclipse and measured exactly this deflection: the starlight was shifted by the amount Schwarzschild's geometry predicted, twice what any force-based fudge could give. It was the observation that confirmed general relativity and made Einstein, overnight, the most famous scientist alive. Massless light, bent by pure geometry.
+
+---
+
+## The factor that hits zero
+
+Everything in this post has turned on one expression: the factor $\left(1 - \tfrac{2GM}{rc^2}\right)$ sitting in the metric. Far away it is 1 and spacetime is flat. Closer in it shrinks: time slows, space stretches, orbits precess, light bends. But follow $r$ inward and watch what happens. At the radius
+
+$$r_s = \frac{2GM}{c^2}$$
+
+the factor hits exactly **zero**. The time term $g_{tt}$ vanishes and the radial term $g_{rr}$ blows up to infinity. From the outside, time itself appears to stop. This radius has a name, the **Schwarzschild radius**, and the surface it traces has another: the **event horizon**.
+
+What happens there, and whether that infinity is real geometry or merely a bad choice of coordinates, is where part 3 begins, the same way this post grew out of a single promise at the end of the last one. For now, sit with the strangeness of a metric that measures a point of no return. The Veritasium video **[Something Strange Happens When You Follow Einstein's Math](https://www.youtube.com/watch?v=6akmv1bsz1M)** follows Schwarzschild's solution all the way to that edge.
+
+<div class="summary">
+  <p class="summary-label">In plain language</p>
+  <ul class="summary-list">
+    <li><span class="summary-term">Gravity as geometry</span>: not a force reaching across space, but curved spacetime; objects just follow the straightest paths, the geodesics of part 1.</li>
+    <li><span class="summary-term">Schwarzschild metric</span>: the exact geometry outside a spherical mass, and the first solution to Einstein's equations.</li>
+    <li><span class="summary-term">Curvature of time</span>: everyday gravity lives in the time part of the metric; things fall because the straightest path through curved time bends toward the mass.</li>
+    <li><span class="summary-term">Geodesic orbits</span>: planets coast along geodesics; relativity makes the orbit precess, and Mercury's 43 arcseconds per century proves it.</li>
+    <li><span class="summary-term">Bending light</span>: null geodesics bend past a mass even though light is massless, confirmed by Eddington's 1919 eclipse.</li>
+    <li><span class="summary-term">The factor</span>: $1 - \tfrac{2GM}{rc^2}$ hits zero at the Schwarzschild radius, marking the event horizon where part 3 begins.</li>
+  </ul>
+</div>
+
+<div class="post-references">
+
+## Further reading
+
+- Einstein, A. (1916). [The Foundation of the General Theory of Relativity](https://einsteinpapers.press.princeton.edu/vol6-trans/158) (English translation, Einstein Papers Project). *Annalen der Physik*, 49, 769–822. The paper that recast gravity as spacetime curvature and gave the field equations this post's metric solves.
+- Schwarzschild, K. (1916). [On the Gravitational Field of a Mass Point according to Einstein's Theory](https://arxiv.org/abs/physics/9905030) (English translation). *Sitzungsberichte der Königlich Preussischen Akademie der Wissenschaften*. The original derivation of the metric, found within months of Einstein's equations while Schwarzschild served at the front.
+- Flamm, L. (1916). [Contributions to Einstein's Theory of Gravitation](https://doi.org/10.1007/s10714-015-1908-2) (republished with translation, 2015). *General Relativity and Gravitation*, 47, 72. Introduces the paraboloid embedding drawn as the funnel throughout this post.
+- Dyson, F. W., Eddington, A. S., & Davidson, C. (1920). [A Determination of the Deflection of Light by the Sun's Gravitational Field](https://doi.org/10.1098/rsta.1920.0009). *Philosophical Transactions of the Royal Society A*, 220, 291–333. The 1919 total-eclipse measurement that confirmed light bending and made Einstein world-famous.
+- Misner, C. W., Thorne, K. S., & Wheeler, J. A. (1973). [*Gravitation*](https://press.princeton.edu/books/hardcover/9780691177793/gravitation). Princeton University Press. The classic text, and the source of Wheeler's "spacetime tells matter how to move; matter tells spacetime how to curve."
+- Carroll, S. M. (1997). [Lecture Notes on General Relativity](https://arxiv.org/abs/gr-qc/9712019). A free, widely used introduction; the Schwarzschild geodesics, perihelion precession, and light deflection are all worked through in full.
+- Wald, R. M. (1984). [*General Relativity*](https://press.uchicago.edu/ucp/books/book/chicago/G/bo5952261.html). University of Chicago Press. A rigorous graduate treatment for readers who want the full differential-geometry machinery behind this post.
+
+</div>

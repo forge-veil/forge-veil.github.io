@@ -20,6 +20,11 @@ pnpm-debug.log*
 # environment variables
 .env
 .env.production
+.env.local
+.env*.local
+
+# local API response cache
+.cache/
 
 # macOS-specific files
 .DS_Store

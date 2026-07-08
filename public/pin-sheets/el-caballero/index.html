@@ -1,0 +1,742 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>El Caballero · Pin Sheet · U.S. Senior Open Final Qualifying</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400&family=Hanken+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:      #EFE9DD;
+    --paper-2:    #E6DFCF;
+    --ink:        #1C1F19;
+    --ink-2:      #57584F;
+    --ink-3:      #8A8676;
+    --hair:       #C8C0AE;
+    --hair-2:     #D9D3C2;
+    --forest:     #2F4A2C;
+    --moss:       #5A6B40;
+    --ox:         #8B2F1F;
+    --amber:      #B5811F;
+
+    --serif: "Newsreader", "Iowan Old Style", Georgia, serif;
+    --sans:  "Hanken Grotesk", -apple-system, BlinkMacSystemFont, sans-serif;
+    --mono:  "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { background: var(--paper); }
+  body {
+    margin: 0;
+    color: var(--ink);
+    font-family: var(--sans);
+    font-weight: 400;
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    background-image:
+      radial-gradient(circle at 20% 10%, rgba(47,74,44,0.03), transparent 40%),
+      radial-gradient(circle at 80% 90%, rgba(139,47,31,0.025), transparent 40%);
+  }
+
+  .sheet {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 56px 56px 80px;
+  }
+
+  /* Header */
+  header {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: end;
+    gap: 32px;
+    padding-bottom: 22px;
+    border-bottom: 1.5px solid var(--ink);
+    position: relative;
+  }
+  header::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; bottom: -5px;
+    border-bottom: 1px solid var(--ink);
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    margin-bottom: 14px;
+  }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: clamp(40px, 5vw, 64px);
+    line-height: 0.95;
+    letter-spacing: -0.02em;
+    margin: 0;
+    color: var(--ink);
+  }
+  h1 .amp {
+    font-style: italic;
+    font-weight: 400;
+    color: var(--forest);
+  }
+  .meta {
+    text-align: right;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--ink-2);
+    line-height: 1.7;
+  }
+  .meta b { color: var(--ink); font-weight: 600; }
+  .meta .date {
+    display: block;
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 18px;
+    color: var(--forest);
+    letter-spacing: 0;
+    margin-bottom: 6px;
+  }
+
+  /* Disclaimer strip */
+  .disclaimer {
+    margin: 16px 0 36px;
+    padding: 10px 14px;
+    background: var(--paper-2);
+    border-left: 3px solid var(--ox);
+    font-family: var(--sans);
+    font-size: 11.5px;
+    color: var(--ink-2);
+    letter-spacing: 0.01em;
+  }
+  .disclaimer b { color: var(--ink); font-weight: 600; }
+
+  /* Nine columns */
+  .nines {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+  }
+  @media (max-width: 880px) {
+    .sheet { padding: 32px 24px 60px; }
+    .nines { grid-template-columns: 1fr; gap: 36px; }
+  }
+
+  .nine-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 18px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--hair);
+  }
+  .nine-title {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: 22px;
+    letter-spacing: 0.01em;
+  }
+  .nine-title em {
+    font-style: italic;
+    color: var(--forest);
+    font-weight: 400;
+  }
+  .nine-totals {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+  }
+  .nine-totals b { color: var(--ink); font-weight: 600; }
+
+  /* Hole rows */
+  .hole {
+    display: grid;
+    grid-template-columns: 56px 1fr 116px;
+    gap: 18px;
+    padding: 14px 0 16px;
+    border-bottom: 1px dashed var(--hair-2);
+    align-items: start;
+  }
+  .hole:last-child { border-bottom: none; }
+
+  .hole-num {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: 42px;
+    line-height: 0.9;
+    letter-spacing: -0.03em;
+    color: var(--ink);
+    text-align: right;
+    padding-top: 2px;
+  }
+  .hole-num .tens { color: var(--ink-3); }
+
+  .hole-body {
+    min-width: 0;
+  }
+  .stat-line {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+  }
+  .stat-line .par { color: var(--ink); font-weight: 600; }
+  .stat-line .yds { color: var(--ink); font-weight: 500; }
+  .stat-line .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--hair); }
+
+  .tier {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--sans);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    padding: 2px 8px;
+    border-radius: 100px;
+    background: rgba(0,0,0,0.04);
+  }
+  .tier.t-E  { color: var(--moss);   background: rgba(90,107,64,0.10); }
+  .tier.t-M  { color: var(--amber);  background: rgba(181,129,31,0.10); }
+  .tier.t-MH { color: var(--ox);     background: rgba(139,47,31,0.08); }
+  .tier.t-H  { color: #fff;          background: var(--ox); letter-spacing: 0.16em; }
+
+  .pin-call {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-style: italic;
+    font-size: 17px;
+    line-height: 1.3;
+    color: var(--ink);
+    margin: 4px 0 4px;
+    letter-spacing: -0.005em;
+  }
+  .pin-call .sep { color: var(--ink-3); font-style: normal; margin: 0 6px; font-weight: 300; }
+
+  .rationale {
+    font-size: 12.5px;
+    color: var(--ink-2);
+    line-height: 1.45;
+    margin: 0;
+  }
+  .miss {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.04em;
+    color: var(--ink-2);
+    margin-top: 6px;
+    padding-left: 12px;
+    position: relative;
+  }
+  .miss::before {
+    content: "↳";
+    position: absolute;
+    left: 0;
+    color: var(--ox);
+    font-family: var(--sans);
+  }
+  .miss b { color: var(--ink); font-weight: 600; }
+
+  /* Green diagram */
+  .green-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .green-svg {
+    width: 108px;
+    height: 140px;
+    display: block;
+  }
+  .green-svg.traced { width: 110px; height: 144px; }
+
+  /* Image-based overlay (real StrackaLine map underneath) */
+  .green-img-wrap {
+    position: relative;
+    width: 116px;
+    line-height: 0;
+    background: #fff;
+    border: 1px solid var(--ink);
+    border-radius: 2px;
+    overflow: hidden;
+    box-shadow: 0 1px 0 rgba(28,31,25,0.05);
+    cursor: zoom-in;
+    transition: transform 0.18s cubic-bezier(.2,.7,.3,1),
+                box-shadow 0.18s ease-out;
+    z-index: 1;
+    will-change: transform;
+  }
+  .green-img-wrap:hover {
+    transform: scale(3.6);
+    z-index: 100;
+    box-shadow:
+      0 14px 36px rgba(28,31,25,0.32),
+      0 2px 6px  rgba(28,31,25,0.18),
+      0 0 0 1px rgba(28,31,25,0.6);
+  }
+  /* Front 9 (left column) expands leftward; Back 9 (right column) rightward */
+  #front .green-img-wrap { transform-origin: right center; }
+  #back  .green-img-wrap { transform-origin: left  center; }
+
+  .green-img-wrap img {
+    display: block;
+    width: 100%;
+    height: auto;
+    image-rendering: -webkit-optimize-contrast;
+  }
+  .pin-overlay {
+    position: absolute;
+    /* anchor cup at (left%, top%) — cup sits at pixel (18, 30) in the 40×36 SVG */
+    transform: translate(-18px, -30px);
+    pointer-events: none;
+  }
+  .pin-overlay svg { display: block; overflow: visible; }
+  .pin-overlay.ghost { opacity: 0.55; }
+
+  @media print {
+    .green-img-wrap { cursor: default; }
+    .green-img-wrap:hover { transform: none; box-shadow: none; z-index: 1; }
+  }
+  .green-missing {
+    width: 116px;
+    height: 140px;
+    border: 1px dashed var(--hair);
+    background: var(--paper-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--ink-3);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 8px;
+    line-height: 1.5;
+  }
+  .green-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  /* Footer */
+  footer {
+    margin-top: 56px;
+    padding-top: 28px;
+    border-top: 1.5px solid var(--ink);
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 40px;
+  }
+  @media (max-width: 880px) {
+    footer { grid-template-columns: 1fr; gap: 24px; }
+  }
+  .footer-title {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--forest);
+    letter-spacing: 0.02em;
+    margin-bottom: 12px;
+  }
+  .strategy {
+    font-size: 13px;
+    color: var(--ink);
+    line-height: 1.55;
+  }
+  .strategy ul { margin: 0; padding-left: 18px; }
+  .strategy li { margin-bottom: 7px; }
+  .strategy li b { color: var(--forest); font-weight: 600; }
+
+  .legend {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-2);
+    letter-spacing: 0.04em;
+    line-height: 1.9;
+  }
+  .legend-row {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .swatch {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border-radius: 3px;
+  }
+
+  .signoff {
+    margin-top: 42px;
+    padding-top: 18px;
+    border-top: 1px solid var(--hair);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    display: flex;
+    justify-content: space-between;
+  }
+  .signoff em {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 12px;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--forest);
+  }
+
+  /* Print */
+  @media print {
+    @page { size: A4; margin: 12mm; }
+    body { background: white; }
+    .sheet { padding: 0; max-width: 100%; }
+    .disclaimer { background: transparent; }
+    header::after { display: none; }
+    .nines { gap: 24px; }
+    .hole { padding: 8px 0 9px; break-inside: avoid; }
+    .hole-num { font-size: 32px; }
+    .pin-call { font-size: 14px; }
+    .rationale { font-size: 11px; }
+    .green-svg { width: 70px; height: 86px; }
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <header>
+    <div>
+      <div class="eyebrow">U.S. Senior Open · Final Qualifying</div>
+      <h1>El Caballero <span class="amp">&amp;</span><br>the Pins We Expect</h1>
+    </div>
+    <div class="meta">
+      <span class="date">Monday · June 15, 2026</span>
+      <b>Tarzana, California</b><br>
+      Robert Trent Jones Sr. · 1957<br>
+      Rees Jones revision · 2021<br>
+      Par 71 · 6,815 yards (Gold)
+    </div>
+  </header>
+
+  <div class="disclaimer">
+    <b>Educated guesses, not the actual sheet.</b> Tomorrow's cups are cut by the host pro and the USGA setup official the morning of the round. <b>All 18 holes overlaid on real StrackaLine contour maps</b> — hover any thumbnail to zoom. Use this to organize practice rounds, not to read break.
+  </div>
+
+  <div class="nines">
+
+    <!-- FRONT NINE -->
+    <section>
+      <div class="nine-header">
+        <div class="nine-title">Front <em>Nine</em></div>
+        <div class="nine-totals">Par <b>36</b> · <b>3,477</b> yds</div>
+      </div>
+      <div id="front"></div>
+    </section>
+
+    <!-- BACK NINE -->
+    <section>
+      <div class="nine-header">
+        <div class="nine-title">Back <em>Nine</em></div>
+        <div class="nine-totals">Par <b>35</b> · <b>3,338</b> yds</div>
+      </div>
+      <div id="back"></div>
+    </section>
+
+  </div>
+
+  <footer>
+    <div>
+      <div class="footer-title">Practice priorities</div>
+      <div class="strategy">
+        <ul>
+          <li><b>Back-shelf wedges</b> — distance control to #5, #13, #16. Where strokes go to die.</li>
+          <li><b>Long-iron centers</b> — #6, #8, #9, #17. Middle of the green, take your par, run.</li>
+          <li><b>Lay-up number on #7</b> — pin almost certainly punishes the line of charge. Pick a comfortable wedge yardage and own it twice.</li>
+          <li><b>PM rollout</b> — late wave should plan 3–5 extra feet of release on every back pin. Marine layer burns off; greens firm up by lunch.</li>
+          <li><b>Below the hole on #8, #15, #18</b> — uphill putts only. Center of green is your friend.</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="footer-title">Difficulty key</div>
+      <div class="legend">
+        <div class="legend-row"><span class="tier t-E">E</span> accessible — get one</div>
+        <div class="legend-row"><span class="tier t-M">M</span> fair — center it</div>
+        <div class="legend-row"><span class="tier t-MH">M·H</span> firm — pick a side</div>
+        <div class="legend-row"><span class="tier t-H">H</span> sunday pin — par's a good score</div>
+      </div>
+      <div class="footer-title" style="margin-top:22px;">Pin notation</div>
+      <div class="legend">
+        Depth · F / M / B from front edge<br>
+        Side  · L / C / R looking from tee<br>
+        Flag color tracks difficulty tier.
+      </div>
+    </div>
+  </footer>
+
+  <div class="signoff">
+    <span>Educated guess · v1</span>
+    <em>Play smart. Make the cut.</em>
+    <span>Vatsal · 06.14.26</span>
+  </div>
+
+</div>
+
+<script>
+const HOLES = [
+  {n:1,par:5,yds:522,depth:"F",side:"C",tier:"E",
+    call:"Front · Center · ~10 paces",
+    rationale:"Hourglass green with two viable cup pockets — both center-line. Front pocket (paces 8–12, slope 0.4–1.6%) is the textbook opener; back pocket (paces 28–32) is the only realistic alternative. Everything else reads 4%+. The neck at paces 17–22 is unputtable — 4.5/5.6/4.0/5.3% — and a no-go landing zone for any second shot.",
+    miss:"Below the hole or short of the pocket. Anything finishing on the neck is dead — funnels into trouble both ways."},
+  {n:2,par:4,yds:434,depth:"M",side:"CR",tier:"M",
+    call:"Middle · Center-Right",
+    rationale:"#1 handicap. Hole already plays hard — no need to tuck. Fair cup on the largest portion of green.",
+    miss:"Left of pin is the safer half."},
+  {n:3,par:4,yds:381,depth:"F",side:"R",tier:"MH",
+    call:"Front · Right",
+    rationale:"Short par 4 → defended. Likely behind the right greenside bunker to make wedges work.",
+    miss:"Long-left, lag back. Never short-right."},
+  {n:4,par:4,yds:401,depth:"M",side:"L",tier:"M",
+    call:"Middle · Left",
+    rationale:"Standard mid pin. Pace-of-play and scoring balance call for one straightforward middle on this stretch.",
+    miss:"Right of pin, never long."},
+  {n:5,par:4,yds:360,depth:"B",side:"R",tier:"H",
+    call:"Back · Right",
+    rationale:"Distinctive short par 4 Rees Jones called out by name. Setup uses these holes to separate the field — back-right shelf, full hard.",
+    miss:"Front of green. Never above the hole."},
+  {n:6,par:3,yds:217,depth:"M",side:"C",tier:"M",
+    call:"Middle · Center",
+    rationale:"Long par 3 with a feature green complex. Fair cup on the largest tier — the length defends scoring on its own.",
+    miss:"Front-center. Never short-right."},
+  {n:7,par:5,yds:509,depth:"B",side:"R",tier:"MH",
+    call:"Back · Right",
+    rationale:"Risk/reward par 5. Setup will punish the line of charge — expect a pin that rewards laying back to a full wedge.",
+    miss:"Wedge in to a comfortable yardage. Don't force the second."},
+  {n:8,par:3,yds:212,depth:"F",side:"C",tier:"E",
+    call:"Front · Center",
+    rationale:"Long par 3 — these get accessible pins in final qualifying. Front of green, room to run one in.",
+    miss:"Below the hole, always."},
+  {n:9,par:4,yds:453,depth:"M",side:"C",tier:"M",
+    call:"Middle · Center",
+    rationale:"Long par 4 closing the front. Fair pin — the yardage is the test.",
+    miss:"Center of green. Take par and walk to the turn."},
+
+  {n:10,par:3,yds:163,depth:"B",side:"L",tier:"MH",
+    call:"Back · Left",
+    rationale:"Shortest hole on the course. Short par 3s always get tucked in final qualifying — expect back-left.",
+    miss:"Right of pin, putt across."},
+  {n:11,par:4,yds:402,depth:"M",side:"R",tier:"M",
+    call:"Middle · Right",
+    rationale:"Standard mid pin. Setup gives you a breather after the tricky #10.",
+    miss:"Left of pin."},
+  {n:12,par:5,yds:532,depth:"M",side:"C",tier:"E",
+    call:"Middle · Center",
+    rationale:"Longest hole on the course. You've earned a fair pin after that walk — center of the green.",
+    miss:"Front of green. Never long."},
+  {n:13,par:4,yds:380,depth:"B",side:"R",tier:"MH",
+    call:"Back · Right",
+    rationale:"Short par 4 → defended. Back-shelf tuck — makes wedges spin or release into a bad spot.",
+    miss:"Front-left, putt up the green."},
+  {n:14,par:4,yds:384,depth:"F",side:"L",tier:"M",
+    call:"Front · Left",
+    rationale:"Short par 4. Front tuck tests wedge precision without being unfair — likely behind a left bunker.",
+    miss:"Right of pin. Never long-left."},
+  {n:15,par:4,yds:411,depth:"M",side:"C",tier:"M",
+    call:"Middle · Center",
+    rationale:"Standard. Setup needs a breather before the closing stretch.",
+    miss:"Below the hole."},
+  {n:16,par:3,yds:176,depth:"B",side:"R",tier:"H",
+    call:"Back · Right",
+    rationale:"Mid par 3 with room to be ornery — the back-nine sunday pin. Expect back-right, near a slope.",
+    miss:"Front-left, putt across the green."},
+  {n:17,par:4,yds:455,depth:"M",side:"C",tier:"M",
+    call:"Middle · Center",
+    rationale:"Long par 4 — plays hard enough. Fair middle pin.",
+    miss:"Center of green. Par walks away."},
+  {n:18,par:4,yds:435,depth:"B",side:"C",tier:"M",
+    call:"Back · Center",
+    rationale:"Finisher — demanding but accessible. Back-center is the qualifying default: full club, full commitment, full green to work with.",
+    miss:"Below the hole. Two-putt from anywhere."}
+];
+
+// Stylized green shape templates (asymmetric blobs for variety)
+const GREEN_PATHS = [
+  "M 18 38 C 14 22, 28 12, 50 12 C 78 10, 92 22, 90 42 C 92 70, 82 88, 56 90 C 26 92, 12 76, 14 58 Z",
+  "M 22 30 C 22 14, 38 10, 56 12 C 82 14, 92 28, 88 50 C 86 72, 76 88, 50 90 C 24 90, 14 72, 16 52 Z",
+  "M 16 42 C 14 24, 30 10, 54 12 C 80 14, 92 30, 90 50 C 88 76, 70 90, 46 88 C 22 86, 14 64, 16 46 Z",
+  "M 20 36 C 16 18, 34 10, 58 14 C 84 18, 90 34, 88 54 C 88 74, 74 90, 48 88 C 22 84, 16 60, 20 42 Z",
+  "M 18 34 C 18 18, 32 10, 56 10 C 80 12, 90 26, 90 48 C 90 70, 78 90, 52 92 C 26 92, 14 70, 14 50 Z"
+];
+
+function pinCoord(depth, side) {
+  // Depth: F = bottom (y~78), M = middle (y~50), B = top (y~24)
+  // Side:  L = x~30, C = x~52, R = x~74, CR = x~62, CL = x~42
+  const dy = { F: 78, M: 50, B: 24 }[depth] ?? 50;
+  const sx = { L: 30, C: 52, R: 74, CR: 62, CL: 42 }[side] ?? 52;
+  return { x: sx, y: dy };
+}
+
+function tierColor(tier) {
+  return {
+    E:  "#5A6B40",
+    M:  "#B5811F",
+    MH: "#8B2F1F",
+    H:  "#8B2F1F"
+  }[tier] ?? "#8B2F1F";
+}
+
+function greenSVG(hole) {
+  if (TRACED_GREENS[hole.n]) return TRACED_GREENS[hole.n](hole);
+  const path = GREEN_PATHS[hole.n % GREEN_PATHS.length];
+  const { x, y } = pinCoord(hole.depth, hole.side);
+  const flag = tierColor(hole.tier);
+  return `
+    <svg class="green-svg" viewBox="0 0 104 104" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <ellipse cx="52" cy="96" rx="34" ry="3" fill="rgba(28,31,25,0.08)"/>
+      <path d="${path}" fill="#D8D2BE" stroke="#1C1F19" stroke-width="1.1"/>
+      <path d="M 26 56 C 38 50, 66 50, 80 58" fill="none" stroke="rgba(28,31,25,0.18)" stroke-width="0.5" stroke-dasharray="1 2"/>
+      <path d="M 30 70 C 42 64, 64 64, 78 72" fill="none" stroke="rgba(28,31,25,0.12)" stroke-width="0.5" stroke-dasharray="1 2"/>
+      <text x="52" y="102" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="6" fill="#8A8676" letter-spacing="1">FRONT</text>
+      <g transform="translate(${x}, ${y})">
+        <line x1="0" y1="0" x2="0" y2="-16" stroke="#1C1F19" stroke-width="1.2" stroke-linecap="round"/>
+        <path d="M 0 -16 L 10 -13 L 0 -10 Z" fill="${flag}" stroke="${flag}" stroke-width="0.5"/>
+        <circle cx="0" cy="0" r="1.7" fill="#1C1F19"/>
+      </g>
+    </svg>
+  `;
+}
+
+// Per-hole image overlays. Pin coords are CSS % over the underlying image:
+//   top% from image top, left% from image left.
+// Pace anchors are eyeballed from each StrackaLine PNG's visible 5/10/15/...
+// labels. Tune any of these by editing the numbers in OVERLAY_COORDS.
+// Pin flag with optional coord tag above the head. Cup at (18, 30). SVG 40×36.
+const flagSVG = (color, opacity = 1, dashed = false, label = '') => `
+  <svg width="40" height="36" viewBox="0 0 40 36" xmlns="http://www.w3.org/2000/svg">
+    ${label ? `
+      <rect x="2" y="0" width="32" height="10" rx="1.5"
+            fill="rgba(255,255,255,0.94)" stroke="#1C1F19" stroke-width="0.5"
+            opacity="${opacity}"/>
+      <text x="18" y="7.3" text-anchor="middle"
+            font-family="JetBrains Mono, monospace" font-size="5" font-weight="700"
+            fill="#1C1F19" letter-spacing="0.3" opacity="${opacity}">${label}</text>
+      <line x1="18" y1="10" x2="18" y2="13" stroke="#1C1F19" stroke-width="0.4" opacity="${opacity}"/>
+    ` : ''}
+    <line x1="18" y1="30" x2="18" y2="14" stroke="#1C1F19" stroke-width="1.6"
+          stroke-linecap="round" ${dashed ? 'stroke-dasharray="2 1.5"' : ''} opacity="${opacity}"/>
+    <path d="M 18 14 L 30 17 L 18 20 Z" fill="${dashed ? 'none' : color}"
+          stroke="${color}" stroke-width="0.8" opacity="${opacity}"/>
+    <circle cx="18" cy="30" r="2" fill="#1C1F19" opacity="${opacity}"/>
+  </svg>`;
+
+const OVERLAY_COORDS = {
+  // main: my pin guess; ghost: likeliest alternate cup.
+  // lbl format: "depth-sideDir" — paces from front, paces from nearest edge.
+  //   "10-C"  = 10 paces from front, centered
+  //   "15-7R" = 15 paces from front, 7 paces from right edge
+  1:  { main: {t:59, l:52, lbl:'10-C'},  ghost: {t:26, l:54, lbl:'24-C'} },
+  2:  { main: {t:47, l:55, lbl:'19-8R'} },
+  3:  { main: {t:66, l:62, lbl:'9-5R'} },
+  4:  { main: {t:50, l:42, lbl:'15-6L'} },
+  5:  { main: {t:28, l:62, lbl:'20-5R'} },
+  6:  { main: {t:48, l:50, lbl:'16-C'} },
+  7:  { main: {t:30, l:63, lbl:'22-6R'} },
+  8:  { main: {t:65, l:50, lbl:'10-C'} },
+  9:  { main: {t:50, l:50, lbl:'18-C'} },
+  10: { main: {t:30, l:42, lbl:'20-6L'} },
+  11: { main: {t:50, l:60, lbl:'15-7R'} },
+  12: { main: {t:53, l:50, lbl:'17-C'} },
+  13: { main: {t:28, l:60, lbl:'22-5R'} },
+  14: { main: {t:75, l:42, lbl:'8-5L'} },
+  15: { main: {t:50, l:50, lbl:'12-C'} },
+  16: { main: {t:32, l:62, lbl:'20-5R'} },
+  17: { main: {t:50, l:50, lbl:'15-C'} },
+  18: { main: {t:28, l:50, lbl:'22-C'} },
+};
+
+function makeOverlay(n) {
+  return (hole) => {
+    const flag = tierColor(hole.tier);
+    const pad = String(n).padStart(2, '0');
+    const c = OVERLAY_COORDS[n];
+    const ghostHTML = c.ghost ? `
+      <div class="pin-overlay ghost" style="left: ${c.ghost.l}%; top: ${c.ghost.t}%;">
+        ${flagSVG('#1C1F19', 0.75, true, c.ghost.lbl || '')}
+      </div>` : '';
+    return `
+      <div class="green-img-wrap" title="Hole ${n} — StrackaLine contour · hover to zoom">
+        <img src="el-caballero-greens/hole${pad}.png" alt="Hole ${n} contour map"
+             onerror="this.parentElement.outerHTML='<div class=\\'green-missing\\'>hole${pad}.png<br>not found</div>'"/>
+        <div class="pin-overlay" style="left: ${c.main.l}%; top: ${c.main.t}%;">
+          ${flagSVG(flag, 1, false, c.main.lbl || '')}
+        </div>
+        ${ghostHTML}
+      </div>
+    `;
+  };
+}
+
+const TRACED_GREENS = Object.fromEntries(
+  Object.keys(OVERLAY_COORDS).map(n => [n, makeOverlay(+n)])
+);
+
+function tierClass(t) {
+  return { E: "t-E", M: "t-M", MH: "t-MH", H: "t-H" }[t] ?? "t-M";
+}
+function tierLabel(t) {
+  return { E: "E", M: "M", MH: "M·H", H: "HARD" }[t] ?? "M";
+}
+
+function renderHole(hole) {
+  const numHTML = hole.n < 10
+    ? `<span class="tens">0</span>${hole.n}`
+    : `${hole.n}`;
+  return `
+    <article class="hole">
+      <div class="hole-num">${numHTML}</div>
+      <div class="hole-body">
+        <div class="stat-line">
+          <span class="par">PAR ${hole.par}</span>
+          <span class="dot"></span>
+          <span class="yds">${hole.yds} YDS</span>
+          <span class="dot"></span>
+          <span class="tier ${tierClass(hole.tier)}">${tierLabel(hole.tier)}</span>
+        </div>
+        <div class="pin-call">${hole.call}</div>
+        <p class="rationale">${hole.rationale}</p>
+        <div class="miss"><b>Miss:</b> ${hole.miss}</div>
+      </div>
+      <div class="green-wrap">
+        ${greenSVG(hole)}
+        <div class="green-label">${hole.depth} · ${hole.side}</div>
+      </div>
+    </article>
+  `;
+}
+
+document.getElementById("front").innerHTML =
+  HOLES.slice(0, 9).map(renderHole).join("");
+document.getElementById("back").innerHTML =
+  HOLES.slice(9, 18).map(renderHole).join("");
+</script>
+</body>
+</html>

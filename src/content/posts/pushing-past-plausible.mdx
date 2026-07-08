@@ -1,0 +1,75 @@
+---
+title: "Pushing Past Plausible"
+description: "An AI's first answer is shaped like the right answer before it has the substance. The night before a USGA qualifier, I asked Claude for a pin sheet — and learned where the bluff actually lives."
+topic: personal
+postLayout: longform
+tags: [ai, claude, golf, tools, tournament-prep]
+publishedAt: 2026-06-14
+published: true
+---
+
+We're playing the final qualifying for the U.S. Senior Open tomorrow. El Caballero Country Club in Tarzana, par 71, around 7,000 yards from the back tees. I won't see the pin sheet until tournament morning — USGA setup officials cut cups at sunrise, and StrackaLine doesn't publish the updated locations until after.
+
+So I did what I usually do when I want to think out loud about something. I asked Claude.
+
+The question was simple: based on past USGA setup philosophy and any architectural notes from El Caballero, where would the pins most likely be tomorrow? Give me your best guesses.
+
+The first response was, to its credit, honest. It told me it couldn't see the actual pin sheet, couldn't see the StrackaLine contour data, and that no one online had tomorrow's pins because they don't exist yet. It then offered a framework — accessible pins on long par 4s, tucked pins on short par 4s, one Sunday pin per nine — and stopped there. Useful priors. No commitment.
+
+So I committed it back. *I understand it is not known. I am asking for educated GUESSES.*
+
+Something shifted. Now there was a table. Eighteen holes, each with a depth (front, middle, back), a side (left, center, right), and a difficulty tier. The hedging dropped because the bargain was clear: we both knew these were guesses; the question was how disciplined the guesses could be.
+
+That should have been enough. Print the table. Walk away.
+
+Instead I asked for a visual. Could it render the table as an HTML pin sheet?
+
+It built one. Editorial styling, a serif display font, a tier color system, small green-shaped diagrams next to each hole. Honestly nice-looking. I almost shipped it as-is.
+
+But the green diagrams next to each hole bothered me. They were *specific*. Hole 1 had an asymmetric blob with a notch on the back-right. Hole 7 had a different one. They looked like *the actual greens at El Caballero* in miniature.
+
+I asked. Where did the green shapes come from?
+
+The reply: stylized blobs. Drawn from imagination, varied per hole to avoid visual repetition. The text disclaimer at the top of the page already acknowledged this. The diagrams themselves did not. The visual *contradicted* the disclaimer.
+
+This is the part of working with language models I keep re-learning. They don't have a single dial for "how confident am I." Different parts of the same response can be confident at different levels, and the visual layer — diagrams, tables, formatting — tends to default to more confident than the prose. Confident-looking output reads as confident output, regardless of what the fine print says.
+
+I asked Claude to come clean about which parts of its pin sheet were actually grounded. Then we threw the stylized blobs away.
+
+The new approach was simpler. Use the StrackaLine contour images as the base layer of each green diagram. Overlay just my pin guess on top. The contour data comes from the source of truth. The model's contribution shrinks to one decision per hole: *where on the image should the flag go.*
+
+I screenshotted the StrackaLine page for hole 1 and sent it. Claude read off the pace markers — pace 0 at the bottom edge, pace 35 at the top — and placed a flag at top-59%, left-52%, my proposed pin in the front pocket. Then a faint dashed second flag at the back pocket as the most likely alternative.
+
+I sent the other seventeen. We iterated. We added coord tags above each flag in standard pin-sheet notation: `15-7R` for 15 paces from front, 7 paces from the right edge. We added hover-to-zoom so I could read the actual contour at the pin location. We tuned positions hole by hole based on what each green's pace grid actually showed.
+
+A few hours after that first casual question, I had a working pin sheet. Eighteen real StrackaLine contours, an eighteenth-of-an-inch flag pinned to each one at my best-guess coordinate, hover any thumbnail and it pops up at 3.6× with the proposed pin in plain view.
+
+<figure class="pin-sheet-embed">
+  <iframe
+    src="/pin-sheets/el-caballero/index.html"
+    title="El Caballero pin sheet — U.S. Senior Open final qualifying"
+    loading="lazy"
+    style="width:100%; height:900px; border:1px solid var(--rule, #d9d3c2); border-radius:4px; background:#EFE9DD;"
+  ></iframe>
+  <figcaption style="margin-top:0.6rem; font-size:0.85rem; color:var(--muted, #57584F); display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+    <span>The artifact. Hover any thumbnail to zoom.</span>
+    <a href="/pin-sheets/el-caballero/index.html" target="_blank" rel="noopener">Open in new tab →</a>
+  </figcaption>
+</figure>
+
+
+It's not the actual sheet. Tomorrow's actual sheet exists only in the head of one USGA official until 5 a.m. But it's a defensible *prior* — a structured way to think about where each pin is likely to be, why, and what the alternatives are. It tells me which holes to attack and which to two-putt for par. It tells me to lay back on the par 5 seventh to a comfortable wedge yardage. It tells me to be below the hole on every back pin.
+
+The real lesson, though, isn't golf.
+
+The model could have produced exactly this tool from the first prompt. The capability was there. What it produced first was an answer *shaped like the right answer* — text that was honest about the constraints, visuals that lied without saying so. Both came in the same response, packaged together.
+
+If I'd printed that first pin sheet and taken it to the course, I'd have been carrying stylized blobs labeled as the real greens, telling myself I'd done my prep. The disclaimer was right there in the text. It didn't matter, because the visual was wrong.
+
+The fix is uncomfortably mundane: ask the model to come clean. Specifically. *How did you generate this diagram? What's the source for the green shape? Trace it from the image, not from gestalt.* Every iteration in the loop, on every layer, until each one points to something real.
+
+Working with these models well isn't about better prompts. It's about better follow-ups. The first answer is the shape of an answer. The second, third, fourth answers — when you push on specific layers and ask where each part came from — are where the actual tool gets built.
+
+Tomorrow's qualifier starts in the morning. I'll find out how the guesses held up.
+
+Either way, the pin sheet is the artifact. The lesson is the loop.

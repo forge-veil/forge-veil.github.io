@@ -1,0 +1,1071 @@
+---
+interface Props {
+  mode: 'well' | 'time-tilt' | 'orbit' | 'light' | 'wheeler';
+  height?: number;
+  rs?: number;
+  side?: boolean;
+}
+const { mode, height = 420, rs = 1, side = false } = Astro.props;
+---
+
+<div
+  class={`sv-wrap${side ? ' sv-side' : ''}`}
+  data-mode={mode}
+  data-rs={rs}
+  style={`height: ${height}px`}
+>
+  <canvas class="sv-canvas"></canvas>
+  <canvas class="sv-overlay"></canvas>
+  <div class="sv-ui"></div>
+</div>
+
+<style>
+  .sv-wrap {
+    position: relative;
+    width: 100%;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fafafa;
+    border: 1px solid rgba(0,0,0,0.08);
+    margin: 2rem 0;
+  }
+  .sv-side {
+    float: right;
+    width: 44%;
+    margin: 0.25rem 0 1.5rem 2rem;
+  }
+  @media (max-width: 860px) {
+    .sv-side {
+      float: none;
+      width: 100%;
+      margin: 2rem 0;
+    }
+  }
+  .sv-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+  }
+  .sv-canvas:active { cursor: grabbing; }
+  .sv-overlay {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+  .sv-ui {
+    position: absolute;
+    bottom: 14px;
+    left: 16px;
+    right: 16px;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    pointer-events: none;
+  }
+  .sv-reset {
+    font-family: 'Menlo', 'Courier New', monospace;
+    font-size: 10.5px;
+    color: #86868b;
+    cursor: pointer;
+    text-decoration: underline;
+    pointer-events: all;
+  }
+  .sv-toggle {
+    font-family: 'Menlo', 'Courier New', monospace;
+    font-size: 10.5px;
+    color: #1c1c1e;
+    background: rgba(255,255,255,0.7);
+    border: 1px solid rgba(0,0,0,0.12);
+    border-radius: 6px;
+    padding: 5px 10px;
+    cursor: pointer;
+    pointer-events: all;
+    backdrop-filter: blur(4px);
+  }
+  .sv-toggle:hover { background: rgba(255,255,255,0.95); }
+</style>
+
+<script>
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { flammZ, throwHeight, computeOrbit, computeLightRay, deflectionAngle } from '../lib/schwarzschild';
+
+function initViz(wrap: HTMLElement, mode: string, rs: number) {
+  const glCanvas = wrap.querySelector<HTMLCanvasElement>('.sv-canvas')!;
+  const ovCanvas = wrap.querySelector<HTMLCanvasElement>('.sv-overlay')!;
+  const uiDiv    = wrap.querySelector<HTMLElement>('.sv-ui')!;
+
+  const renderer = new THREE.WebGLRenderer({ canvas: glCanvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setClearColor(0xfafafa, 1);
+
+  const scene  = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(42, 1, 0.01, 100);
+  camera.position.set(0, 3.6, 6.4);
+  camera.lookAt(0, 0, 0);
+
+  const controls = new OrbitControls(camera, glCanvas);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.minPolarAngle = 0.15;
+  controls.maxPolarAngle = Math.PI / 2 - 0.02;
+  controls.enablePan = false;
+
+  // Soft, even lighting so MeshStandard surfaces read as 3D without harsh speculars.
+  scene.add(new THREE.HemisphereLight(0xffffff, 0xdfe0e6, 1.05));
+  const key = new THREE.DirectionalLight(0xffffff, 0.65);
+  key.position.set(4, 7, 5);
+  scene.add(key);
+
+  function resize() {
+    const w = wrap.clientWidth, h = wrap.clientHeight;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    const dpr = Math.min(devicePixelRatio, 2);
+    ovCanvas.width  = Math.round(w * dpr);
+    ovCanvas.height = Math.round(h * dpr);
+    ovCanvas.style.width  = w + 'px';
+    ovCanvas.style.height = h + 'px';
+  }
+  resize();
+  const resizeController = new AbortController();
+  window.addEventListener('resize', resize, { signal: resizeController.signal });
+
+  const disposeList: Array<THREE.BufferGeometry | THREE.Material> = [];
+  let afterRender: (() => void) | null = null;
+
+  if (mode === 'well')      afterRender = setupWell(scene, camera, controls, rs, ovCanvas, disposeList);
+  if (mode === 'time-tilt') afterRender = setupTimeTilt(scene, camera, controls, ovCanvas, disposeList);
+  if (mode === 'orbit')     afterRender = setupOrbit(scene, camera, controls, uiDiv, ovCanvas, disposeList);
+  if (mode === 'light')     afterRender = setupLight(scene, camera, controls, uiDiv, ovCanvas, disposeList);
+  if (mode === 'wheeler')   afterRender = setupWheeler(scene, camera, controls, ovCanvas, disposeList);
+
+  let animId: number | null = null;
+  function tick() {
+    animId = requestAnimationFrame(tick);
+    controls.update();
+    afterRender?.();
+    renderer.render(scene, camera);
+  }
+
+  const observer = new IntersectionObserver(([entry]) => {
+    if (entry.isIntersecting) { if (animId === null) tick(); }
+    else { if (animId !== null) { cancelAnimationFrame(animId); animId = null; } }
+  }, { threshold: 0 });
+  observer.observe(wrap);
+
+  new MutationObserver(() => {
+    if (!document.contains(wrap)) {
+      resizeController.abort();
+      observer.disconnect();
+      if (animId !== null) { cancelAnimationFrame(animId); animId = null; }
+      renderer.dispose();
+      disposeList.forEach(d => d.dispose());
+    }
+  }).observe(wrap.parentElement!, { childList: true });
+}
+
+// ── Shared: a shaded sphere (mass / planet) ───────────────────────────
+function makeSphere(
+  radius: number, color: number,
+  disposeList: Array<THREE.BufferGeometry | THREE.Material>
+): THREE.Mesh {
+  const g = new THREE.SphereGeometry(radius, 32, 32);
+  const m = new THREE.MeshStandardMaterial({ color, roughness: 0.55, metalness: 0.0 });
+  disposeList.push(g, m);
+  return new THREE.Mesh(g, m);
+}
+
+// ── Shared: build a tube along a list of points ───────────────────────
+function tubeFrom(
+  pts: THREE.Vector3[], radius: number, color: number, opacity: number,
+  disposeList: Array<THREE.BufferGeometry | THREE.Material>
+): THREE.Mesh {
+  const curve = new THREE.CatmullRomCurve3(pts);
+  const g = new THREE.TubeGeometry(curve, Math.min(600, pts.length * 2), radius, 10, false);
+  const m = new THREE.MeshStandardMaterial({
+    color, roughness: 0.5, transparent: opacity < 1, opacity,
+  });
+  disposeList.push(g, m);
+  return new THREE.Mesh(g, m);
+}
+
+// ── Shared: 2D overlay labels that track 3D points as the camera orbits ──
+type Label = { v: THREE.Vector3; text: string; color?: string; dx?: number; dy?: number; align?: CanvasTextAlign; dot?: boolean };
+function drawOverlay(
+  ovCanvas: HTMLCanvasElement,
+  camera: THREE.PerspectiveCamera,
+  caption: string | null,
+  labels: Label[]
+) {
+  const ctx = ovCanvas.getContext('2d');
+  if (!ctx) return;
+  const dpr = Math.min(devicePixelRatio, 2);
+  const W = ovCanvas.width, H = ovCanvas.height;
+  ctx.clearRect(0, 0, W, H);
+  ctx.textBaseline = 'middle';
+
+  if (caption) {
+    ctx.font = `${12 * dpr}px Menlo, monospace`;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = 'rgba(28,28,30,0.82)';
+    ctx.fillText(caption, 16 * dpr, 18 * dpr);
+  }
+
+  ctx.font = `${11.5 * dpr}px Menlo, monospace`;
+  for (const l of labels) {
+    const p = l.v.clone().project(camera);
+    if (p.z > 1) continue;                       // behind the camera
+    const x = (p.x * 0.5 + 0.5) * W;
+    const y = (-p.y * 0.5 + 0.5) * H;
+    const dx = (l.dx ?? 9) * dpr;
+    const dy = (l.dy ?? 0) * dpr;
+    if (l.dot) {
+      ctx.fillStyle = l.color ?? '#1c1c1e';
+      ctx.beginPath(); ctx.arc(x, y, 2.5 * dpr, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.fillStyle = l.color ?? '#1c1c1e';
+    ctx.textAlign = l.align ?? (dx < 0 ? 'right' : 'left');
+    ctx.fillText(l.text, x + dx, y + dy);
+  }
+}
+
+// ── Shared: Kepler-correct timing (equal areas in equal times) ────────
+// computeOrbit samples uniformly in angle; weighting each step by r² makes
+// the body linger at aphelion and race through perihelion, as it really does.
+function keplerIndexer(radii: number[]): (tau: number) => number {
+  const cum = new Float32Array(radii.length);
+  let acc = 0;
+  for (let i = 0; i < radii.length; i++) { acc += radii[i] * radii[i]; cum[i] = acc; }
+  const total = acc || 1;
+  return (tau: number) => {
+    const target = (tau - Math.floor(tau)) * total;
+    let lo = 0, hi = radii.length - 1;
+    while (lo < hi) { const m = (lo + hi) >> 1; if (cum[m] < target) lo = m + 1; else hi = m; }
+    return lo;
+  };
+}
+
+// ── Shared: a fading comet trail that follows the moving body ──────────
+function makeCometTrail(
+  scene: THREE.Scene, headColor: number,
+  disposeList: Array<THREE.BufferGeometry | THREE.Material>
+): (path: THREE.Vector3[], i: number) => void {
+  const N = 52;
+  const geo = new THREE.BufferGeometry();
+  const pos = new Float32Array(N * 3), col = new Float32Array(N * 3);
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  const mat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.9 });
+  disposeList.push(geo, mat);
+  scene.add(new THREE.Line(geo, mat));
+  const head = new THREE.Color(headColor), tail = new THREE.Color(0xc8ccd4);
+  return (path: THREE.Vector3[], i: number) => {
+    for (let k = 0; k < N; k++) {
+      const p = path[Math.max(0, i - (N - 1) + k)];
+      pos[k * 3] = p.x; pos[k * 3 + 1] = p.y; pos[k * 3 + 2] = p.z;
+      const c = tail.clone().lerp(head, Math.pow(k / (N - 1), 1.4));
+      col[k * 3] = c.r; col[k * 3 + 1] = c.g; col[k * 3 + 2] = c.b;
+    }
+    geo.attributes.position.needsUpdate = true;
+    geo.attributes.color.needsUpdate = true;
+  };
+}
+
+// ── Shared: split a precessing path into one-revolution segments ──────
+// Boundaries fall at aphelion (local maxima of r); each segment carries its
+// own Kepler weights and the index of its closest approach (perihelion).
+type OrbitSeg = { sp: THREE.Vector3[]; cum: Float32Array; total: number; periIdx: number };
+function splitOrbits(pts: THREE.Vector3[], radii: number[]): OrbitSeg[] {
+  const bounds = [0];
+  for (let i = 1; i < radii.length - 1; i++)
+    if (radii[i] >= radii[i - 1] && radii[i] > radii[i + 1]) bounds.push(i);
+  bounds.push(radii.length - 1);
+  const segs: OrbitSeg[] = [];
+  for (let b = 0; b < bounds.length - 1; b++) {
+    const a = bounds[b], c = bounds[b + 1];
+    if (c - a < 40) continue;
+    const sp = pts.slice(a, c + 1);
+    const cum = new Float32Array(sp.length);
+    let acc = 0, periIdx = 0, rmin = Infinity;
+    for (let i = 0; i < sp.length; i++) {
+      const r = radii[a + i];
+      acc += r * r; cum[i] = acc;
+      if (r < rmin) { rmin = r; periIdx = i; }
+    }
+    segs.push({ sp, cum, total: acc || 1, periIdx });
+  }
+  return segs;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// Mode: well — Flamm's paraboloid gravity well (shaded 3D)
+// ══════════════════════════════════════════════════════════════════════
+const WELL_R_MAX = 7;
+const WELL_RADIAL = 96;
+const WELL_ANG = 120;
+const WELL_CIRCLES = 14;
+const WELL_SPOKES = 28;
+const WELL_LIFT = 0.012;
+const WELL_DEPTH = 1.35;   // vertical exaggeration so the throat plunges dramatically
+
+// Radial samples bunched toward the throat, where the wall is nearly vertical.
+function wellR(i: number, radial: number, rs: number): number {
+  return rs + (WELL_R_MAX - rs) * Math.pow(i / radial, 2.1);
+}
+// Depth below the flat rim: 0 at the rim, deepest at the throat (r = rs).
+function wellY(r: number, rs: number): number {
+  return -WELL_DEPTH * (flammZ(WELL_R_MAX, rs) - flammZ(r, rs));
+}
+
+function setupWell(
+  scene: THREE.Scene,
+  camera: THREE.PerspectiveCamera,
+  controls: InstanceType<typeof OrbitControls>,
+  rs: number,
+  ovCanvas: HTMLCanvasElement,
+  disposeList: Array<THREE.BufferGeometry | THREE.Material>
+): (() => void) | null {
+  const geo = buildWell(rs);
+  applyWellColors(geo, rs);
+  const mat = new THREE.MeshStandardMaterial({
+    vertexColors: true,
+    roughness: 0.82,
+    metalness: 0.0,
+    side: THREE.DoubleSide,
+    polygonOffset: true,
+    polygonOffsetFactor: 1,
+    polygonOffsetUnits: 1,
+  });
+  disposeList.push(geo, mat);
+  scene.add(new THREE.Mesh(geo, mat));
+
+  const gridGeo = buildWellGrid(rs);
+  const gridMat = new THREE.LineBasicMaterial({ color: 0x5a5a68, transparent: true, opacity: 0.28 });
+  disposeList.push(gridGeo, gridMat);
+  scene.add(new THREE.LineSegments(gridGeo, gridMat));
+
+  // Central mass sinks into the throat, with a faint glow shell.
+  const throatY = wellY(rs, rs);
+  const mass = makeSphere(Math.max(0.22, rs * 0.3), 0x0b0b0d, disposeList);
+  mass.position.set(0, throatY + 0.18, 0);
+  scene.add(mass);
+  const glow = makeSphere(Math.max(0.22, rs * 0.3) * 1.7, 0x9db4ff, disposeList);
+  (glow.material as THREE.MeshStandardMaterial).transparent = true;
+  (glow.material as THREE.MeshStandardMaterial).opacity = 0.1;
+  (glow.material as THREE.MeshStandardMaterial).emissive = new THREE.Color(0x6f8cff);
+  glow.position.copy(mass.position);
+  scene.add(glow);
+
+  // A test mass circling on the funnel wall — motion + depth cue.
+  const ball = makeSphere(0.12, 0x3b5bdb, disposeList);
+  scene.add(ball);
+  const ballR = rs + (WELL_R_MAX - rs) * 0.28;
+
+  camera.position.set(0, 10.2, 11.4);
+  controls.target.set(0, throatY * 0.5, 0);
+  controls.autoRotate = true;
+  controls.autoRotateSpeed = 0.5;
+
+  const rimPt = new THREE.Vector3(WELL_R_MAX * 0.98, 0, 0);
+  const t0 = performance.now();
+  return function () {
+    const a = (performance.now() - t0) / 1000 * 0.8;
+    ball.position.set(ballR * Math.cos(a), wellY(ballR, rs) + 0.14, ballR * Math.sin(a));
+    drawOverlay(ovCanvas, camera, "Flamm's paraboloid: the spatial curvature around a mass", [
+      { v: mass.position.clone().setY(throatY + 0.5), text: 'mass M', color: '#1c1c1e', align: 'center', dx: 0, dy: -6 },
+      { v: rimPt, text: 'far away: flat', color: '#86868b' },
+      { v: ball.position.clone().setY(ball.position.y + 0.22), text: 'test mass', color: '#3b5bdb', align: 'center', dx: 0, dy: -6 },
+    ]);
+  };
+}
+
+function buildWell(rs: number): THREE.BufferGeometry {
+  const radial = WELL_RADIAL, ang = WELL_ANG;
+  const geo = new THREE.BufferGeometry();
+  const verts: number[] = [], idx: number[] = [];
+  for (let i = 0; i <= radial; i++) {
+    const r = wellR(i, radial, rs);
+    const y = wellY(r, rs);
+    for (let j = 0; j <= ang; j++) {
+      const t = (j / ang) * Math.PI * 2;
+      verts.push(r * Math.cos(t), y, r * Math.sin(t));
+    }
+  }
+  const row = ang + 1;
+  for (let i = 0; i < radial; i++)
+    for (let j = 0; j < ang; j++) {
+      const a = i * row + j, b = a + row;
+      idx.push(a, b, a + 1, b, b + 1, a + 1);
+    }
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+  geo.setIndex(idx); geo.computeVertexNormals();
+  return geo;
+}
+
+// Colour from pale lavender at the flat rim to deep indigo at the throat.
+function applyWellColors(geo: THREE.BufferGeometry, rs: number) {
+  const pos = geo.attributes.position as THREE.BufferAttribute;
+  const n = pos.count;
+  const colors = new Float32Array(n * 3);
+  const yMin = wellY(rs, rs); // most negative (throat)
+  for (let i = 0; i < n; i++) {
+    const t = Math.min(1, Math.max(0, pos.getY(i) / yMin)); // 0 rim → 1 throat
+    const e = t * t; // bias the darkening toward the deep throat
+    colors[i * 3]     = 0.95 - 0.68 * e;
+    colors[i * 3 + 1] = 0.95 - 0.66 * e;
+    colors[i * 3 + 2] = 0.99 - 0.36 * e;
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+}
+
+function buildWellGrid(rs: number): THREE.BufferGeometry {
+  const radial = WELL_RADIAL, ang = WELL_ANG;
+  const verts: number[] = [];
+  const yOf = (r: number) => wellY(r, rs) + WELL_LIFT;
+  for (let c = 0; c <= WELL_CIRCLES; c++) {
+    const i = Math.round((c / WELL_CIRCLES) * radial);
+    const r = wellR(i, radial, rs);
+    const y = yOf(r);
+    for (let j = 0; j < ang; j++) {
+      const t0 = (j / ang) * Math.PI * 2, t1 = ((j + 1) / ang) * Math.PI * 2;
+      verts.push(r * Math.cos(t0), y, r * Math.sin(t0), r * Math.cos(t1), y, r * Math.sin(t1));
+    }
+  }
+  for (let s = 0; s < WELL_SPOKES; s++) {
+    const t = (s / WELL_SPOKES) * Math.PI * 2;
+    for (let i = 0; i < radial; i++) {
+      const r0 = wellR(i, radial, rs), r1 = wellR(i + 1, radial, rs);
+      verts.push(r0 * Math.cos(t), yOf(r0), r0 * Math.sin(t), r1 * Math.cos(t), yOf(r1), r1 * Math.sin(t));
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+  return geo;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// Mode: time-tilt — a thrown ball's worldline as a geodesic on a 3D sheet
+// The sheet of spacetime starts flat, with the worldline arcing above it
+// (curvature in the PATH). Curve spacetime and the sheet inflates up to
+// meet the arc — now the worldline lies straight IN the sheet (curvature
+// in the GEOMETRY). Same motion, curvature relocated.
+// ══════════════════════════════════════════════════════════════════════
+const TT_T = 2, TT_APEX = 1.5, TT_SX = 2.1, TT_SZ = 1.4;
+const TT_SEGX = 56, TT_SEGZ = 26;
+
+function setupTimeTilt(
+  scene: THREE.Scene,
+  camera: THREE.PerspectiveCamera,
+  controls: InstanceType<typeof OrbitControls>,
+  ovCanvas: HTMLCanvasElement,
+  disposeList: Array<THREE.BufferGeometry | THREE.Material>
+): (() => void) | null {
+  camera.position.set(0.2, 2.9, 6.2);
+  controls.target.set(0, TT_APEX * 0.42, 0);
+  controls.autoRotate = false;
+
+  const tOf = (x: number) => ((x + TT_SX) / (2 * TT_SX)) * TT_T;      // time from x
+  const fall = (z: number) => Math.max(0, 1 - (z / TT_SZ) * (z / TT_SZ)); // ridge across z
+  const sheetY = (x: number, z: number, k: number) => k * throwHeight(tOf(x), TT_T, TT_APEX) * fall(z);
+
+  // Sheet surface
+  const sGeo = new THREE.PlaneGeometry(TT_SX * 2, TT_SZ * 2, TT_SEGX, TT_SEGZ);
+  sGeo.rotateX(-Math.PI / 2);
+  const sMat = new THREE.MeshStandardMaterial({
+    color: 0xececf4, roughness: 0.9, metalness: 0.0, side: THREE.DoubleSide,
+    polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
+  });
+  disposeList.push(sGeo, sMat);
+  scene.add(new THREE.Mesh(sGeo, sMat));
+
+  // Grid lines that hug the sheet
+  const gcols = 14, grows = 10, gseg = TT_SEGX;
+  const gridGeo = new THREE.BufferGeometry();
+  const gridCount = (grows + 1) * gseg * 2 + (gcols + 1) * gseg * 2;
+  const gridPos = new Float32Array(gridCount * 3);
+  gridGeo.setAttribute('position', new THREE.BufferAttribute(gridPos, 3));
+  const gridMat = new THREE.LineBasicMaterial({ color: 0x6b6b78, transparent: true, opacity: 0.3 });
+  disposeList.push(gridGeo, gridMat);
+  scene.add(new THREE.LineSegments(gridGeo, gridMat));
+
+  // Worldline (fixed arc — the physical motion never changes)
+  const NWL = 96;
+  const wlPts: THREE.Vector3[] = [];
+  for (let i = 0; i <= NWL; i++) {
+    const x = -TT_SX + (2 * TT_SX) * (i / NWL);
+    wlPts.push(new THREE.Vector3(x, throwHeight(tOf(x), TT_T, TT_APEX) + 0.015, 0));
+  }
+  const wlGeo = new THREE.BufferGeometry().setFromPoints(wlPts);
+  const wlMat = new THREE.LineBasicMaterial({ color: 0x1c1c1e });
+  disposeList.push(wlGeo, wlMat);
+  scene.add(new THREE.Line(wlGeo, wlMat));
+
+  const ball = makeSphere(0.09, 0x1c1c1e, disposeList);
+  scene.add(ball);
+
+  const ease = (x: number) => { const c = Math.max(0, Math.min(1, x)); return c * c * (3 - 2 * c); };
+  const t0 = performance.now();
+  return function () {
+    // Auto-cycle the curvature: flat, inflate to curved, hold, flatten, repeat.
+    const e = ((performance.now() - t0) / 1000) % 9;
+    const k = e < 1.5 ? 0
+            : e < 3.5 ? ease((e - 1.5) / 2)
+            : e < 5.5 ? 1
+            : e < 7.5 ? 1 - ease((e - 5.5) / 2)
+            : 0;
+
+    // Update sheet vertices
+    const pos = sGeo.attributes.position as THREE.BufferAttribute;
+    for (let i = 0; i < pos.count; i++) {
+      pos.setY(i, sheetY(pos.getX(i), pos.getZ(i), k));
+    }
+    pos.needsUpdate = true;
+    sGeo.computeVertexNormals();
+
+    // Update grid lines to hug the sheet
+    let p = 0;
+    const push = (x: number, z: number) => {
+      gridPos[p++] = x; gridPos[p++] = sheetY(x, z, k) + 0.006; gridPos[p++] = z;
+    };
+    for (let r = 0; r <= grows; r++) {
+      const z = -TT_SZ + (2 * TT_SZ) * (r / grows);
+      for (let s = 0; s < gseg; s++) {
+        const xa = -TT_SX + (2 * TT_SX) * (s / gseg), xb = -TT_SX + (2 * TT_SX) * ((s + 1) / gseg);
+        push(xa, z); push(xb, z);
+      }
+    }
+    for (let c = 0; c <= gcols; c++) {
+      const x = -TT_SX + (2 * TT_SX) * (c / gcols);
+      for (let s = 0; s < gseg; s++) {
+        const za = -TT_SZ + (2 * TT_SZ) * (s / gseg), zb = -TT_SZ + (2 * TT_SZ) * ((s + 1) / gseg);
+        push(x, za); push(x, zb);
+      }
+    }
+    gridGeo.attributes.position.needsUpdate = true;
+
+    // Ball rides the worldline
+    const ph = ((performance.now() - t0) / 1000 / TT_T) % 1;
+    const bx = -TT_SX + 2 * TT_SX * ph;
+    ball.position.set(bx, throwHeight(tOf(bx), TT_T, TT_APEX) + 0.05, 0);
+
+    drawOverlay(ovCanvas, camera,
+      k > 0.5 ? 'curved spacetime: the path is a straight geodesic'
+              : 'flat spacetime: the path only looks curved',
+      [
+        { v: new THREE.Vector3(TT_SX + 0.12, 0.02, 0), text: 'time →', color: '#86868b' },
+        { v: new THREE.Vector3(-TT_SX, TT_APEX + 0.28, 0), text: 'space (height)', color: '#86868b', align: 'left', dx: 0, dy: -4 },
+        { v: new THREE.Vector3(-TT_SX * 0.34, throwHeight(tOf(-TT_SX * 0.34), TT_T, TT_APEX) + 0.12, 0), text: 'worldline', color: '#1c1c1e', dy: -6 },
+      ]);
+  };
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// Mode: orbit — a planet's geodesic, precessing (Einstein) or closed (Newton)
+// ══════════════════════════════════════════════════════════════════════
+// Gentle, believable precession: rs=0.08, L=0.31 gives ~21° advance per orbit
+// with a nicely eccentric ellipse (rather than the wild ~100°/orbit before).
+const ORB_RS = 0.08, ORB_L = 0.31, ORB_R0 = 4, ORB_DPHI = 0.02, ORB_STEPS = 1700, ORB_FIT = 2.5;
+// Curved sheet (visual): a well the orbit visibly rides in.
+const ORB_SHEET_EXT = 3.2, ORB_SHEET_SEG = 44, ORB_WELL_W = 1.15, ORB_WELL_D = 1.7;
+function orbitWellY(r: number): number {
+  return -ORB_WELL_D / (1 + (r / ORB_WELL_W) * (r / ORB_WELL_W));
+}
+
+function setupOrbit(
+  scene: THREE.Scene,
+  camera: THREE.PerspectiveCamera,
+  controls: InstanceType<typeof OrbitControls>,
+  uiDiv: HTMLElement,
+  ovCanvas: HTMLCanvasElement,
+  disposeList: Array<THREE.BufferGeometry | THREE.Material>
+): (() => void) | null {
+  camera.position.set(0, 4.6, 6.0);
+  controls.target.set(0, -0.5, 0);
+  controls.autoRotate = false;
+
+  // ── Curved sheet of spacetime the orbit lives in ──────────────────
+  const shGeo = new THREE.PlaneGeometry(ORB_SHEET_EXT * 2, ORB_SHEET_EXT * 2, ORB_SHEET_SEG, ORB_SHEET_SEG);
+  shGeo.rotateX(-Math.PI / 2);
+  const shPos = shGeo.attributes.position as THREE.BufferAttribute;
+  const shCol: number[] = [];
+  const yMin = orbitWellY(0);
+  for (let i = 0; i < shPos.count; i++) {
+    const y = orbitWellY(Math.hypot(shPos.getX(i), shPos.getZ(i)));
+    shPos.setY(i, y);
+    const t = Math.min(1, Math.max(0, y / yMin)), e = t * t;
+    // Kept pale and near-neutral so the blue orbit lines read clearly.
+    shCol.push(0.94 - 0.15 * e, 0.94 - 0.15 * e, 0.97 - 0.13 * e);
+  }
+  shPos.needsUpdate = true;
+  shGeo.setAttribute('color', new THREE.Float32BufferAttribute(shCol, 3));
+  shGeo.computeVertexNormals();
+  const shMat = new THREE.MeshStandardMaterial({
+    vertexColors: true, roughness: 0.9, side: THREE.DoubleSide,
+    polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
+  });
+  disposeList.push(shGeo, shMat);
+  scene.add(new THREE.Mesh(shGeo, shMat));
+
+  const gv: number[] = [], gLines = 18, gSeg = ORB_SHEET_SEG;
+  const gYOf = (x: number, z: number) => orbitWellY(Math.hypot(x, z)) + 0.012;
+  for (let i = 0; i <= gLines; i++) {
+    const x = -ORB_SHEET_EXT + 2 * ORB_SHEET_EXT * (i / gLines);
+    for (let s = 0; s < gSeg; s++) {
+      const z0 = -ORB_SHEET_EXT + 2 * ORB_SHEET_EXT * (s / gSeg), z1 = -ORB_SHEET_EXT + 2 * ORB_SHEET_EXT * ((s + 1) / gSeg);
+      gv.push(x, gYOf(x, z0), z0, x, gYOf(x, z1), z1);
+    }
+  }
+  for (let j = 0; j <= gLines; j++) {
+    const z = -ORB_SHEET_EXT + 2 * ORB_SHEET_EXT * (j / gLines);
+    for (let s = 0; s < gSeg; s++) {
+      const x0 = -ORB_SHEET_EXT + 2 * ORB_SHEET_EXT * (s / gSeg), x1 = -ORB_SHEET_EXT + 2 * ORB_SHEET_EXT * ((s + 1) / gSeg);
+      gv.push(x0, gYOf(x0, z), z, x1, gYOf(x1, z), z);
+    }
+  }
+  const gGeo = new THREE.BufferGeometry();
+  gGeo.setAttribute('position', new THREE.Float32BufferAttribute(gv, 3));
+  const gMat = new THREE.LineBasicMaterial({ color: 0x6b6b78, transparent: true, opacity: 0.28 });
+  disposeList.push(gGeo, gMat);
+  scene.add(new THREE.LineSegments(gGeo, gMat));
+
+  const opts = { rs: ORB_RS, L: ORB_L, r0: ORB_R0, dPhi: ORB_DPHI, steps: ORB_STEPS };
+  const raw = {
+    einstein: computeOrbit({ ...opts, relativistic: true }),
+    newton:   computeOrbit({ ...opts, relativistic: false }),
+  };
+  const allR = raw.einstein.concat(raw.newton).map(p => Math.hypot(p.x, p.y));
+  const scale = ORB_FIT / Math.max(...allR);
+  // Lift each orbit point onto the curved sheet.
+  const toV = (p: { x: number; y: number }) => {
+    const X = p.x * scale, Z = p.y * scale;
+    return new THREE.Vector3(X, orbitWellY(Math.hypot(X, Z)) + 0.04, Z);
+  };
+  const paths = { einstein: raw.einstein.map(toV), newton: raw.newton.map(toV) };
+
+  const mass = makeSphere(0.2, 0x0b0b0d, disposeList);
+  mass.position.set(0, orbitWellY(0) + 0.08, 0);
+  scene.add(mass);
+  const halo = makeSphere(0.32, 0xffe08a, disposeList);
+  (halo.material as THREE.MeshStandardMaterial).transparent = true;
+  (halo.material as THREE.MeshStandardMaterial).opacity = 0.12;
+  (halo.material as THREE.MeshStandardMaterial).emissive = new THREE.Color(0xffcf6b);
+  halo.position.copy(mass.position);
+  scene.add(halo);
+
+  const radii = {
+    einstein: raw.einstein.map(p => Math.hypot(p.x, p.y)),
+    newton:   raw.newton.map(p => Math.hypot(p.x, p.y)),
+  };
+
+  // The body, and a thin blue growing line for the orbit being traced.
+  const body = makeSphere(0.1, 0x3b5bdb, disposeList);
+  scene.add(body);
+  const activeGeo = new THREE.BufferGeometry();
+  const activeMat = new THREE.LineBasicMaterial({ color: 0x3b5bdb });
+  disposeList.push(activeGeo, activeMat);
+  const activeLine = new THREE.Line(activeGeo, activeMat);
+  activeLine.frustumCulled = false;
+  scene.add(activeLine);
+
+  const MAXSEG = 4;
+  let segs: OrbitSeg[] = [];
+  let dashes: THREE.Line[] = [];    // completed orbits — dashed light-blue
+  let marks: THREE.Mesh[] = [];     // perihelion markers
+  let activeBuf = new Float32Array(3);
+  let relativistic = true;
+
+  function clearLoad() {
+    dashes.forEach(l => { scene.remove(l); l.geometry.dispose(); (l.material as THREE.Material).dispose(); });
+    marks.forEach(m => { scene.remove(m); m.geometry.dispose(); (m.material as THREE.Material).dispose(); });
+    dashes = []; marks = [];
+  }
+
+  function load() {
+    clearLoad();
+    const pts = relativistic ? paths.einstein : paths.newton;
+    const rad = relativistic ? radii.einstein : radii.newton;
+    segs = splitOrbits(pts, rad).slice(0, MAXSEG);
+    let maxLen = 2;
+    for (const s of segs) {
+      maxLen = Math.max(maxLen, s.sp.length);
+      const dg = new THREE.BufferGeometry().setFromPoints(s.sp);
+      const dm = new THREE.LineDashedMaterial({ color: 0x7f9bec, transparent: true, opacity: 0.9, dashSize: 0.09, gapSize: 0.07 });
+      const dl = new THREE.Line(dg, dm); dl.computeLineDistances(); dl.visible = false; scene.add(dl); dashes.push(dl);
+      const ms = makeSphere(0.055, 0xd6336c, disposeList);
+      ms.position.copy(s.sp[s.periIdx]).setY(s.sp[s.periIdx].y + 0.03); ms.visible = false;
+      scene.add(ms); marks.push(ms);
+    }
+    activeBuf = new Float32Array(maxLen * 3);
+    activeGeo.setAttribute('position', new THREE.BufferAttribute(activeBuf, 3));
+  }
+  load();
+
+  const btn = document.createElement('button');
+  btn.className = 'sv-toggle';
+  btn.textContent = 'Einstein · precessing';
+  let t0 = performance.now();
+  btn.addEventListener('click', () => {
+    relativistic = !relativistic;
+    btn.textContent = relativistic ? 'Einstein · precessing' : 'Newton · closed';
+    load();
+    t0 = performance.now();
+  });
+  uiDiv.appendChild(btn);
+
+  // One revolution traces over TRACE s (Kepler-timed), holds, then dims as the
+  // next begins; after all orbits, a pause shows the full precessing fan.
+  const TRACE = 3.4, HOLD = 0.7, SLOT = TRACE + HOLD, ENDPAUSE = 2.6;
+  const segIndex = (s: OrbitSeg, p: number) => {
+    const target = Math.max(0, Math.min(1, p)) * s.total;
+    let lo = 0, hi = s.sp.length - 1;
+    while (lo < hi) { const m = (lo + hi) >> 1; if (s.cum[m] < target) lo = m + 1; else hi = m; }
+    return lo;
+  };
+
+  return function () {
+    const M = segs.length;
+    if (M === 0) return;
+    const e = ((performance.now() - t0) / 1000) % (M * SLOT + ENDPAUSE);
+    const inEnd = e >= M * SLOT;
+    const curSlot = inEnd ? M : Math.floor(e / SLOT);
+    const local = inEnd ? 1 : e - curSlot * SLOT;
+    const prog = local < TRACE ? local / TRACE : 1;
+
+    // Older orbits: dashed + their closest-approach markers left behind.
+    for (let j = 0; j < M; j++) {
+      const done = inEnd || j < curSlot;
+      dashes[j].visible = done;
+      marks[j].visible = done;
+    }
+
+    if (!inEnd) {
+      const s = segs[curSlot];
+      const idx = segIndex(s, prog);
+      for (let k = 0; k <= idx; k++) {
+        activeBuf[k * 3] = s.sp[k].x; activeBuf[k * 3 + 1] = s.sp[k].y + 0.008; activeBuf[k * 3 + 2] = s.sp[k].z;
+      }
+      activeGeo.setDrawRange(0, idx + 1);
+      activeGeo.attributes.position.needsUpdate = true;
+      activeLine.visible = idx >= 1;
+      body.visible = true;
+      body.position.copy(s.sp[idx]).setY(s.sp[idx].y + 0.02);
+      marks[curSlot].visible = idx >= s.periIdx;  // marker drops once past closest approach
+    } else {
+      activeLine.visible = false;
+      body.visible = false;
+    }
+
+    const labels: Label[] = [{ v: new THREE.Vector3(0, orbitWellY(0) + 0.5, 0), text: 'star', color: '#1c1c1e', align: 'center', dx: 0, dy: -6 }];
+    if (body.visible) labels.push({ v: body.position.clone().setY(body.position.y + 0.22), text: 'planet', color: '#3b5bdb', dy: -6 });
+    let lastM = -1;
+    for (let j = 0; j < M; j++) if (marks[j].visible) lastM = j;
+    if (lastM >= 0) labels.push({ v: marks[lastM].position.clone().setY(marks[lastM].position.y + 0.14), text: 'closest approach', color: '#d6336c', dy: -5 });
+    drawOverlay(ovCanvas, camera,
+      relativistic ? 'each orbit swings a little further around: it precesses' : 'every orbit retraces the same ellipse',
+      labels);
+  };
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// Mode: light — null geodesics bend across a curved sheet of spacetime.
+// The plane itself is a shaded gravity well; the light rays ride it,
+// dipping through the curvature. A slider deepens the well (more mass)
+// and the rays bend harder in step, with a live deflection readout.
+// ══════════════════════════════════════════════════════════════════════
+const LIGHT_BS = [1.8, 2.4, 3.2, 4.5, 6];
+const LIGHT_VIEW_R = 7, LIGHT_FIT = 3.1;
+const LIGHT_SHEET_EXT = 3.2, LIGHT_RADIAL = 64, LIGHT_ANG = 96;
+const LIGHT_CIRCLES = 11, LIGHT_SPOKES = 24, LIGHT_LIFT = 0.012;
+const LIGHT_WELL_W = 1.0, LIGHT_WELL_D = 4.6;
+
+// Smooth potential well: deep at the centre, flat far away, scaled by mass.
+function lightWellY(r: number, mass: number): number {
+  return -LIGHT_WELL_D * mass / (1 + (r / LIGHT_WELL_W) * (r / LIGHT_WELL_W));
+}
+
+function setupLight(
+  scene: THREE.Scene,
+  camera: THREE.PerspectiveCamera,
+  controls: InstanceType<typeof OrbitControls>,
+  uiDiv: HTMLElement,
+  ovCanvas: HTMLCanvasElement,
+  disposeList: Array<THREE.BufferGeometry | THREE.Material>
+): (() => void) | null {
+  camera.position.set(0, 4.2, 6.2);
+  controls.target.set(0, -0.4, 0);
+  controls.autoRotate = false;
+
+  const scale = LIGHT_FIT / LIGHT_VIEW_R;
+  let mass = 0.3;
+
+  // Objects rebuilt whenever the mass changes.
+  let sheet: THREE.Mesh | null = null;
+  let grid: THREE.LineSegments | null = null;
+  let ring: THREE.LineSegments | null = null;
+  const rays: THREE.Mesh[] = [];
+  let massSphere: THREE.Mesh | null = null;
+  let maxDefl = 0;
+  let rayLabelPt: THREE.Vector3 | null = null;
+
+  function disposeMesh(o: THREE.Mesh | THREE.LineSegments | null) {
+    if (!o) return;
+    scene.remove(o);
+    o.geometry.dispose();
+    (o.material as THREE.Material).dispose();
+  }
+
+  function rebuild() {
+    rays.forEach(disposeMesh); rays.length = 0;
+    disposeMesh(sheet); disposeMesh(grid); disposeMesh(ring); disposeMesh(massSphere);
+
+    // Curved sheet
+    const sGeo = buildLightSheet(mass);
+    const sMat = new THREE.MeshStandardMaterial({
+      vertexColors: true, roughness: 0.9, metalness: 0.0, side: THREE.DoubleSide,
+      polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
+    });
+    sheet = new THREE.Mesh(sGeo, sMat); scene.add(sheet);
+
+    const gGeo = buildLightGrid(mass);
+    const gMat = new THREE.LineBasicMaterial({ color: 0x6b6b78, transparent: true, opacity: 0.28 });
+    grid = new THREE.LineSegments(gGeo, gMat); scene.add(grid);
+
+    // Light rays, riding the curved sheet
+    maxDefl = 0; rayLabelPt = null;
+    for (const b of LIGHT_BS) {
+      const raw = computeLightRay({ rs: mass, b, dPhi: 0.005, steps: 2000 })
+        .filter(p => Math.hypot(p.x, p.y) <= LIGHT_VIEW_R);
+      if (raw.length < 3) continue;
+      const rmin = Math.min(...raw.map(p => Math.hypot(p.x, p.y)));
+      if (rmin <= mass * 1.1) continue;                 // captured by the mass
+      maxDefl = Math.max(maxDefl, deflectionAngle(raw));
+      const pts = raw.filter((_, i) => i % 2 === 0).map(p => {
+        const X = p.x * scale, Z = p.y * scale;
+        return new THREE.Vector3(X, lightWellY(Math.hypot(X, Z), mass) + 0.03, Z);
+      });
+      if (pts.length < 2) continue;
+      if (!rayLabelPt) rayLabelPt = pts[Math.floor(pts.length * 0.1)].clone();
+      const t = tubeFrom(pts, 0.016, 0xf59f00, 0.95, disposeList);
+      rays.push(t); scene.add(t);
+    }
+
+    // Photon-sphere ring (r = 1.5 rs) traced on the sheet
+    const rphW = 1.5 * mass * scale;
+    ring = ringOnSheet(rphW, mass);
+    scene.add(ring);
+
+    // Central mass, sunk to the bottom of the well
+    const mGeo = new THREE.SphereGeometry(Math.max(0.12, mass * scale * 1.1), 28, 28);
+    const mMat = new THREE.MeshStandardMaterial({ color: 0x0b0b0d, roughness: 0.5 });
+    massSphere = new THREE.Mesh(mGeo, mMat);
+    massSphere.position.set(0, lightWellY(0, mass) + 0.05, 0);
+    scene.add(massSphere);
+  }
+
+  // Mass slider
+  uiDiv.style.pointerEvents = 'all';
+  uiDiv.innerHTML = `
+    <div class="sv-slider-row">
+      <span class="sv-slider-label">Mass</span>
+      <input type="range" min="0.08" max="0.5" step="0.01" value="${mass}">
+      <span class="sv-slider-val">${mass.toFixed(2)}</span>
+    </div>`;
+  const slider = uiDiv.querySelector<HTMLInputElement>('input[type=range]')!;
+  const valSpan = uiDiv.querySelector<HTMLSpanElement>('.sv-slider-val')!;
+  slider.addEventListener('input', () => {
+    mass = parseFloat(slider.value);
+    valSpan.textContent = mass.toFixed(2);
+    rebuild();
+  });
+
+  rebuild();
+
+  return function () {
+    const rphW = 1.5 * mass * scale;
+    const labels: Label[] = [
+      { v: new THREE.Vector3(0, lightWellY(0, mass) + mass * scale * 1.1 + 0.22, 0), text: 'mass', color: '#1c1c1e', align: 'center', dx: 0, dy: -6 },
+      { v: new THREE.Vector3(rphW, lightWellY(rphW, mass) + 0.05, 0), text: 'photon sphere', color: '#86868b' },
+    ];
+    if (rayLabelPt) labels.push({ v: rayLabelPt, text: 'light ray', color: '#c47a12' });
+    drawOverlay(ovCanvas, camera, `more mass, more bending · deflection ≈ ${Math.round(maxDefl * 180 / Math.PI)}°`, labels);
+  };
+}
+
+function buildLightSheet(mass: number): THREE.BufferGeometry {
+  const ext = LIGHT_SHEET_EXT, radial = LIGHT_RADIAL, ang = LIGHT_ANG;
+  const verts: number[] = [], idx: number[] = [], cols: number[] = [];
+  const yMin = lightWellY(0, mass);
+  for (let i = 0; i <= radial; i++) {
+    const r = ext * (i / radial);
+    const y = lightWellY(r, mass);
+    const t = yMin < -1e-6 ? Math.min(1, Math.max(0, y / yMin)) : 0; // 0 rim → 1 centre
+    const e = t * t;
+    for (let j = 0; j <= ang; j++) {
+      const a = (j / ang) * Math.PI * 2;
+      verts.push(r * Math.cos(a), y, r * Math.sin(a));
+      cols.push(0.95 - 0.55 * e, 0.95 - 0.52 * e, 0.99 - 0.26 * e);
+    }
+  }
+  const row = ang + 1;
+  for (let i = 0; i < radial; i++)
+    for (let j = 0; j < ang; j++) {
+      const a = i * row + j, b = a + row;
+      idx.push(a, b, a + 1, b, b + 1, a + 1);
+    }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+  geo.setIndex(idx); geo.computeVertexNormals();
+  return geo;
+}
+
+function buildLightGrid(mass: number): THREE.BufferGeometry {
+  const ext = LIGHT_SHEET_EXT, radial = LIGHT_RADIAL, ang = LIGHT_ANG;
+  const verts: number[] = [];
+  const yOf = (r: number) => lightWellY(r, mass) + LIGHT_LIFT;
+  for (let c = 1; c <= LIGHT_CIRCLES; c++) {
+    const r = ext * (c / LIGHT_CIRCLES);
+    const y = yOf(r);
+    for (let j = 0; j < ang; j++) {
+      const a0 = (j / ang) * Math.PI * 2, a1 = ((j + 1) / ang) * Math.PI * 2;
+      verts.push(r * Math.cos(a0), y, r * Math.sin(a0), r * Math.cos(a1), y, r * Math.sin(a1));
+    }
+  }
+  for (let s = 0; s < LIGHT_SPOKES; s++) {
+    const a = (s / LIGHT_SPOKES) * Math.PI * 2;
+    for (let i = 0; i < radial; i++) {
+      const r0 = ext * (i / radial), r1 = ext * ((i + 1) / radial);
+      verts.push(r0 * Math.cos(a), yOf(r0), r0 * Math.sin(a), r1 * Math.cos(a), yOf(r1), r1 * Math.sin(a));
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+  return geo;
+}
+
+function ringOnSheet(r: number, mass: number): THREE.LineSegments {
+  const verts: number[] = [];
+  const y = lightWellY(r, mass) + LIGHT_LIFT * 2;
+  for (let j = 0; j < 96; j++) {
+    const a0 = (j / 96) * Math.PI * 2, a1 = ((j + 1) / 96) * Math.PI * 2;
+    verts.push(r * Math.cos(a0), y, r * Math.sin(a0), r * Math.cos(a1), y, r * Math.sin(a1));
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+  const mat = new THREE.LineBasicMaterial({ color: 0xf59f00, transparent: true, opacity: 0.55 });
+  return new THREE.LineSegments(geo, mat);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// Mode: wheeler — the two-way street. A mass dimples the grid of spacetime
+// (matter tells spacetime how to curve), and a freely coasting body is
+// swept along the curve it makes (spacetime tells matter how to move).
+// ══════════════════════════════════════════════════════════════════════
+const WH_EXT = 3.2, WH_SEG = 44, WH_WELL_W = 1.15, WH_WELL_D = 2.2, WH_LIFT = 0.012;
+
+function wheelerY(r: number): number {
+  return -WH_WELL_D / (1 + (r / WH_WELL_W) * (r / WH_WELL_W));
+}
+
+function setupWheeler(
+  scene: THREE.Scene,
+  camera: THREE.PerspectiveCamera,
+  controls: InstanceType<typeof OrbitControls>,
+  ovCanvas: HTMLCanvasElement,
+  disposeList: Array<THREE.BufferGeometry | THREE.Material>
+): (() => void) | null {
+  camera.position.set(0, 4.8, 7.2);
+  controls.target.set(0, -0.7, 0);
+  controls.autoRotate = true;
+  controls.autoRotateSpeed = 0.35;
+
+  // Curved sheet of spacetime
+  const sGeo = new THREE.PlaneGeometry(WH_EXT * 2, WH_EXT * 2, WH_SEG, WH_SEG);
+  sGeo.rotateX(-Math.PI / 2);
+  const sPos = sGeo.attributes.position as THREE.BufferAttribute;
+  const cols: number[] = [];
+  const yMin = wheelerY(0);
+  for (let i = 0; i < sPos.count; i++) {
+    const y = wheelerY(Math.hypot(sPos.getX(i), sPos.getZ(i)));
+    sPos.setY(i, y);
+    const t = Math.min(1, Math.max(0, y / yMin)), e = t * t;
+    cols.push(0.95 - 0.52 * e, 0.95 - 0.5 * e, 0.99 - 0.26 * e);
+  }
+  sPos.needsUpdate = true;
+  sGeo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+  sGeo.computeVertexNormals();
+  const sMat = new THREE.MeshStandardMaterial({
+    vertexColors: true, roughness: 0.9, metalness: 0.0, side: THREE.DoubleSide,
+    polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
+  });
+  disposeList.push(sGeo, sMat);
+  scene.add(new THREE.Mesh(sGeo, sMat));
+
+  // Grid lines hugging the sheet
+  const gLines = 18, gSeg = WH_SEG, gv: number[] = [];
+  const yOf = (x: number, z: number) => wheelerY(Math.hypot(x, z)) + WH_LIFT;
+  for (let i = 0; i <= gLines; i++) {
+    const x = -WH_EXT + 2 * WH_EXT * (i / gLines);
+    for (let s = 0; s < gSeg; s++) {
+      const z0 = -WH_EXT + 2 * WH_EXT * (s / gSeg), z1 = -WH_EXT + 2 * WH_EXT * ((s + 1) / gSeg);
+      gv.push(x, yOf(x, z0), z0, x, yOf(x, z1), z1);
+    }
+  }
+  for (let j = 0; j <= gLines; j++) {
+    const z = -WH_EXT + 2 * WH_EXT * (j / gLines);
+    for (let s = 0; s < gSeg; s++) {
+      const x0 = -WH_EXT + 2 * WH_EXT * (s / gSeg), x1 = -WH_EXT + 2 * WH_EXT * ((s + 1) / gSeg);
+      gv.push(x0, yOf(x0, z), z, x1, yOf(x1, z), z);
+    }
+  }
+  const gGeo = new THREE.BufferGeometry();
+  gGeo.setAttribute('position', new THREE.Float32BufferAttribute(gv, 3));
+  const gMat = new THREE.LineBasicMaterial({ color: 0x6b6b78, transparent: true, opacity: 0.3 });
+  disposeList.push(gGeo, gMat);
+  scene.add(new THREE.LineSegments(gGeo, gMat));
+
+  // Central mass at the bottom of the dimple
+  const mass = makeSphere(0.32, 0x0b0b0d, disposeList);
+  mass.position.set(0, wheelerY(0) + 0.14, 0);
+  scene.add(mass);
+
+  // A freely coasting body, orbiting along the curve
+  const raw = computeOrbit({ rs: 0.5, L: 1.15, r0: 4, dPhi: 0.02, steps: 1500, relativistic: true });
+  const maxR = Math.max(...raw.map(p => Math.hypot(p.x, p.y)));
+  const oScale = 2.3 / maxR;
+  const radii = raw.map(p => Math.hypot(p.x, p.y));
+  const path = raw.map(p => {
+    const X = p.x * oScale, Z = p.y * oScale;
+    return new THREE.Vector3(X, wheelerY(Math.hypot(X, Z)) + 0.09, Z);
+  });
+  scene.add(tubeFrom(path, 0.012, 0x9a9aa6, 0.4, disposeList));
+  const body = makeSphere(0.1, 0x3b5bdb, disposeList);
+  scene.add(body);
+  const trail = makeCometTrail(scene, 0x3b5bdb, disposeList);
+  const indexer = keplerIndexer(radii);
+
+  const PERIOD = 15;
+  const t0 = performance.now();
+  return function () {
+    const i = indexer(((performance.now() - t0) / 1000) / PERIOD);
+    body.position.copy(path[i]);
+    trail(path, i);
+    drawOverlay(ovCanvas, camera, "gravity's two-way street (J. A. Wheeler)", [
+      { v: new THREE.Vector3(0, wheelerY(0) + 0.6, 0), text: 'mass curves spacetime', color: '#1c1c1e', align: 'center', dx: 0, dy: -6 },
+      { v: body.position.clone().setY(body.position.y + 0.2), text: 'spacetime moves matter', color: '#3b5bdb', dy: -6 },
+    ]);
+  };
+}
+
+// ── Dispatch (runs last, after all module constants are initialised) ──
+document.querySelectorAll<HTMLElement>('.sv-wrap').forEach(wrap => {
+  const mode = wrap.dataset.mode!;
+  const rs   = parseFloat(wrap.dataset.rs ?? '1');
+  initViz(wrap, mode, rs);
+});
+</script>
