@@ -26,6 +26,7 @@ const { Content, headings } = await render(post);
 
 const postSlug = post.id.replace(/\.(md|mdx)$/, '');
 const canonicalUrl = new URL(`/blog/${postSlug}/`, Astro.site).href;
+const ogImage = new URL(`/og/${postSlug}.png`, Astro.site).href;
 const articleImage = new URL('/og-default.png', Astro.site).href;
 
 const articleSchema = {
@@ -82,6 +83,7 @@ function readTime(body: string | undefined) {
   description={post.data.description}
   canonicalUrl={canonicalUrl}
   ogType="article"
+  ogImage={ogImage}
   publishedAt={post.data.publishedAt}
   tags={post.data.tags}
 >

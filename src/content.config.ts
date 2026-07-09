@@ -59,6 +59,7 @@ export const collections = {
       published: z.boolean().default(false),
       wip: z.boolean().default(false),
       postLayout: z.enum(['longform']).optional(),
+      ogMotif: z.string().optional(),
     }),
   }),
 };
