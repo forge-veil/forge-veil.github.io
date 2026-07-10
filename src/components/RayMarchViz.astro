@@ -1,0 +1,85 @@
+---
+// src/components/RayMarchViz.astro
+import katex from 'katex';
+const eq = katex.renderToString(
+  String.raw`C \;=\; \sum_{\nu} T_\nu\, \alpha_\nu\, c_\nu, \qquad T_\nu = \prod_{\mu < \nu}(1-\alpha_\mu), \qquad \alpha_\nu = 1 - e^{-\sigma_\nu \delta_\nu}`,
+  { displayMode: true, throwOnError: false }
+);
+---
+<figure class="viz raymarch">
+  <div class="viz-eq" set:html={eq} />
+  <canvas id="raymarch-canvas" width="720" height="260"></canvas>
+  <div class="viz-controls">
+    <label>Sample <input id="raymarch-k" type="range" min="0" max="24" value="0" /></label>
+    <span id="raymarch-readout" class="viz-readout"></span>
+  </div>
+  <figcaption>Walk the sample point along the ray. Transmittance <em>T</em> is how much light still reaches the camera after the slabs in front; each slab adds its own color weighted by how opaque it is and how much light survived to reach it.</figcaption>
+</figure>
+
+<script>
+  import { alphaFromSigma } from '../lib/splat';
+
+  const canvas = document.getElementById('raymarch-canvas') as HTMLCanvasElement;
+  const ctx = canvas.getContext('2d')!;
+  const slider = document.getElementById('raymarch-k') as HTMLInputElement;
+  const readout = document.getElementById('raymarch-readout')!;
+  const N = 25;
+  const inkFor = (v: number) => `rgba(28,28,30,${v})`;
+
+  // Density hump along t ∈ [0,1]: two gaussians.
+  const sigmaAt = (t: number) =>
+    2.4 * Math.exp(-((t - 0.4) ** 2) / (2 * 0.02)) + 1.6 * Math.exp(-((t - 0.68) ** 2) / (2 * 0.015));
+  const colorAt = (t: number): [number, number, number] =>
+    t < 0.54 ? [0.20, 0.34, 0.52] : [0.62, 0.35, 0.24]; // muted blue then muted rust
+
+  function draw(kMax: number) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const x0 = 40, x1 = 680, yRay = 70, slabW = (x1 - x0) / N;
+    const delta = 1 / N;
+    // ray line
+    ctx.strokeStyle = inkFor(0.5); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x0, yRay); ctx.lineTo(x1, yRay); ctx.stroke();
+    let T = 1, C = [0, 0, 0];
+    for (let n = 0; n < N; n++) {
+      const t = (n + 0.5) / N;
+      const sigma = sigmaAt(t);
+      const alpha = alphaFromSigma(sigma, delta);
+      const col = colorAt(t);
+      const x = x0 + n * slabW;
+      // slab opacity bar (density)
+      ctx.fillStyle = inkFor(Math.min(0.85, alpha));
+      ctx.fillRect(x, yRay - 22, slabW - 1, 44);
+      if (n <= kMax) {
+        const w = T * alpha;
+        C = [C[0] + w * col[0], C[1] + w * col[1], C[2] + w * col[2]];
+        T *= (1 - alpha);
+        // contribution mark
+        ctx.fillStyle = `rgb(${col.map((c) => Math.round(c * 255)).join(',')})`;
+        ctx.globalAlpha = Math.min(1, w * 3 + 0.15);
+        ctx.fillRect(x, yRay + 40, slabW - 1, 30);
+        ctx.globalAlpha = 1;
+      }
+    }
+    // transmittance bar
+    ctx.fillStyle = inkFor(0.15); ctx.fillRect(40, 150, 640, 14);
+    ctx.fillStyle = inkFor(0.75); ctx.fillRect(40, 150, 640 * T, 14);
+    // accumulated color swatch
+    ctx.fillStyle = `rgb(${C.map((c) => Math.round(Math.min(1, c) * 255)).join(',')})`;
+    ctx.fillRect(40, 185, 90, 50);
+    ctx.strokeStyle = inkFor(0.3); ctx.strokeRect(40, 185, 90, 50);
+    readout.textContent = `T = ${T.toFixed(3)}   ·   accumulated color after ${kMax + 1} samples`;
+  }
+
+  slider.addEventListener('input', () => draw(Number(slider.value)));
+  draw(0);
+</script>
+
+<style>
+  .viz { margin: 2rem 0; }
+  .viz canvas { width: 100%; height: auto; display: block; }
+  .viz-eq { margin-bottom: 1rem; overflow-x: auto; }
+  .viz-controls { display: flex; align-items: center; gap: 1rem; margin-top: 0.75rem; font-family: var(--font-sans); font-size: 0.85rem; color: var(--color-ink-4); }
+  .viz-controls input[type="range"] { accent-color: var(--color-ink); }
+  .viz-readout { color: var(--color-ink-3); }
+  .viz figcaption { font-family: var(--font-sans); font-size: 0.82rem; color: var(--color-ink-4); margin-top: 0.75rem; line-height: 1.5; }
+</style>
