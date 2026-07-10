@@ -50,7 +50,7 @@ There is a deeper problem than geometry, and it is the one that motivates everyt
   <p class="intuition-text">Stop trying to say where the surfaces are. Instead, fill all of space with a colored fog. At every point, the fog has two properties: how strongly it glows, and how much of the light passing through it it stops. A solid wall is just fog that is completely opaque and glows the wall's color. Empty air is fog that is perfectly clear and glows nothing. A wisp of hair is fog that is a little opaque. There are no edges to commit to and nothing to stitch: the whole scene is one soft, continuous cloud, and rendering it is a matter of looking through it.</p>
 </div>
 
-This is the reframing that unlocks everything that follows. Do not model the scene as surfaces. Model it as a **radiance field**: a function defined at every point $\mathbf{x}$ in space and every view direction $\mathbf{d}$, returning a color and a density. In symbols,
+This is the reframing that unlocks everything that follows. Do not model the scene as surfaces. Model it as a **radiance field**: a function defined at every point $\mathbf{x}$ in space and every view direction $\mathbf{d}$, returning a color $c$ and a density $\sigma$. In symbols,
 
 $$F(\mathbf{x}, \mathbf{d}) = \big(\, c(\mathbf{x}, \mathbf{d}),\ \sigma(\mathbf{x}) \,\big)$$
 
@@ -102,9 +102,9 @@ Each factor $(1 - \alpha_\mu)$ is the fraction of light that survived segment $\
 
 $$C = \sum_{\nu} T_\nu\, \alpha_\nu\, c_\nu.$$
 
-This is **alpha compositing**: walk the segments front to back, and each one lays down its color $c_\nu$, painted at strength $\alpha_\nu$ and faded by everything already in front of it, $T_\nu$. It is the exact same "over" operation that stacks semi-transparent layers in any image editor, here derived from the physics of light through fog rather than assumed. The interactive figure below is this sum, made literal: drag the sample point along the ray and watch each segment add its color, watch the transmittance bar drain as opaque fog accumulates, and watch the running color converge to the pixel's final value.
-
 <RayMarchViz />
+
+This is **alpha compositing**: walk the segments front to back, and each one lays down its color $c_\nu$, painted at strength $\alpha_\nu$ and faded by everything already in front of it, $T_\nu$. It is the exact same "over" operation that stacks semi-transparent layers in any image editor, here derived from the physics of light through fog rather than assumed. The interactive figure above is this sum, made literal: drag the sample point along the ray and watch each segment add its color, watch the transmittance bar drain as opaque fog accumulates, and watch the running color converge to the pixel's final value.
 
 That one equation, $C = \sum_{\nu} T_\nu\, \alpha_\nu\, c_\nu$, is the spine of this entire post. Fix it in your mind, because from here on nothing about the goal changes: every method we meet is producing exactly this weighted sum of colors along a ray. What changes is only *how each method stores the field and finds the segments*. NeRF, in the next section, will answer by asking a neural network for $\sigma$ and $c$ at hundreds of sampled points per ray. 3D Gaussian splatting will answer by skipping the ray march entirely and letting explicit blobs deposit their own $\alpha_\nu\, c_\nu$ onto the pixels they cover. Two machines, wildly different in speed, both evaluating this same sum.
 
