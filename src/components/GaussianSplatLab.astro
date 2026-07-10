@@ -144,7 +144,7 @@ const eqProj = katex.renderToString(
 
   // An Astro bundled <script> runs once per page, so ALL mutable per-instance
   // state (scene, view angles, selection, accumulation buffers) lives inside
-  // init() below — one closure per mounted component so multiple embeds on the
+  // init() below, one closure per mounted component so multiple embeds on the
   // same page never share a scene or clobber each other's pixel buffers.
   document.querySelectorAll<HTMLElement>('.gslab').forEach(init);
 
