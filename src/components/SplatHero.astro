@@ -1,0 +1,306 @@
+---
+// src/components/SplatHero.astro
+// Ambient, non-interactive centrepiece for the top of "Painting with
+// Gaussians": ~40 anisotropic Gaussians arranged into a soft rounded form,
+// slowly turning in place. It reuses the exact same transform -> project ->
+// sort -> composite pipeline as GaussianSplatLab (../lib/splat), just without
+// controls, so the reader sees the payoff before the post unpacks the math.
+interface Props {
+  side?: boolean;
+}
+const { side = false } = Astro.props;
+---
+<div class={`sh-wrap${side ? ' sh-side' : ''}`}>
+  <canvas class="sh-canvas" width="200" height="240"></canvas>
+</div>
+
+<script>
+  import {
+    covariance3D,
+    projectCovariance,
+    invMat2,
+    gaussian2D,
+    alphaOver,
+  } from '../lib/splat';
+  import type { Vec3, Mat3, Mat2, Quat, RGB } from '../lib/splat';
+
+  // ── Scene model (same shape as GaussianSplatLab) ─────────────────────
+  type Splat = { pos: Vec3; scale: Vec3; quat: Quat; color: RGB; opacity: number };
+
+  // Muted palette: ink tones plus two restrained accents, matching the lab.
+  const INK: RGB = [0.36, 0.36, 0.40];
+  const INK_DARK: RGB = [0.22, 0.22, 0.27];
+  const INK_LIGHT: RGB = [0.56, 0.56, 0.62];
+  const BLUE: RGB = [0.30, 0.44, 0.60];
+  const RUST: RGB = [0.64, 0.42, 0.32];
+
+  // Unit-axis, angle → quaternion [w,x,y,z].
+  function qAxis(ax: number, ay: number, az: number, angle: number): Quat {
+    const h = angle / 2, s = Math.sin(h);
+    return [Math.cos(h), ax * s, ay * s, az * s];
+  }
+
+  // Deterministic PRNG (mulberry32). The hero's arrangement is fixed by a
+  // hardcoded seed, not Math.random, so the layout never changes between
+  // builds or page loads.
+  function mulberry32(seed: number) {
+    let a = seed >>> 0;
+    return function () {
+      a |= 0;
+      a = (a + 0x6d2b79f5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  // Hardcoded, deterministic layout: a rounded "head" cluster sitting on a
+  // wider, flatter "shoulders" cluster, so the composited cloud reads as a
+  // soft bust silhouette rather than noise. Built once from a fixed seed.
+  function heroScene(): Splat[] {
+    const rnd = mulberry32(20260709);
+    const splats: Splat[] = [];
+
+    function cluster(
+      count: number,
+      center: Vec3,
+      radii: Vec3,
+      baseScale: number,
+      scaleJitter: number,
+      colors: RGB[],
+    ) {
+      for (let i = 0; i < count; i++) {
+        // Deterministic point inside a unit ball via spherical coordinates.
+        const theta = rnd() * Math.PI * 2;
+        const phi = Math.acos(2 * rnd() - 1);
+        const r = Math.cbrt(rnd());
+        const px = r * Math.sin(phi) * Math.cos(theta);
+        const py = r * Math.sin(phi) * Math.sin(theta);
+        const pz = r * Math.cos(phi);
+        const pos: Vec3 = [
+          center[0] + px * radii[0],
+          center[1] + py * radii[1],
+          center[2] + pz * radii[2],
+        ];
+        // Anisotropic: one long axis, two shorter cross axes, random tilt.
+        const along = baseScale * (1 + (rnd() - 0.5) * scaleJitter);
+        const across = along * (0.32 + rnd() * 0.4);
+        const ax = rnd() - 0.5, ay = rnd() - 0.5, az = rnd() - 0.5;
+        const alen = Math.hypot(ax, ay, az) || 1;
+        const quat = qAxis(ax / alen, ay / alen, az / alen, rnd() * Math.PI);
+        const color = colors[Math.floor(rnd() * colors.length)];
+        const opacity = 0.68 + rnd() * 0.24;
+        splats.push({ pos, scale: [along, across, across], quat, color, opacity });
+      }
+    }
+
+    cluster(16, [0, 0.5, 0], [0.7, 0.66, 0.7], 0.48, 0.5, [INK, INK, INK_LIGHT, INK_LIGHT, BLUE]);
+    cluster(24, [0, -0.42, 0], [1.08, 0.62, 0.78], 0.56, 0.55, [INK, INK, INK_DARK, INK_DARK, RUST]);
+
+    return splats;
+  }
+
+  // ── Small matrix helpers (row-major flat 3x3), same as GaussianSplatLab ──
+  function mat3mul(A: Mat3, B: Mat3): Mat3 {
+    const C = new Array(9) as unknown as Mat3;
+    for (let r = 0; r < 3; r++)
+      for (let c = 0; c < 3; c++)
+        C[r * 3 + c] = A[r * 3] * B[c] + A[r * 3 + 1] * B[3 + c] + A[r * 3 + 2] * B[6 + c];
+    return C;
+  }
+  function transpose3(A: Mat3): Mat3 {
+    return [A[0], A[3], A[6], A[1], A[4], A[7], A[2], A[5], A[8]];
+  }
+  function mat3vec(A: Mat3, v: Vec3): Vec3 {
+    return [
+      A[0] * v[0] + A[1] * v[1] + A[2] * v[2],
+      A[3] * v[0] + A[4] * v[1] + A[5] * v[2],
+      A[6] * v[0] + A[7] * v[1] + A[8] * v[2],
+    ];
+  }
+
+  // World→camera rotation W = Rx(el)·Ry(az), same convention as the lab.
+  function camMatrix(az: number, el: number): Mat3 {
+    const ca = Math.cos(az), sa = Math.sin(az);
+    const ce = Math.cos(el), se = Math.sin(el);
+    return [
+      ca, 0, sa,
+      sa * se, ce, -ca * se,
+      -sa * ce, se, ca * ce,
+    ];
+  }
+
+  // ── Canvas / render config (modest internal resolution, CSS-scaled up) ──
+  const W = 200, H = 240;
+  const CX = W / 2, CY = H / 2;
+  const FOCAL = 220;      // pixels
+  const CAM_R = 6.4;      // camera distance from target
+  const EPS_Z = 0.05;     // cull Gaussians at/behind the camera (z <= eps)
+  const EL = 0.18;        // fixed, gentle downward camera tilt
+  const AZ_RATE = 0.12;   // radians / second, slow continuous turn
+  const BG: RGB = [0.980, 0.980, 0.980]; // #fafafa, matches the site vizzes
+
+  type Item = { z: number; sx: number; sy: number; inv: Mat2; cov2: Mat2; color: RGB; opacity: number };
+
+  const REDUCE_MOTION =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // An Astro bundled <script> runs once per page, so ALL mutable per-instance
+  // state (rotation angle, rAF id, observer, accumulation buffers) lives
+  // inside init() below, one closure per mounted component so multiple
+  // embeds on the same page never share state or clobber each other's pixels.
+  document.querySelectorAll<HTMLElement>('.sh-wrap').forEach(init);
+
+  function init(root: HTMLElement) {
+    const canvas = root.querySelector<HTMLCanvasElement>('.sh-canvas')!;
+    const ctx = canvas.getContext('2d')!;
+    const img = ctx.createImageData(W, H);
+
+    // ── Per-instance mutable state ───────────────────────────────────────
+    const splats = heroScene();
+    let az = 0;
+    let rafId = 0;
+    let lastT = 0;
+    const accR = new Float32Array(W * H);
+    const accG = new Float32Array(W * H);
+    const accB = new Float32Array(W * H);
+    const accA = new Float32Array(W * H);
+
+    // ── The render pipeline: transform → project → sort → composite ─────
+    function render() {
+      const Rc = camMatrix(az, EL);
+      const Rct = transpose3(Rc);
+
+      const items: Item[] = [];
+      for (const s of splats) {
+        const mc = mat3vec(Rc, s.pos);
+        mc[2] += CAM_R; // push the target distance R in front of the camera
+        if (mc[2] <= EPS_Z) continue; // cull at/behind camera
+
+        const cov3 = covariance3D(s.scale, s.quat);
+        const covCam = mat3mul(mat3mul(Rc, cov3), Rct); // Σ_cam = W Σ Wᵀ
+        const cov2raw = projectCovariance(covCam, mc, FOCAL); // Σ' = J Σ_cam Jᵀ
+
+        const sx = CX + FOCAL * (mc[0] / mc[2]);
+        const sy = CY - FOCAL * (mc[1] / mc[2]); // y-flip: +y world up → image down
+        const cov2: Mat2 = [cov2raw[0], -cov2raw[1], -cov2raw[1], cov2raw[3]];
+        const inv = invMat2(cov2);
+
+        items.push({ z: mc[2], sx, sy, inv, cov2, color: s.color, opacity: s.opacity });
+      }
+
+      items.sort((a, b) => a.z - b.z); // near→far so front-to-back "over" accumulates right
+
+      accR.fill(0); accG.fill(0); accB.fill(0); accA.fill(0);
+
+      for (const it of items) {
+        const rx = Math.max(1, Math.ceil(3 * Math.sqrt(Math.max(it.cov2[0], 1e-6))));
+        const ry = Math.max(1, Math.ceil(3 * Math.sqrt(Math.max(it.cov2[3], 1e-6))));
+        const x0 = Math.max(0, Math.floor(it.sx - rx));
+        const x1 = Math.min(W - 1, Math.ceil(it.sx + rx));
+        const y0 = Math.max(0, Math.floor(it.sy - ry));
+        const y1 = Math.min(H - 1, Math.ceil(it.sy + ry));
+        const op = it.opacity;
+        for (let py = y0; py <= y1; py++) {
+          const dy = py - it.sy;
+          const rowBase = py * W;
+          for (let px = x0; px <= x1; px++) {
+            const idx = rowBase + px;
+            const dstA = accA[idx];
+            if (dstA >= 0.999) continue;
+            const g = gaussian2D(px - it.sx, dy, it.inv);
+            const srcA = op * g;
+            if (srcA < 0.003) continue;
+            const res = alphaOver([accR[idx], accG[idx], accB[idx]], dstA, it.color, srcA);
+            accR[idx] = res.rgb[0];
+            accG[idx] = res.rgb[1];
+            accB[idx] = res.rgb[2];
+            accA[idx] = res.a;
+          }
+        }
+      }
+
+      const data = img.data;
+      for (let p = 0; p < W * H; p++) {
+        const a = accA[p];
+        const t = 1 - a;
+        const r = accR[p] + t * BG[0];
+        const g = accG[p] + t * BG[1];
+        const b = accB[p] + t * BG[2];
+        const o = p * 4;
+        data[o] = Math.min(255, r * 255);
+        data[o + 1] = Math.min(255, g * 255);
+        data[o + 2] = Math.min(255, b * 255);
+        data[o + 3] = 255;
+      }
+      ctx.putImageData(img, 0, 0);
+    }
+
+    // ── Rotation loop, paused off-screen ─────────────────────────────────
+    function frame(t: number) {
+      if (lastT === 0) lastT = t;
+      const dt = (t - lastT) / 1000;
+      lastT = t;
+      az += AZ_RATE * dt;
+      render();
+      rafId = requestAnimationFrame(frame);
+    }
+    function start() {
+      if (rafId || REDUCE_MOTION) return;
+      lastT = 0;
+      rafId = requestAnimationFrame(frame);
+    }
+    function stop() {
+      if (!rafId) return;
+      cancelAnimationFrame(rafId);
+      rafId = 0;
+    }
+
+    render(); // first paint, including the reduced-motion single static frame
+
+    if (REDUCE_MOTION) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) start();
+          else stop();
+        }
+      },
+      { threshold: 0.01 },
+    );
+    observer.observe(canvas);
+  }
+</script>
+
+<style>
+  .sh-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 280px;
+    margin: 0 auto 2rem;
+    aspect-ratio: 200 / 240;
+  }
+  .sh-side {
+    float: right;
+    width: 42%;
+    margin: 0.25rem 0 1.5rem 2rem;
+  }
+  @media (max-width: 860px) {
+    .sh-side {
+      float: none;
+      width: 100%;
+      max-width: 280px;
+      margin: 0 auto 2rem;
+    }
+  }
+  .sh-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    border-radius: 10px;
+    background: #fafafa;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+  }
+</style>
