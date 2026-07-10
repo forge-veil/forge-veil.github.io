@@ -1,10 +1,15 @@
 ---
 // src/components/SplatHero.astro
 // Ambient, non-interactive centrepiece for the top of "Painting with
-// Gaussians": ~40 anisotropic Gaussians arranged into a soft rounded form,
-// slowly turning in place. It reuses the exact same transform -> project ->
-// sort -> composite pipeline as GaussianSplatLab (../lib/splat), just without
-// controls, so the reader sees the payoff before the post unpacks the math.
+// Gaussians": a small potted plant, built from about a thousand anisotropic
+// Gaussians (a flat ground patch, a tapered pot, a rounded foliage canopy,
+// and a handful of upright leaf blades), slowly turning in place. The
+// Gaussians are kept small and dense so the scene resolves crisp detail (a
+// clean pot taper and rim, distinct leaves, a smooth ground) rather than a
+// coarse blob. It reuses the exact same transform -> project -> sort ->
+// composite pipeline as GaussianSplatLab (../lib/splat), just without
+// controls, so the reader sees the payoff, a small captured scene, before
+// the post unpacks the math.
 interface Props {
   side?: boolean;
 }
@@ -27,12 +32,16 @@ const { side = false } = Astro.props;
   // ── Scene model (same shape as GaussianSplatLab) ─────────────────────
   type Splat = { pos: Vec3; scale: Vec3; quat: Quat; color: RGB; opacity: number };
 
-  // Muted palette: ink tones plus two restrained accents, matching the lab.
-  const INK: RGB = [0.36, 0.36, 0.40];
-  const INK_DARK: RGB = [0.22, 0.22, 0.27];
-  const INK_LIGHT: RGB = [0.56, 0.56, 0.62];
-  const BLUE: RGB = [0.30, 0.44, 0.60];
-  const RUST: RGB = [0.64, 0.42, 0.32];
+  // Muted palette: a neutral ground tone, a desaturated terracotta pot, and
+  // a desaturated sage foliage, matching the restrained accents in the lab.
+  const GROUND: RGB = [0.40, 0.40, 0.43];
+  const GROUND_DARK: RGB = [0.32, 0.32, 0.36];
+  const POT: RGB = [0.55, 0.34, 0.24];
+  const POT_DARK: RGB = [0.46, 0.28, 0.20];
+  const POT_LIGHT: RGB = [0.62, 0.40, 0.29];
+  const SAGE: RGB = [0.34, 0.42, 0.30];
+  const SAGE_DARK: RGB = [0.26, 0.33, 0.24];
+  const SAGE_LIGHT: RGB = [0.47, 0.56, 0.40];
 
   // Unit-axis, angle → quaternion [w,x,y,z].
   function qAxis(ax: number, ay: number, az: number, angle: number): Quat {
@@ -54,13 +63,17 @@ const { side = false } = Astro.props;
     };
   }
 
-  // Hardcoded, deterministic layout: a rounded "head" cluster sitting on a
-  // wider, flatter "shoulders" cluster, so the composited cloud reads as a
-  // soft bust silhouette rather than noise. Built once from a fixed seed.
+  // Hardcoded, deterministic layout: a small captured scene, a potted
+  // plant, built from a flat ground patch, a tapered pot, a rounded foliage
+  // canopy, and a handful of upright leaf blades, so the composited cloud
+  // reads as "a plant in a pot on the ground" rather than an abstract
+  // blob. Built once from a fixed seed.
   function heroScene(): Splat[] {
     const rnd = mulberry32(20260709);
     const splats: Splat[] = [];
 
+    // Rounded organic blob cluster (used for the foliage canopy): random
+    // axis tilt, points scattered in an ellipsoid via spherical coordinates.
     function cluster(
       count: number,
       center: Vec3,
@@ -94,8 +107,134 @@ const { side = false } = Astro.props;
       }
     }
 
-    cluster(16, [0, 0.5, 0], [0.7, 0.66, 0.7], 0.48, 0.5, [INK, INK, INK_LIGHT, INK_LIGHT, BLUE]);
-    cluster(24, [0, -0.42, 0], [1.08, 0.62, 0.78], 0.56, 0.55, [INK, INK, INK_DARK, INK_DARK, RUST]);
+    // Flat, wide, near-horizontal disk splats forming the ground patch.
+    // Near-identity quaternion (slight jitter) so the tiny axis stays close
+    // to world-up: this is what makes the ground read as a receding surface,
+    // not a hard slab.
+    function groundPatch(count: number, center: Vec3, radius: number, colors: RGB[]) {
+      for (let i = 0; i < count; i++) {
+        const theta = rnd() * Math.PI * 2;
+        const r = Math.sqrt(rnd()) * radius;
+        const pos: Vec3 = [
+          center[0] + Math.cos(theta) * r,
+          center[1] + (rnd() - 0.5) * 0.03,
+          center[2] + Math.sin(theta) * r,
+        ];
+        const wide = 0.15 + rnd() * 0.13;
+        const thin = 0.02 + rnd() * 0.015;
+        const jitter = (rnd() - 0.5) * 0.25;
+        const quat = qAxis(1, 0, 0, jitter);
+        const color = colors[Math.floor(rnd() * colors.length)];
+        const opacity = 0.22 + rnd() * 0.16;
+        splats.push({ pos, scale: [wide, thin, wide], quat, color, opacity });
+      }
+    }
+
+    // Tapered pot: a cluster of splats sampled over a truncated-cone shell,
+    // wider at the rim (top) than at the base.
+    function pot(
+      count: number,
+      baseCenter: Vec3,
+      height: number,
+      baseRadius: number,
+      topRadius: number,
+      colors: RGB[],
+    ) {
+      for (let i = 0; i < count; i++) {
+        const t = rnd();
+        const y = baseCenter[1] + t * height;
+        const radius = baseRadius + (topRadius - baseRadius) * t;
+        const theta = rnd() * Math.PI * 2;
+        const rr = radius * (0.86 + rnd() * 0.2);
+        const pos: Vec3 = [
+          baseCenter[0] + Math.cos(theta) * rr,
+          y,
+          baseCenter[2] + Math.sin(theta) * rr,
+        ];
+        const baseScale = 0.09 + rnd() * 0.04;
+        const across = baseScale * (0.55 + rnd() * 0.3);
+        const ax = -Math.sin(theta), az = Math.cos(theta); // tangential axis
+        const quat = qAxis(ax, (rnd() - 0.5) * 0.3, az, Math.PI / 2 + (rnd() - 0.5) * 0.4);
+        const color = colors[Math.floor(rnd() * colors.length)];
+        const opacity = 0.8 + rnd() * 0.18;
+        splats.push({ pos, scale: [baseScale, across, across], quat, color, opacity });
+      }
+    }
+
+    // Individual upright leaf blade: elongated vertical splat, base near the
+    // canopy, tip leaning outward from a given azimuth. Purposefully
+    // anisotropic (long vertical axis, thin cross-section) so the rendered
+    // scene visibly teaches what an anisotropic Gaussian looks like.
+    function leaf(base: Vec3, length: number, azimuth: number, lean: number, color: RGB) {
+      const midHeight = length * 0.5 * Math.cos(lean);
+      const midOut = length * 0.5 * Math.sin(lean);
+      const pos: Vec3 = [
+        base[0] + Math.cos(azimuth) * midOut,
+        base[1] + midHeight,
+        base[2] + Math.sin(azimuth) * midOut,
+      ];
+      const width = length * 0.09;
+      // Leaf axis points mostly up (local y), leaning outward in the
+      // azimuth direction: rotate the local y axis toward the
+      // radial-outward vector.
+      const axisX = Math.cos(azimuth) * Math.sin(lean);
+      const axisZ = Math.sin(azimuth) * Math.sin(lean);
+      const axisLen = Math.hypot(axisX, axisZ) || 1;
+      const quat = qAxis(-axisZ / axisLen, 0, axisX / axisLen, lean);
+      splats.push({
+        pos,
+        scale: [width * 0.4, length * 0.5, width],
+        quat,
+        color,
+        opacity: 0.9,
+      });
+    }
+
+    // Ground: a soft, roughly circular patch under the pot. Many small,
+    // low-opacity disk splats build up a smooth surface rather than a few
+    // coarse ones.
+    groundPatch(180, [0, -1.08, 0], 0.95, [GROUND, GROUND, GROUND_DARK]);
+
+    // Pot: tapered, wider rim than base, sitting on the ground. Kept
+    // narrower than the foliage canopy above so its shoulders stay visible
+    // beneath the bulge, and tall enough to read clearly as a pot.
+    const POT_BASE_Y = -1.02;
+    const POT_HEIGHT = 0.5;
+    const POT_BASE_R = 0.22;
+    const POT_TOP_R = 0.4;
+    const POT_TOP_Y = POT_BASE_Y + POT_HEIGHT; // -0.52
+    pot(300, [0, POT_BASE_Y, 0], POT_HEIGHT, POT_BASE_R, POT_TOP_R, [POT, POT_DARK, POT_LIGHT]);
+
+    // A denser rim highlight ring so the pot's open top reads clearly.
+    pot(60, [0, POT_TOP_Y - 0.03, 0], 0.05, POT_TOP_R * 0.97, POT_TOP_R * 1.03, [POT_LIGHT, POT]);
+
+    // Foliage: a rounded canopy resting just above the pot rim. Narrower in
+    // x/z than the pot's rim so the pot's shoulders peek out on the sides,
+    // and its lower edge only slightly overlaps the rim, not the pot body,
+    // so most of the pot stays visible below the greenery.
+    const CANOPY_CENTER_Y = -0.06;
+    cluster(340, [0, CANOPY_CENTER_Y, 0], [0.3, 0.34, 0.29], 0.24, 0.6, [SAGE, SAGE, SAGE_DARK, SAGE_LIGHT]);
+    cluster(140, [0, CANOPY_CENTER_Y + 0.18, 0], [0.2, 0.18, 0.19], 0.18, 0.55, [SAGE_LIGHT, SAGE, SAGE_DARK]);
+
+    // Leaf blades: a handful of upright anisotropic splats rooted near the
+    // canopy's core, rising well beyond the rounded fill so their long,
+    // thin silhouettes clearly break the canopy outline. Alternating
+    // heights and lean angles for an asymmetric, plant-like fan.
+    const leafAngles = [
+      0.2, 0.6, 0.95, 1.35, 1.75, 2.15, 2.55, 2.95,
+      3.35, 3.75, 4.15, 4.55, 4.95, 5.35, 5.75, 6.05,
+    ];
+    const leafColors = [SAGE_LIGHT, SAGE, SAGE_LIGHT, SAGE_DARK];
+    for (let i = 0; i < leafAngles.length; i++) {
+      const az = leafAngles[i];
+      const tall = i % 2 === 0;
+      const len = tall ? 0.6 + (i % 3) * 0.04 : 0.42 + (i % 3) * 0.05;
+      const lean = tall ? 0.14 + (i % 3) * 0.05 : 0.4 + (i % 3) * 0.06;
+      const rootR = 0.1 + (i % 4) * 0.03;
+      const rootY = CANOPY_CENTER_Y + 0.1 + (i % 2) * 0.05;
+      const base: Vec3 = [Math.cos(az) * rootR, rootY, Math.sin(az) * rootR];
+      leaf(base, len, az, lean, leafColors[i % leafColors.length]);
+    }
 
     return splats;
   }
