@@ -1,0 +1,242 @@
+---
+// src/components/SphericalHarmonicsViz.astro
+// Small demo for "Painting with Gaussians": a Gaussian splat's color is not
+// one fixed RGB triple, it is a low-order spherical-harmonic function of view
+// direction. This renders a single sphere whose per-pixel color comes from
+// the tested evalSHRGB in ../lib/splat, so the reader can see a fixed
+// coefficient set produce a view-dependent sheen, and see each SH band's
+// contribution by toggling it off.
+import katex from 'katex';
+const eq = katex.renderToString(
+  String.raw`c(\mathbf{d}) = \sum_{\ell,m} c_{\ell m}\, Y_{\ell m}(\mathbf{d})`,
+  { displayMode: true, throwOnError: false }
+);
+---
+<figure class="viz shv">
+  <div class="viz-eq" set:html={eq} />
+
+  <canvas class="shv-canvas" width="400" height="400"></canvas>
+
+  <div class="viz-controls shv-controls">
+    <label>Orbit azimuth
+      <input class="shv-azimuth" type="range" min="0" max="360" value="35" step="1" />
+    </label>
+    <span class="shv-readout viz-readout"></span>
+  </div>
+
+  <div class="shv-bands" role="group" aria-label="spherical harmonic bands">
+    <button class="shv-band-btn" type="button" data-mode="dc" aria-pressed="false">DC only</button>
+    <button class="shv-band-btn" type="button" data-mode="band1" aria-pressed="false">+ band 1</button>
+    <button class="shv-band-btn active" type="button" data-mode="band2" aria-pressed="true">+ band 2</button>
+  </div>
+
+  <figcaption>
+    Each coefficient c<sub>ℓm</sub> is a fixed RGB triple; c(d) sums them against
+    the basis functions Y<sub>ℓm</sub> evaluated at the view direction d. With
+    only the ℓ = 0 term the surface is a flat, uniform tone, since that band
+    carries no directional dependence at all. Band 1 lets a warm sheen sweep
+    across the sphere as you drag the azimuth slider; band 2 adds a faint
+    second lobe to its shape.
+  </figcaption>
+</figure>
+
+<script>
+  import { evalSHRGB } from '../lib/splat';
+  import type { RGB, Vec3 } from '../lib/splat';
+
+  // Fixed, muted coefficient set: a warm-tan DC term plus a restrained
+  // band-1 azimuthal sheen and a faint band-2 lobe. Values are picked so the
+  // full-band result stays a gentle, Apple-like sheen rather than a garish
+  // disco ball (see task-5-report.md for the per-direction sanity check).
+  const COEFFS: RGB[] = [
+    [0.70, 0.34, 0.16], // ell=0: DC, view-independent base tone
+    [0.04, 0.03, 0.02], // ell=1, basis -y
+    [0.10, 0.07, 0.04], // ell=1, basis z
+    [0.30, 0.16, 0.02], // ell=1, basis -x: drives the azimuthal sweep
+    [0.05, 0.03, 0.01], // ell=2, basis xy
+    [0.04, 0.03, 0.02], // ell=2, basis yz
+    [0.07, 0.04, 0.01], // ell=2, zonal basis
+    [0.05, 0.03, 0.01], // ell=2, basis xz
+    [0.06, 0.02, -0.02], // ell=2, basis x^2 - y^2
+  ];
+  const ZERO: RGB = [0, 0, 0];
+
+  type BandMode = 'dc' | 'band1' | 'band2';
+
+  // Zero out the coefficients for bands the reader has disabled, so the
+  // caller can see each band's contribution in isolation.
+  function activeCoeffs(mode: BandMode): RGB[] {
+    return COEFFS.map((c, i) => {
+      if (i === 0) return c;
+      if (i <= 3) return mode === 'dc' ? ZERO : c;
+      return mode === 'band2' ? c : ZERO;
+    });
+  }
+
+  function bandLabel(mode: BandMode): string {
+    if (mode === 'dc') return 'DC only, view-independent';
+    if (mode === 'band1') return 'DC + band 1';
+    return 'DC + band 1 + band 2';
+  }
+
+  // An Astro bundled <script> runs once per page, so ALL mutable per-instance
+  // state (azimuth, band mode, image buffer) lives inside init() below, one
+  // closure per mounted component, so multiple embeds never share state.
+  document.querySelectorAll<HTMLElement>('.shv').forEach(init);
+
+  function init(root: HTMLElement) {
+    const canvas = root.querySelector<HTMLCanvasElement>('.shv-canvas')!;
+    const ctx = canvas.getContext('2d')!;
+    const azimuthEl = root.querySelector<HTMLInputElement>('.shv-azimuth')!;
+    const readoutEl = root.querySelector<HTMLElement>('.shv-readout')!;
+    const bandBtns = Array.from(root.querySelectorAll<HTMLButtonElement>('.shv-band-btn'));
+
+    const W = canvas.width;
+    const H = canvas.height;
+    const cx = W / 2;
+    const cy = H / 2;
+    const radius = Math.min(cx, cy) * 0.92;
+    const img = ctx.createImageData(W, H);
+    const BG: RGB = [0.969, 0.969, 0.973]; // matches --color-surface (#f7f7f9)
+
+    let azimuth = (parseFloat(azimuthEl.value) * Math.PI) / 180;
+    let mode: BandMode =
+      (bandBtns.find((b) => b.classList.contains('active'))?.dataset.mode as BandMode) ?? 'band2';
+
+    function render() {
+      const coeffs = activeCoeffs(mode);
+      const cosA = Math.cos(azimuth);
+      const sinA = Math.sin(azimuth);
+      const data = img.data;
+
+      for (let py = 0; py < H; py++) {
+        const ny = -((py + 0.5 - cy) / radius);
+        for (let px = 0; px < W; px++) {
+          const idx = (py * W + px) * 4;
+          const nx = (px + 0.5 - cx) / radius;
+          const r2 = nx * nx + ny * ny;
+
+          if (r2 > 1.04) {
+            data[idx] = BG[0] * 255;
+            data[idx + 1] = BG[1] * 255;
+            data[idx + 2] = BG[2] * 255;
+            data[idx + 3] = 255;
+            continue;
+          }
+
+          // Surface normal of the disc-as-sphere at this pixel, rotated
+          // about the vertical axis by the orbit azimuth. Rotating the
+          // normal by the view azimuth is equivalent to orbiting the SH
+          // environment around a fixed sphere: it sweeps the shaded
+          // highlight across the disc as the slider moves.
+          const nz = Math.sqrt(Math.max(0, 1 - Math.min(r2, 1)));
+          let dx = nx * cosA - nz * sinA;
+          let dz = nx * sinA + nz * cosA;
+          let dy = ny;
+          const invLen = 1 / Math.hypot(dx, dy, dz);
+          dx *= invLen;
+          dy *= invLen;
+          dz *= invLen;
+          const dir: Vec3 = [dx, dy, dz];
+
+          const [r, g, b] = evalSHRGB(coeffs, dir);
+
+          // Soft antialiased edge: fade to background just past the rim.
+          const edgeAlpha = r2 > 1 ? Math.max(0, 1 - (r2 - 1) / 0.04) : 1;
+          data[idx] = (r * edgeAlpha + BG[0] * (1 - edgeAlpha)) * 255;
+          data[idx + 1] = (g * edgeAlpha + BG[1] * (1 - edgeAlpha)) * 255;
+          data[idx + 2] = (b * edgeAlpha + BG[2] * (1 - edgeAlpha)) * 255;
+          data[idx + 3] = 255;
+        }
+      }
+
+      ctx.putImageData(img, 0, 0);
+      readoutEl.textContent = `azimuth ${Math.round((azimuth * 180) / Math.PI)}°  ·  ${bandLabel(mode)}`;
+    }
+
+    // rAF-coalesced draw so dragging the slider stays smooth.
+    let pending = false;
+    function scheduleRender() {
+      if (pending) return;
+      pending = true;
+      requestAnimationFrame(() => {
+        pending = false;
+        render();
+      });
+    }
+
+    azimuthEl.addEventListener('input', () => {
+      azimuth = (parseFloat(azimuthEl.value) * Math.PI) / 180;
+      scheduleRender();
+    });
+
+    bandBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        bandBtns.forEach((b) => {
+          const isActive = b === btn;
+          b.classList.toggle('active', isActive);
+          b.setAttribute('aria-pressed', String(isActive));
+        });
+        mode = (btn.dataset.mode as BandMode) ?? 'band2';
+        scheduleRender();
+      });
+    });
+
+    render();
+  }
+</script>
+
+<style>
+  .viz { margin: 2rem 0; }
+  .viz-eq { margin-bottom: 1rem; overflow-x: auto; }
+  .viz-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.75rem;
+    font-family: var(--font-sans);
+    font-size: 0.85rem;
+    color: var(--color-ink-4);
+  }
+  .viz-controls input[type='range'] { accent-color: var(--color-ink); }
+  .viz-readout { color: var(--color-ink-3); font-variant-numeric: tabular-nums; }
+  .shv-canvas {
+    display: block;
+    width: 100%;
+    max-width: 340px;
+    height: auto;
+    margin: 0 auto;
+    border-radius: 10px;
+    background: var(--color-surface);
+    border: 0.5px solid var(--color-border);
+  }
+  .shv-bands {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.85rem;
+  }
+  .shv-band-btn {
+    font-family: var(--font-display);
+    font-size: 0.78rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 0.5px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-ink-4);
+    transition: all 0.15s;
+  }
+  .shv-band-btn:hover { color: var(--color-ink-2); }
+  .shv-band-btn.active {
+    background: var(--color-ink);
+    color: var(--color-panel);
+    border-color: var(--color-ink);
+  }
+  .shv figcaption {
+    font-family: var(--font-sans);
+    font-size: 0.82rem;
+    color: var(--color-ink-4);
+    margin-top: 0.9rem;
+    line-height: 1.55;
+  }
+</style>
