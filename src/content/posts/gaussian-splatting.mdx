@@ -1,0 +1,109 @@
+---
+title: "Painting with Gaussians"
+seoTitle: "3D Gaussian Splatting Explained: From Radiance Fields to Real-Time Rendering"
+description: "A visual, interactive derivation of 3D Gaussian Splatting: radiance fields, the volume rendering integral, NeRF, and how splatting renders photoreal scenes in real time."
+topic: mathematics
+postLayout: longform
+ogMotif: gaussian-splat
+tags: [gaussian-splatting, radiance-fields, nerf, volume-rendering, novel-view-synthesis, neural-rendering]
+publishedAt: 2026-07-09
+published: false
+---
+
+import SplatHero from '../../components/SplatHero.astro';
+import RayMarchViz from '../../components/RayMarchViz.astro';
+
+<SplatHero side />
+
+Take a few dozen photos of a statue, walking around it with your phone. Now imagine asking for a photo you never took: the statue seen from a spot you never stood in, the light glinting off the marble exactly as it would have. No new photograph exists, yet the answer is completely determined. Every viewpoint you did capture constrains what the missing one must look like. The soft cloud on the right is the kind of thing that fills that gap: not a mesh, not a point cloud, but a haze of overlapping colored blobs that, seen from any angle, composites back into a photograph.
+
+The task of turning a handful of photos into the ability to render any new view is called **novel view synthesis**. It is old, and for decades it was hard. What changed is a single idea: instead of trying to reconstruct the surfaces of a scene, describe the scene as a **radiance field**, a function that assigns, to every point in space and every direction you might look from, a color and a measure of how solid that point is. Formally it is a map $(\text{position}, \text{direction}) \to (\text{color}, \text{density})$. Picture a fog filling the room, and at every point in that fog, two facts: what color it glows, and how much of the light passing through it it blocks. Do this at every point and viewing angle and you have described the scene completely, without ever naming a single surface.
+
+This post walks from that idea to the technique that made it fast enough to render in real time. We build the one equation that turns a radiance field into a pixel, then meet two very different machines for evaluating it: NeRF, which hides the field inside a neural network, and 3D Gaussian splatting, which paints it directly with the blobs above.
+
+<div class="toc-card">
+  <p class="toc-card-heading">In this post</p>
+  <ol class="toc-card-list">
+    <li><a class="toc-card-item" href="#the-problem-photos-in-new-views-out"><span class="toc-n">1</span>The problem: photos in, new views out</a></li>
+    <li><a class="toc-card-item" href="#volume-rendering-from-a-field-to-a-pixel"><span class="toc-n">2</span>Volume rendering: from a field to a pixel</a></li>
+    <li><a class="toc-card-item" href="#nerf-store-the-field-in-a-network"><span class="toc-n">3</span>NeRF: store the field in a network</a></li>
+    <li><a class="toc-card-item" href="#the-turn-rasterize-do-not-sample"><span class="toc-n">4</span>The turn: rasterize, do not sample</a></li>
+    <li><a class="toc-card-item" href="#3d-gaussian-splatting"><span class="toc-n">5</span>3D Gaussian splatting</a></li>
+    <li><a class="toc-card-item" href="#where-this-leaves-us"><span class="toc-n">6</span>Where this leaves us</a></li>
+  </ol>
+</div>
+
+---
+
+## The problem: photos in, new views out
+
+You have a set of photographs of a scene, each taken from a known position and pointing in a known direction. You want to produce a photograph from a new position and direction, one that was never captured, and you want it to look real. That is the whole problem. Everything in this post is machinery for solving it.
+
+The obvious first move is to rebuild the shape of the scene. Feed the photos to a reconstruction pipeline, recover a cloud of 3D points where the surfaces are, stitch them into a mesh of triangles, and render the mesh from the new viewpoint. This works, and for a long time it was the only game in town. But it fights the world at every step. A mesh is a hard commitment: this triangle is surface, that empty space is not, with a crisp boundary in between. Real scenes refuse to cooperate. Where exactly is the surface of a fern, a head of hair, a plume of smoke, a chain-link fence seen through fog? These are not surfaces with clean edges; they are partly-there, semi-transparent, wispy. Force a mesh onto them and you get holes, jagged silhouettes, and a plastic sheen where there should be softness.
+
+There is a deeper problem than geometry, and it is the one that motivates everything here: **appearance**. A mesh tells you where a surface is, but a photograph is about how a surface *looks*, and how it looks depends on where you look from. This is **view dependence**. Wet marble, a glazed ceramic, a car's hood, the surface of a lake: each throws a bright highlight that sits in a different place, or vanishes entirely, as you move. The color arriving at your eye from a single physical point is not one fixed value; it is a function of the direction you view it from. A **view direction** is just that: the direction, in 3D, along which you are looking at a point, usually written as a unit vector $\mathbf{d}$. Geometry alone, a bare mesh with one color painted per point, throws this information away. It can tell you the shape of the lake but not the glare of the sun on it, which is often the entire content of the photograph.
+
+<div class="intuition">
+  <p class="intuition-label">Intuition</p>
+  <p class="intuition-text">Stop trying to say where the surfaces are. Instead, fill all of space with a colored fog. At every point, the fog has two properties: how strongly it glows, and how much of the light passing through it it stops. A solid wall is just fog that is completely opaque and glows the wall's color. Empty air is fog that is perfectly clear and glows nothing. A wisp of hair is fog that is a little opaque. There are no edges to commit to and nothing to stitch: the whole scene is one soft, continuous cloud, and rendering it is a matter of looking through it.</p>
+</div>
+
+This is the reframing that unlocks everything that follows. Do not model the scene as surfaces. Model it as a **radiance field**: a function defined at every point $\mathbf{x}$ in space and every view direction $\mathbf{d}$, returning a color and a density. In symbols,
+
+$$F(\mathbf{x}, \mathbf{d}) = \big(\, c(\mathbf{x}, \mathbf{d}),\ \sigma(\mathbf{x}) \,\big)$$
+
+where $c$ is the color the point emits toward you (allowed to change with the direction $\mathbf{d}$, which is exactly what captures the moving highlight) and $\sigma$ is the density, how solidly the point blocks light (a property of the point alone, the same from every angle: a wall is a wall no matter where you stand). We will define both precisely in the next section. The move from "surfaces" to "a field of color and density" costs us the clean geometry, but it buys us everything meshes could never represent: soft edges, semi-transparency, and view-dependent shine, all in one continuous object. The only thing left to answer is how you turn such a field into an actual pixel. That is volume rendering, and it is the heart of the post.
+
+---
+
+## Volume rendering: from a field to a pixel
+
+You have a field of glowing, light-blocking fog and a camera pointing at it. What color is a single pixel? A pixel corresponds to one ray of sight: a line shot from the camera, through that pixel, out into the scene. To find the pixel's color, walk along that ray and accumulate what the fog does to the light traveling back toward you. That walk is called **ray marching**, and doing the accumulation correctly is **volume rendering**.
+
+<div class="intuition">
+  <p class="intuition-label">Intuition</p>
+  <p class="intuition-text">Imagine peering through a long tube of colored mist toward a light at the far end. As you look, every thin layer of mist does two things at once: it adds a little of its own glow to what reaches your eye, and it dims everything behind it. A layer near you contributes its color at full strength, because nothing stands between it and you. A layer deep in the tube contributes almost nothing, not because it glows any less, but because so much mist in front of it has already swallowed its light before it can arrive. The pixel's final color is the sum of every layer's glow, each one faded by exactly the amount of mist standing between that layer and the camera.</p>
+</div>
+
+Let us make that precise. Parameterize the ray by a distance $t$ from the camera: the point at distance $t$ along the ray is $\mathbf{r}(t) = \mathbf{o} + t\mathbf{d}$, where $\mathbf{o}$ is the camera position and $\mathbf{d}$ is the view direction. As $t$ grows we move away from the camera, deeper into the scene. At each point on the ray the field hands us two numbers:
+
+- The **density** $\sigma(t)$, shorthand for $\sigma(\mathbf{r}(t))$. It is the amount of light-blocking per unit length at that point: the chance, per tiny step $dt$, that a photon traveling through is absorbed or scattered away. Clear air has $\sigma = 0$; the surface of a solid object has $\sigma$ shooting up very large. Density has no color and no direction; it only says how solid the fog is here.
+- The **emission**, or emitted color, $c(t)$, shorthand for $c(\mathbf{r}(t), \mathbf{d})$. It is the color the fog at this point sends back toward the camera. This is where view dependence lives: the same point can emit one color when viewed head-on and another at a glancing angle, which is how the field represents a shifting highlight.
+
+Now track the light. Send it back-to-front is confusing, so instead track how much of the light *from a given point* survives the trip forward to the camera. Define the **transmittance** $T(t)$: the fraction of light emitted at distance $t$ that makes it all the way back to the camera without being blocked by the fog in front of it. Right at the camera nothing stands in the way, so $T(0) = 1$. As the ray pushes deeper, more fog accumulates in front, so $T$ can only fall.
+
+How fast does it fall? Over a tiny step $dt$ at distance $t$, the fraction of light removed is exactly the density times the step, $\sigma(t)\,dt$. So the transmittance loses that fraction of itself:
+
+$$dT = -\,\sigma(t)\, T(t)\, dt \quad\Longrightarrow\quad \frac{dT}{T} = -\,\sigma(t)\, dt.$$
+
+This is the equation for exponential decay, the same one that governs a dimming light through smoked glass. Integrating from the camera out to $t$ gives the transmittance in closed form:
+
+$$T(t) = \exp\!\left(-\int_0^t \sigma(s)\, ds\right).$$
+
+Read it directly: the integral $\int_0^t \sigma(s)\,ds$ is the total amount of fog piled up between the camera and the point at distance $t$. Pass it through $\exp(-\,\cdot\,)$ and you get a number between 0 and 1. When there is no fog in the way the integral is 0 and $T = 1$, all the light gets through. As fog accumulates the integral grows and $T$ slides toward 0, the point is buried and its light never reaches you.
+
+We now have every piece to write the color of the pixel. The point at distance $t$ emits color $c(t)$. It emits it at a rate set by how much fog is right there, $\sigma(t)$, because clear air emits nothing and dense fog emits a lot. And whatever it emits is dimmed by the factor $T(t)$ on its way back to the camera. Multiply the three together for the contribution of the slab at $t$, then add up every slab along the ray from the near edge $t_n$ to the far edge $t_f$:
+
+$$C = \int_{t_n}^{t_f} T(t)\, \sigma(t)\, c(t)\, dt, \qquad T(t) = \exp\!\left(-\int_{t_n}^{t} \sigma(s)\, ds\right).$$
+
+This is the **volume rendering integral**. Every term earns its place. Drop $c(t)$ and you have no color; drop $\sigma(t)$ and clear air would contribute as loudly as a solid wall; drop $T(t)$ and objects hidden behind others would show through as if the fog in front were not there. Together they say: a pixel is the sum of the colors along its ray, each weighted by how much fog emits it and discounted by how much fog hides it.
+
+An integral is a statement, not a recipe a computer can run. To evaluate it, chop the ray into $N$ short segments and assume $\sigma$ and $c$ are roughly constant across each one. Index the segments by $\nu$, and let $\delta_\nu$ be the length of segment $\nu$. Two quantities fall out. First, the fraction of light a single segment removes. Over a segment of length $\delta_\nu$ with density $\sigma_\nu$, the surviving light is $e^{-\sigma_\nu \delta_\nu}$, so the fraction absorbed, the segment's **opacity** or **alpha**, is
+
+$$\alpha_\nu = 1 - e^{-\sigma_\nu \delta_\nu}.$$
+
+Alpha runs from 0 (a perfectly clear segment) to 1 (a fully opaque one), and it is just the discrete stand-in for density: high density over the segment means alpha near 1. Second, the transmittance up to segment $\nu$ becomes a running product of what every earlier segment let through:
+
+$$T_\nu = \prod_{\mu < \nu} (1 - \alpha_\mu).$$
+
+Each factor $(1 - \alpha_\mu)$ is the fraction of light that survived segment $\mu$; multiply them all and you have the fraction that survives every segment in front of $\nu$. The continuous exponential of an integral has become a plain product, one factor per segment. Substituting both into the integral turns it into a sum:
+
+$$C = \sum_{\nu} T_\nu\, \alpha_\nu\, c_\nu.$$
+
+This is **alpha compositing**: walk the segments front to back, and each one lays down its color $c_\nu$, painted at strength $\alpha_\nu$ and faded by everything already in front of it, $T_\nu$. It is the exact same "over" operation that stacks semi-transparent layers in any image editor, here derived from the physics of light through fog rather than assumed. The interactive figure below is this sum, made literal: drag the sample point along the ray and watch each segment add its color, watch the transmittance bar drain as opaque fog accumulates, and watch the running color converge to the pixel's final value.
+
+<RayMarchViz />
+
+That one equation, $C = \sum_{\nu} T_\nu\, \alpha_\nu\, c_\nu$, is the spine of this entire post. Fix it in your mind, because from here on nothing about the goal changes: every method we meet is producing exactly this weighted sum of colors along a ray. What changes is only *how each method stores the field and finds the segments*. NeRF, in the next section, will answer by asking a neural network for $\sigma$ and $c$ at hundreds of sampled points per ray. 3D Gaussian splatting will answer by skipping the ray march entirely and letting explicit blobs deposit their own $\alpha_\nu\, c_\nu$ onto the pixels they cover. Two machines, wildly different in speed, both evaluating this same sum.
+
+---
