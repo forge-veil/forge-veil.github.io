@@ -107,3 +107,51 @@ This is **alpha compositing**: walk the segments front to back, and each one lay
 That one equation, $C = \sum_{\nu} T_\nu\, \alpha_\nu\, c_\nu$, is the spine of this entire post. Fix it in your mind, because from here on nothing about the goal changes: every method we meet is producing exactly this weighted sum of colors along a ray. What changes is only *how each method stores the field and finds the segments*. NeRF, in the next section, will answer by asking a neural network for $\sigma$ and $c$ at hundreds of sampled points per ray. 3D Gaussian splatting will answer by skipping the ray march entirely and letting explicit blobs deposit their own $\alpha_\nu\, c_\nu$ onto the pixels they cover. Two machines, wildly different in speed, both evaluating this same sum.
 
 ---
+
+## NeRF: store the field in a network
+
+The spine equation is hungry: to evaluate it we need a color and a density at every point we choose to sample along a ray. Where do those numbers come from? NeRF's answer is disarmingly simple, which is to memorize them. Train a small function to recall the glowing fog of the last section, so that when you hand it a point and a viewing angle it hands back the fog's color and density right there.
+
+<div class="intuition">
+  <p class="intuition-label">Intuition</p>
+  <p class="intuition-text">Imagine describing the entire fog to a friend over the phone, well enough that they could redraw the scene from any angle. You would not read out a number for every point, since there are infinitely many. Instead you would teach them a rule: here is how the color and the thickness change as you move through the room. NeRF learns exactly such a rule. It is one compact function that has studied all your photos and distilled them into a single skill: given any point in space and any direction you might look from, report the color glowing there and how solid it is.</p>
+</div>
+
+NeRF stores that rule in an **MLP**: a small neural network, a stack of matrix multiplies interleaved with simple nonlinear functions, that maps an input vector to an output vector. Here the input is a point together with a view direction, and the output is the pair the spine equation was asking for:
+
+$$(x, y, z, \theta, \phi) \to (c, \sigma).$$
+
+The three numbers $(x, y, z)$ locate a point in space; the two angles $(\theta, \phi)$ name the direction you are looking from. Out come precisely the two quantities from section 2: the emitted color $c$ and the density $\sigma$. Nothing about volume rendering changes. The MLP is just one way to supply the $(c, \sigma)$ that the compositing sum consumes at each sample, a stand-in for the abstract field $F$ we drew earlier. Notice that density is fed only the position: a wall is a wall no matter where you stand, so $\sigma$ ignores the angles. Color is fed both position and direction, and that is exactly where the view-dependent highlight lives.
+
+There is a catch that nearly sinks the idea. Feed the raw coordinates straight into the network and the rendered scene comes out soft and blurred, stripped of fine detail. The reason is a known bias of these networks: left to themselves they prefer smooth, slowly varying outputs, the low frequencies, and strongly resist representing anything that changes sharply from point to point. But a crisp edge or a fine texture *is* a sharp, high-frequency change, so the raw-coordinate network smears exactly the detail we most want.
+
+The fix is to stop feeding the network the bare coordinate and instead feed it a spray of sines and cosines of that coordinate taken at a range of frequencies. This is **positional encoding**, written $\gamma(p)$ for a single coordinate $p$:
+
+$$\gamma(p) = \big(\sin(2^0\pi p),\, \cos(2^0\pi p),\, \dots,\, \sin(2^{L-1}\pi p),\, \cos(2^{L-1}\pi p)\big).$$
+
+Each sine and cosine pair is a wave, and the multipliers $2^0, 2^1, \dots, 2^{L-1}$ make successive waves oscillate faster and faster. The slow waves let the network place broad features; the fast ones hand it a vocabulary for sharp edges and fine texture that the bare coordinate could never coax out of it. Apply $\gamma$ to each of $x$, $y$, $z$ (and to the view direction) before the first layer, and the same network that produced mush now resolves crisp detail.
+
+One practical refinement is worth naming, because sampling well is half the battle. Spreading sample points uniformly along a ray is wasteful: most of a ray is empty air, and spending network queries on empty space just to confirm it is empty burns effort for nothing. NeRF instead samples in two passes. A coarse pass scatters a modest number of samples along the whole ray to find roughly where it first meets something solid. A fine pass then concentrates a second batch of samples in just those regions, spending the query budget where the surface actually is. This coarse-to-fine, or **hierarchical**, sampling sharpens the image without inflating the count of samples.
+
+And there is the rub: NeRF is photoreal, and NeRF is slow. Look again at the spine equation and count the work. Every pixel is one ray; every ray needs many samples to approximate its integral; and every single sample is a full query of the network, a complete run through all those matrix multiplies. Multiply pixels by samples by the cost of one query and a single image can demand millions of network evaluations. The field is beautifully stored but agonizingly expensive to read back. That expense is the wall the next idea climbs over.
+
+---
+
+## The turn: rasterize, do not sample
+
+Notice what actually makes NeRF slow. The scene is never stored anywhere you can point to; it lives implicitly inside the network's weights, and the only way to learn what sits at a location is to ask, point by point, millions of times per image. So here is a different thought: instead of interrogating a network about mostly empty space, put the scene out in the open where you can see it.
+
+<div class="intuition">
+  <p class="intuition-label">Intuition</p>
+  <p class="intuition-text">Stop asking "what is here?" at a dense grid of points along every ray. Instead, place a modest number of explicit little blobs directly in 3D space, each one carrying its own color and its own opacity. To render, throw the blobs forward onto the screen and let them pile up into a picture. There is no hidden field to probe and no ray to crawl along sample by sample: the scene is simply a bag of visible primitives, and rendering is a matter of painting them onto the image.</p>
+</div>
+
+Almost nothing about the goal changes, and that is the whole point. The pixel's color is still the very same compositing sum from section 2,
+
+$$C = \sum_{\nu} T_\nu\, \alpha_\nu\, c_\nu,$$
+
+with each primitive contributing a color $c_\nu$ at strength $\alpha_\nu$, faded by everything already stacked in front of it, $T_\nu$. What changes is where those $\alpha_\nu$ and $c_\nu$ come from. NeRF manufactured them on demand, one network query per sample. Now the primitives themselves carry their color and opacity as stored properties, so there is no per-sample network to run at all. The expensive middleman is gone, and the same sum is left standing. Crucially, every number describing a blob (its position, its shape, its color, its opacity) is **differentiable**, which means the whole bag of blobs can be fit to your photos by gradient descent: render the current blobs, compare against a real photo, and nudge every parameter a little in the direction that shrinks the difference, repeating until the render and the photograph agree.
+
+The word for throwing a primitive forward onto the image plane, rather than shooting a ray out to hunt for it, is **splatting**, and it is what makes this fast enough to render in real time. The one question left is what the blobs should be. The answer, and the reason the whole method is named for it, is Gaussians.
+
+---
