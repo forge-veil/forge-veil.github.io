@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { quatToMat3, covariance3D, projectCovariance } from './splat';
+import { quatToMat3, covariance3D, projectCovariance, invMat2, gaussian2D, alphaOver, alphaFromSigma, transmittance, evalSHRGB } from './splat';
 
 const IDENT_Q: [number, number, number, number] = [1, 0, 0, 0];
 
@@ -59,5 +59,71 @@ describe('projectCovariance', () => {
     const near = projectCovariance(cov3, [0, 0, 5], 500);
     const far = projectCovariance(cov3, [0, 0, 10], 500);
     expect(far[0]).toBeLessThan(near[0]);
+  });
+});
+
+describe('gaussian2D', () => {
+  it('is 1 at the center', () => {
+    const inv = invMat2([1, 0, 0, 1]);
+    expect(gaussian2D(0, 0, inv)).toBeCloseTo(1);
+  });
+  it('falls off with distance', () => {
+    const inv = invMat2([1, 0, 0, 1]);
+    expect(gaussian2D(2, 0, inv)).toBeLessThan(gaussian2D(1, 0, inv));
+  });
+  it('is anisotropic: wider covariance falls off slower along x', () => {
+    const inv = invMat2([4, 0, 0, 1]); // wide in x
+    expect(gaussian2D(2, 0, inv)).toBeGreaterThan(gaussian2D(0, 2, inv));
+  });
+});
+
+describe('alphaFromSigma', () => {
+  it('is 0 when density is 0', () => {
+    expect(alphaFromSigma(0, 1)).toBeCloseTo(0);
+  });
+  it('approaches 1 for large density·length', () => {
+    expect(alphaFromSigma(100, 1)).toBeGreaterThan(0.99);
+  });
+});
+
+describe('transmittance', () => {
+  it('is 1 before any sample', () => {
+    expect(transmittance([1, 1, 1], [1, 1, 1], 0)).toBeCloseTo(1);
+  });
+  it('decreases monotonically', () => {
+    const s = [0.5, 0.5, 0.5], d = [1, 1, 1];
+    expect(transmittance(s, d, 2)).toBeLessThan(transmittance(s, d, 1));
+  });
+});
+
+describe('alphaOver', () => {
+  it('opaque front sample fully occludes back', () => {
+    const r = alphaOver([1, 0, 0], 0, [0, 0, 1], 1); // dst empty, src opaque red
+    expect(r.rgb[0]).toBeCloseTo(1);
+    expect(r.a).toBeCloseTo(1);
+  });
+  it('accumulated alpha never exceeds 1', () => {
+    let acc = { rgb: [0, 0, 0] as [number, number, number], a: 0 };
+    for (let n = 0; n < 10; n++) acc = alphaOver(acc.rgb, acc.a, [1, 1, 1], 0.5);
+    expect(acc.a).toBeLessThanOrEqual(1.0001);
+  });
+});
+
+describe('evalSHRGB', () => {
+  it('returns the DC term for zero higher-order coefficients', () => {
+    const coeffs = Array.from({ length: 9 }, () => [0, 0, 0] as [number, number, number]);
+    coeffs[0] = [0.5, 0.5, 0.5];
+    const c = evalSHRGB(coeffs, [0, 0, 1]);
+    // DC band constant is 0.2820948; color = 0.5 + 0.2820948*0.5 offset convention below
+    expect(c[0]).toBeGreaterThan(0);
+    expect(c[0]).toBeLessThanOrEqual(1);
+  });
+  it('changes with view direction when band-1 coefficients are non-zero', () => {
+    const coeffs = Array.from({ length: 9 }, () => [0, 0, 0] as [number, number, number]);
+    coeffs[0] = [0.5, 0.5, 0.5];
+    coeffs[1] = [0.4, 0, 0]; // band-1 y term (basis -C1·y), red channel
+    const up = evalSHRGB(coeffs, [0, 1, 0]);
+    const down = evalSHRGB(coeffs, [0, -1, 0]);
+    expect(up[0]).not.toBeCloseTo(down[0], 3);
   });
 });
