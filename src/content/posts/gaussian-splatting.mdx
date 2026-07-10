@@ -12,6 +12,8 @@ published: false
 
 import SplatHero from '../../components/SplatHero.astro';
 import RayMarchViz from '../../components/RayMarchViz.astro';
+import GaussianSplatLab from '../../components/GaussianSplatLab.astro';
+import SphericalHarmonicsViz from '../../components/SphericalHarmonicsViz.astro';
 
 <SplatHero side />
 
@@ -155,3 +157,84 @@ with each primitive contributing a color $c_\nu$ at strength $\alpha_\nu$, faded
 The word for throwing a primitive forward onto the image plane, rather than shooting a ray out to hunt for it, is **splatting**, and it is what makes this fast enough to render in real time. The one question left is what the blobs should be. The answer, and the reason the whole method is named for it, is Gaussians.
 
 ---
+
+## 3D Gaussian splatting
+
+We finally get to name the blob. Each of those soft clouds is a **3D Gaussian**, and once you see what a single one is, the rest of the method is just arranging millions of them and reusing the sum we already built.
+
+<div class="intuition">
+  <p class="intuition-label">Intuition</p>
+  <p class="intuition-text">Picture a dab of soft, glowing paint suspended in mid-air. It is brightest at its center and fades smoothly to nothing at its edges, with no hard boundary anywhere. You get to place it (drop it at any point in space), stretch it (squash it into a thin flake, pull it into a long needle, leave it a round ball), tilt it (spin that stretched shape to any orientation), and tint it (give it a color and a degree of see-through). A scene is then just a heap of these dabs, thousands or millions of them, packed so their soft edges overlap and blend into a continuous surface. Everything below is the math for one dab and the recipe for painting the heap onto a screen.</p>
+</div>
+
+**The primitive.** A 3D Gaussian is the smooth, bell-shaped falloff you know from the "bell curve," lifted into three dimensions. It is a function that is 1 at a center point and decays smoothly toward 0 as you move away in any direction. Written out,
+
+$$G(\mathbf{x}) = \exp\!\left(-\tfrac12\, (\mathbf{x}-\boldsymbol{\mu})^\top\, \Sigma^{-1}\, (\mathbf{x}-\boldsymbol{\mu})\right).$$
+
+Two objects define its shape. The **mean** $\boldsymbol{\mu}$ is a point in 3D space: it is simply where the blob sits, the location of its bright center. The **covariance** $\Sigma$ is a $3\times 3$ matrix that encodes the blob's shape, size, and orientation all at once: how far it reaches, and in which directions it reaches farthest. A blob that reaches equally in every direction is a round ball, or **isotropic**. A blob that stretches by different amounts along different axes, wide in one direction and thin in another, is **anisotropic**, and that is exactly what you want: a thin flake to sit flat against a wall, a long sliver to trace an edge, a fat lump to fill a volume.
+
+Walk the exponent to see why it falls off. The vector $\mathbf{x}-\boldsymbol{\mu}$ is the offset from the center to the point you are asking about. At the center that offset is zero, so the exponent is zero, and $\exp(0) = 1$: the blob is at full strength. Move away and the offset grows, the exponent goes increasingly negative, and $\exp$ of a negative number slides toward 0: the blob fades. The matrix $\Sigma^{-1}$ sitting between the two offset vectors is what makes the falloff directional. It measures the offset not in plain distance but in units of the blob's own spread: a step along a direction the blob is stretched costs little (you are still well inside the bell), while the same step along a thin direction costs a lot (you fall off the edge fast). So $\Sigma^{-1}$ turns raw distance from the center into "how many blob-widths away am I," and $\exp(-\tfrac12\,\cdot\,)$ turns that into a smooth brightness that is 1 at the core and trails gently to nothing.
+
+**Why factor the covariance.** Here is a snag that comes straight from section 4. We fit these blobs to the photos by gradient descent: render the current heap, compare it to a real photograph, and nudge every parameter a little to shrink the difference. That means $\Sigma$ has to be nudged too. But not every $3\times 3$ matrix is a legal blob shape. To describe a real ellipsoid, a covariance must be **symmetric positive semidefinite**: symmetric, and never assigning a negative spread to any direction. Freely nudging the six independent numbers inside $\Sigma$ will, sooner or later, push it out of that legal set, and you get a "shape" that curves the wrong way or collapses to nonsense, which the renderer cannot draw and the gradient cannot recover from.
+
+The fix is to never store $\Sigma$ directly. Store instead the two ingredients that build it: a rotation and a set of scales.
+
+$$\Sigma = R\, S\, S^\top\, R^\top.$$
+
+Here $S$ is a diagonal matrix of three positive **scales**, the blob's radius along each of its own three axes (this is the stretching), and $R$ is a **rotation** that turns those axes to any orientation (this is the tilting). Read left to right, the product takes a unit ball, stretches it by $S$ into an ellipsoid, and spins it by $R$. Any $\Sigma$ built this way is automatically symmetric positive semidefinite, a valid shape *by construction*, no matter how the optimizer pushes $R$ and $S$ around. We have moved the gradient descent onto three scales and a rotation, quantities that cannot represent an illegal blob, and recover the covariance from them only when we need it. Build a scene below: drop a few Gaussians, set their scales and orientations, then orbit the camera and watch each 3D blob project down to a 2D footprint, sort by depth, and blend.
+
+<GaussianSplatLab />
+
+**Projecting a blob to the screen.** A Gaussian lives in 3D, but a pixel lives on a flat screen, so before we can composite anything we have to ask what a 3D blob *looks like* from the camera: what 2D footprint does it cast?
+
+<div class="intuition">
+  <p class="intuition-label">Intuition</p>
+  <p class="intuition-text">Hold a dinner plate up in front of you. Face-on, it is a full circle. Tilt it away and the circle squashes into an ellipse; tilt it until it is edge-on and it collapses to a thin sliver, almost a line. The plate never changed shape in the world; only its appearance from your viewpoint did. A 3D Gaussian projects the same way. A round blob seen head-on lands as a round splat, but a flake-shaped blob seen edge-on lands as a thin streak. Its footprint on the screen depends entirely on how it is turned relative to the camera.</p>
+</div>
+
+Making that precise means carrying the covariance through the projection. The screen-space covariance $\Sigma'$, the $2\times 2$ matrix describing the flat elliptical splat, comes from the 3D covariance by
+
+$$\Sigma' = J\, W\, \Sigma\, W^\top\, J^\top.$$
+
+Read it as two steps applied to the blob, each also applied to its mirror on the other side, which is why every factor shows up twice. First $W$, the **world-to-camera rotation**: it re-expresses the blob in the camera's own frame, turning the whole scene so the camera looks straight down its own axis. That handles orientation but not yet the flattening. Then $J$, the **Jacobian** of the perspective projection: perspective (far things look smaller, the projection that gives depth) is not a simple linear map, so we replace it, right at the blob's location, with the linear map that best matches it there. That is what a Jacobian is: the local linear approximation of a curved transformation at one point. We do not need every entry of $J$; what matters is that it captures how the projection locally stretches and shears space around the blob, so applying it to $\Sigma$ squashes the ellipsoid into exactly the 2D ellipse the camera would see. This is the **EWA** (elliptical weighted average) splat, and it is precisely what you were watching in the lab: the thin sliver a tilted splat becomes when you orbit is this $J\,W$ at work, flattening the 3D ellipsoid into its edge-on footprint.
+
+**Color that changes with the view.** A blob so far has one color, but section 1 warned us that real surfaces do not: the whole reason we chose a radiance field was to capture appearance that shifts with viewpoint.
+
+<div class="intuition">
+  <p class="intuition-label">Intuition</p>
+  <p class="intuition-text">Tilt a glazed ceramic mug under a lamp. A bright highlight sits on its shoulder; step to the side and the highlight slides across the surface and then winks out, even though nothing about the mug or the lamp moved. The color arriving at your eye from one physical point is not a single value, it is a whole set of values, one for each direction you might look from. So a blob should not store one color; it should store a little function that, handed a viewing direction, returns the color to show from that direction.</p>
+</div>
+
+Storing an arbitrary function of direction sounds expensive, but there is a compact way to do it. The set of all viewing directions forms a sphere, and there is a standard family of gentle patterns painted on that sphere, from a flat constant, through a few broad lobes, to finer ripples, called **spherical harmonics**. They are to the sphere of directions what the sines and cosines of section 3 were to a coordinate: a small basis you can mix to build up any smooth pattern. A blob then stores just a handful of mixing weights, and reconstructs its color for a given direction $\mathbf{d}$ as a weighted sum,
+
+$$c(\mathbf{d}) = \sum_{\ell,\, m} c_{\ell m}\, Y_{\ell m}(\mathbf{d}).$$
+
+Each $Y_{\ell m}$ is one of those fixed patterns on the sphere (the index $\ell$ sets how fine the pattern is, $m$ which variant at that fineness), and each $c_{\ell m}$ is the blob's own learned weight for it. A few weights buy a soft, believable glint: keep only the first, constant term and the blob is flatly colored from every side; add the higher terms and it can brighten on one flank and dim on another, exactly the moving highlight. Drag the direction below and watch a fixed set of weights repaint the sphere as the viewpoint moves.
+
+<SphericalHarmonicsViz />
+
+**Back to the integral.** Every piece is now on the table, and the last step is the one we have been promising since section 2: it is the same sum. To render a frame, project all the blobs to the screen with the EWA map, sort them front to back by depth, and composite them with the exact spine equation,
+
+$$C = \sum_{\nu} T_\nu\, \alpha_\nu\, c_\nu.$$
+
+Nothing here is new. The index $\nu$ now runs over the depth-sorted blobs covering a pixel instead of the sample slabs along a ray. Each blob's color $c_\nu$ is the spherical-harmonic color read off in the current view direction. Each blob's $\alpha_\nu$ is its stored opacity multiplied by the value of its projected 2D Gaussian at that pixel: full strength at the splat's center, fading toward its elliptical edge, exactly the falloff the primitive was built to have. And $T_\nu$ is the same running product of $(1-\alpha_\mu)$ over the nearer blobs, the fraction of light that survives everything stacked in front. Alpha-composite them in order and the pixel is done.
+
+This is why it runs in real time. There is no ray to crawl along and, decisively, no network to query per pixel: the color and opacity are read straight off each blob's stored parameters, and the expensive per-sample MLP evaluation that made NeRF slow is simply absent. Sorting and rasterizing a heap of splats is work a graphics card does by the millions every frame, so the same weighted sum that took NeRF seconds per image takes splatting milliseconds.
+
+---
+
+## Where this leaves us
+
+Both methods evaluate the identical spine equation; they differ entirely in how they store the field and how much it costs to read back. The trade is compact:
+
+| | NeRF | 3D Gaussian splatting |
+|---|---|---|
+| **Render speed** | Seconds per frame: many samples per ray, each a full network query | Real-time, tens to hundreds of frames per second: sort and rasterize, no per-pixel query |
+| **Quality** | Excellent, and often still the reference for tricky view-dependent effects | Comparable on most scenes, sometimes sharper on fine texture |
+| **Training** | Hours on a GPU, per scene | Minutes to under an hour, per scene |
+| **Memory / size** | Small: a few MB of network weights | Large: hundreds of MB to gigabytes for millions of explicit blobs |
+| **Editability** | Hard: the scene is tangled inside opaque weights | Easier: blobs are explicit primitives you can move, cull, or recolor |
+
+The honest caveats matter. Strongly view-dependent effects remain hard: a few spherical-harmonic weights capture a soft glint well but struggle with sharp mirror reflections, refraction through glass, or a highlight that snaps across a surface, and both methods can smear these into a blur. Very large scenes strain the approach, since a city block or a whole building may need so many blobs that they no longer fit comfortably in memory. And that is the flip side of splatting's speed: storing millions of explicit Gaussians, each with its position, covariance factors, opacity, and a stack of color weights, costs far more disk and memory than a compact network, which makes streaming and sharing these scenes its own open problem.
+
+The direction of travel is toward keeping splatting's speed while trimming its cost and widening what it can represent: fewer blobs for the same quality, compressed representations, and better handling of the reflective, glassy surfaces that still give it trouble. The spine equation, though, is not going anywhere. Whatever stores the field next will still, in the end, be evaluating that one weighted sum of colors along a ray.
