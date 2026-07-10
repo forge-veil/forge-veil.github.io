@@ -66,6 +66,15 @@ export const MOTIFS: Record<string, string> = {
     <line x1="80" y1="170" x2="260" y2="170" stroke="${FAINT}" stroke-width="1.5"/>
     <line x1="170" y1="80" x2="170" y2="260" stroke="${FAINT}" stroke-width="1.5"/>
   </svg>`,
+  // Gaussian splats: a few overlapping anisotropic ellipses at varied angles.
+  'gaussian-splat': `<svg viewBox="0 0 340 340" xmlns="http://www.w3.org/2000/svg" fill="none">
+    <ellipse cx="150" cy="150" rx="70" ry="30" transform="rotate(25 150 150)" stroke="${FAINT}" stroke-width="2"/>
+    <ellipse cx="195" cy="175" rx="58" ry="24" transform="rotate(-15 195 175)" stroke="${MUT}" stroke-width="2"/>
+    <ellipse cx="165" cy="200" rx="44" ry="18" transform="rotate(55 165 200)" stroke="${INK}" stroke-width="2.5"/>
+    <ellipse cx="205" cy="130" rx="34" ry="14" transform="rotate(-40 205 130)" stroke="${FAINT}" stroke-width="1.5"/>
+    <circle cx="150" cy="150" r="3" fill="${INK}"/>
+    <circle cx="195" cy="175" r="3" fill="${MUT}"/>
+  </svg>`,
 };
 
 export function motifFor(opts: { ogMotif?: string; topic: string }): string {

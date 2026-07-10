@@ -22,4 +22,11 @@ describe('motifFor', () => {
       expect(svg).toContain('</svg>');
     }
   });
+  it('has a gaussian-splat motif that is a well-formed svg', () => {
+    const svg = MOTIFS['gaussian-splat'];
+    expect(svg).toBeDefined();
+    expect(svg).toContain('<svg');
+    expect(svg).toContain('viewBox="0 0 340 340"');
+    expect(svg.trim().endsWith('</svg>')).toBe(true);
+  });
 });
