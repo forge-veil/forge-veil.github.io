@@ -1,0 +1,159 @@
+---
+// src/components/TransmittanceSplatViz.astro
+// Transmittance on the real capture. The same "Sunflowers in a stone jug" scene
+// from the hero, rendered with Spark, but with a slider on every splat's
+// opacity. Turn it down and each splat blocks almost no light: the scene is a
+// faint, see-through haze (transmittance near 1, back shows through front).
+// Turn it up and the front splats occlude the back, transmittance collapses,
+// and the solid photoreal scene emerges. That is T_v = prod (1 - a_mu) at work
+// on real data. Scene by alfred2010, CC BY 4.0.
+import katex from 'katex';
+const eq = katex.renderToString(
+  String.raw`C \;=\; \sum_{\nu} T_\nu\, \alpha_\nu\, c_\nu, \qquad T_\nu = \prod_{\mu < \nu}(1 - \alpha_\mu)`,
+  { displayMode: true, throwOnError: false }
+);
+---
+<figure class="viz tsplat">
+  <div class="viz-eq" set:html={eq} />
+  <div class="ts-wrap"><canvas class="ts-canvas"></canvas></div>
+  <div class="viz-controls">
+    <label>Splat opacity <input class="ts-op" type="range" min="4" max="100" value="16" /></label>
+    <span class="ts-readout viz-readout"></span>
+  </div>
+  <figcaption>
+    The real captured scene, one opacity slider. Low opacity: every splat is nearly clear, so light passes through and the scene is a translucent haze (transmittance near 1). Raise it and the front splats block the ones behind, transmittance falls, and the solid image builds up: the same $C = \sum_\nu T_\nu \alpha_\nu c_\nu$ accumulating on real data. Drag to orbit, scroll to zoom.
+    <span class="ts-credit">Scene: <a href="https://superspl.at/scene/e2879fc1" target="_blank" rel="noopener noreferrer">&ldquo;Sunflowers in a stone jug&rdquo;</a> by alfred2010 (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>)</span>
+  </figcaption>
+</figure>
+
+<script>
+  const CAM_R = 7.0, CAM_EL = 0.14, CAM_FOV = 42, TARGET_Y = 0.05;
+  const AZ_START = Math.PI, MAX_DPR = 2;
+  const HERO_ROT = [0, 0, -0.4]; // same upright correction as the hero
+
+  document.querySelectorAll<HTMLElement>('.tsplat').forEach(init);
+
+  function init(root: HTMLElement) {
+    const canvas = root.querySelector<HTMLCanvasElement>('.ts-canvas')!;
+    const slider = root.querySelector<HTMLInputElement>('.ts-op')!;
+    const readout = root.querySelector<HTMLElement>('.ts-readout')!;
+
+    const REDUCE_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const opacityOf = () => Number(slider.value) / 100;
+
+    let started = false, ready = false, isVisible = false, rafId = 0;
+    let renderer: any = null, scene: any = null, camera: any = null;
+    let controls: any = null, mesh: any = null;
+
+    function phrase(o: number) {
+      if (o < 0.25) return 'translucent haze, light passes through';
+      if (o < 0.6) return 'filling in, front starts to hide back';
+      return 'solid, front blocks the light behind';
+    }
+    function updateReadout() {
+      const o = opacityOf();
+      readout.textContent = `opacity ×${o.toFixed(2)}   ·   ${phrase(o)}`;
+    }
+
+    function resize() {
+      if (!renderer || !camera) return;
+      const dpr = Math.min(MAX_DPR, window.devicePixelRatio || 1);
+      const w = Math.max(1, canvas.clientWidth), h = Math.max(1, canvas.clientHeight);
+      renderer.setPixelRatio(dpr);
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }
+
+    function draw() {
+      if (!renderer || !scene || !camera) return;
+      resize();
+      if (controls) controls.update();
+      if (mesh) mesh.opacity = opacityOf();
+      renderer.render(scene, camera);
+    }
+    function frame() { draw(); rafId = requestAnimationFrame(frame); }
+    function start() { if (!rafId && ready && isVisible) rafId = requestAnimationFrame(frame); }
+    function stop() { if (rafId) { cancelAnimationFrame(rafId); rafId = 0; } }
+
+    async function boot() {
+      if (started) return;
+      started = true;
+      try {
+        const three = await import('three');
+        const { SparkRenderer, SplatMesh } = await import('@sparkjsdev/spark');
+        const { OrbitControls } = await import('three/addons/controls/OrbitControls.js');
+
+        renderer = new three.WebGLRenderer({ canvas, alpha: true, antialias: true, premultipliedAlpha: true });
+        renderer.setClearColor(0x000000, 0);
+
+        scene = new three.Scene();
+        camera = new three.PerspectiveCamera(CAM_FOV, 1, 0.05, 200);
+        camera.position.set(
+          CAM_R * Math.cos(CAM_EL) * Math.sin(AZ_START),
+          TARGET_Y + CAM_R * Math.sin(CAM_EL),
+          CAM_R * Math.cos(CAM_EL) * Math.cos(AZ_START),
+        );
+
+        controls = new OrbitControls(camera, canvas);
+        controls.target.set(0, TARGET_Y, 0);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.08;
+        controls.enablePan = true;
+        controls.enableZoom = true;
+        controls.minDistance = CAM_R * 0.3;
+        controls.maxDistance = CAM_R * 2.4;
+        controls.autoRotate = !REDUCE_MOTION;
+        controls.autoRotateSpeed = 0.7;
+        controls.update();
+
+        scene.add(new SparkRenderer({ renderer }));
+
+        mesh = new SplatMesh({ url: `${import.meta.env.BASE_URL}hero.spz` });
+        mesh.rotation.set(HERO_ROT[0], HERO_ROT[1], HERO_ROT[2]);
+        mesh.opacity = opacityOf();
+        scene.add(mesh);
+        await mesh.initialized;
+
+        ready = true;
+        resize();
+        draw();
+        if (isVisible) start();
+      } catch {
+        stop();
+      }
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          isVisible = e.isIntersecting;
+          if (isVisible) { boot(); start(); } else { stop(); }
+        }
+      },
+      { threshold: 0.01, rootMargin: '200px' },
+    );
+    observer.observe(canvas);
+
+    slider.addEventListener('input', () => {
+      updateReadout();
+      if (mesh) mesh.opacity = opacityOf();
+      if (ready && (REDUCE_MOTION || !rafId)) draw();
+    });
+    window.addEventListener('resize', () => { if (ready && (REDUCE_MOTION || !rafId)) draw(); });
+    updateReadout();
+  }
+</script>
+
+<style>
+  .viz { margin: 2rem 0; }
+  .viz-eq { margin-bottom: 1rem; overflow-x: auto; }
+  .ts-wrap { width: 100%; max-width: 460px; margin: 0 auto; aspect-ratio: 4 / 3; }
+  .ts-canvas { width: 100%; height: 100%; display: block; cursor: grab; }
+  .ts-canvas:active { cursor: grabbing; }
+  .viz-controls { display: flex; align-items: center; gap: 1rem; margin-top: 0.75rem; font-family: var(--font-sans); font-size: 0.85rem; color: var(--color-ink-4); flex-wrap: wrap; }
+  .viz-controls input[type="range"] { accent-color: var(--color-ink); }
+  .viz-readout { color: var(--color-ink-3); }
+  .viz figcaption { font-family: var(--font-sans); font-size: 0.82rem; color: var(--color-ink-4); margin-top: 0.75rem; line-height: 1.5; }
+  .ts-credit { display: block; margin-top: 0.4rem; color: var(--color-ink-5); font-size: 0.76rem; }
+</style>
