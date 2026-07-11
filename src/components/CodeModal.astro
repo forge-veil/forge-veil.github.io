@@ -1,0 +1,180 @@
+---
+// src/components/CodeModal.astro
+// A small "equations & code" trigger that opens a modal dialog showing the
+// real code behind an interactive figure, matching the Klein bottle modal on
+// the home page (reuses the global .klein-dialog* styles). Pick a `preset`;
+// the curated sections below hold the actual source from src/lib/splat.ts and
+// the Spark integration, verbatim.
+import katex from 'katex';
+import { codeToHtml } from 'shiki';
+
+interface Section { label: string; desc?: string; eq?: string; code: string; lang?: string; }
+interface Props { preset: string; trigger?: string; }
+const { preset, trigger = 'equations & code' } = Astro.props;
+
+const PRESETS: Record<string, Section[]> = {
+  'volume-rendering': [
+    {
+      label: 'Volume rendering, discretized',
+      desc: 'A segment opacity, the transmittance in front of it, and the front-to-back over. Straight from the derivation.',
+      eq: String.raw`C = \sum_{\nu} T_\nu\, \alpha_\nu\, c_\nu`,
+      code: `// alpha = 1 - exp(-sigma * delta)
+export function alphaFromSigma(sigma: number, delta: number): number {
+  return 1 - Math.exp(-sigma * delta);
+}
+
+// T up to nu = exp(-sum of sigma * delta in front)
+export function transmittance(sigmas: number[], deltas: number[], upTo: number): number {
+  let s = 0;
+  for (let n = 0; n < upTo; n++) s += sigmas[n] * deltas[n];
+  return Math.exp(-s);
+}
+
+// Front-to-back "over": dst + (1 - dstA) * srcA * src
+export function alphaOver(dst: RGB, dstA: number, src: RGB, srcA: number) {
+  const w = (1 - dstA) * srcA;
+  return {
+    rgb: [dst[0] + w * src[0], dst[1] + w * src[1], dst[2] + w * src[2]],
+    a: dstA + w,
+  };
+}`,
+    },
+  ],
+  'ewa-projection': [
+    {
+      label: '3D covariance',
+      desc: 'Build the ellipsoid from a rotation R and per-axis scales S, so it stays a valid (positive semidefinite) shape by construction.',
+      eq: String.raw`\Sigma = R\,S\,S^\top R^\top`,
+      code: `// Sigma = R S Sᵀ Rᵀ, with S = diag(scale). Equivalent to M Mᵀ, M = R S.
+export function covariance3D(scale: Vec3, q: Quat): Mat3 {
+  const R = quatToMat3(q);
+  const [sx, sy, sz] = scale;
+  const M: Mat3 = [
+    R[0] * sx, R[1] * sy, R[2] * sz,
+    R[3] * sx, R[4] * sy, R[5] * sz,
+    R[6] * sx, R[7] * sy, R[8] * sz,
+  ];
+  return [ // M Mᵀ
+    M[0]*M[0] + M[1]*M[1] + M[2]*M[2], M[0]*M[3] + M[1]*M[4] + M[2]*M[5], M[0]*M[6] + M[1]*M[7] + M[2]*M[8],
+    M[3]*M[0] + M[4]*M[1] + M[5]*M[2], M[3]*M[3] + M[4]*M[4] + M[5]*M[5], M[3]*M[6] + M[4]*M[7] + M[5]*M[8],
+    M[6]*M[0] + M[7]*M[1] + M[8]*M[2], M[6]*M[3] + M[7]*M[4] + M[8]*M[5], M[6]*M[6] + M[7]*M[7] + M[8]*M[8],
+  ];
+}`,
+    },
+    {
+      label: 'EWA projection',
+      desc: 'Project the 3D covariance to a 2D screen-space ellipse through the Jacobian J of the perspective map. This is the sliver you see when a splat turns edge-on.',
+      eq: String.raw`\Sigma' = J\,\Sigma\,J^\top`,
+      code: `// camPos = Gaussian mean in camera space; J is the perspective Jacobian
+// of (x,y,z) -> focal * (x/z, y/z). Returns the 2x2 screen covariance.
+export function projectCovariance(cov3: Mat3, camPos: Vec3, focal: number): Mat2 {
+  const [x, y, z] = camPos, f = focal;
+  const a: Vec3 = [f / z, 0, -f * x / (z * z)]; // row 0 of J
+  const b: Vec3 = [0, f / z, -f * y / (z * z)]; // row 1 of J
+  const Sa = mat3MulVec(cov3, a);
+  const Sb = mat3MulVec(cov3, b);
+  return [dot(a, Sa), dot(a, Sb), dot(a, Sb), dot(b, Sb)];
+}`,
+    },
+    {
+      label: 'Evaluate and composite',
+      desc: 'The projected Gaussian falloff at a pixel, then the same front-to-back over that volume rendering used.',
+      code: `// exp(-1/2 · dᵀ Σ'⁻¹ d)
+export function gaussian2D(dx: number, dy: number, invCov: Mat2): number {
+  const [a, b, c, d] = invCov;
+  const q = dx * (a * dx + b * dy) + dy * (c * dx + d * dy);
+  return Math.exp(-0.5 * q);
+}`,
+    },
+  ],
+  'spherical-harmonics': [
+    {
+      label: 'Spherical harmonics',
+      desc: 'Color as a function of view direction, stored as a few coefficients per channel (degree 2 here). The DC term is the flat base color; higher bands add the view-dependent sheen.',
+      eq: String.raw`c(\mathbf{d}) = \sum_{\ell, m} c_{\ell m}\, Y_{\ell m}(\mathbf{d})`,
+      code: `const SH_C0 = 0.2820947918;
+const SH_C1 = 0.4886025119;
+const SH_C2 = [1.0925484306, 1.0925484306, 0.3153915653, 1.0925484306, 0.5462742153];
+
+export function evalSHRGB(coeffs: RGB[], dir: Vec3): RGB {
+  const [x, y, z] = dir;
+  const basis = [
+    SH_C0,
+    -SH_C1 * y, SH_C1 * z, -SH_C1 * x,
+    SH_C2[0]*x*y, SH_C2[1]*y*z, SH_C2[2]*(2*z*z - x*x - y*y), SH_C2[3]*x*z, SH_C2[4]*(x*x - y*y),
+  ];
+  const out: RGB = [0.5, 0.5, 0.5];
+  for (let ch = 0; ch < 3; ch++) {
+    let acc = 0;
+    for (let n = 0; n < 9; n++) acc += coeffs[n][ch] * basis[n];
+    out[ch] = Math.min(1, Math.max(0, out[ch] + acc));
+  }
+  return out;
+}`,
+    },
+  ],
+  'spark-sh': [
+    {
+      label: 'Toggling SH on the real capture',
+      desc: 'The captured scene ships spherical-harmonic color. Spark renders it directly; dropping to degree 0 leaves the flat base color, restoring it brings the highlights back.',
+      code: `import { SplatMesh } from '@sparkjsdev/spark';
+
+// SOGS capture, spherical harmonics included
+const mesh = new SplatMesh({ url: '/hero-sh.sog' });
+
+function setViewDependent(on: boolean) {
+  mesh.maxSh = on ? 3 : 0;  // degree 3 SH, or flat DC color
+  mesh.updateGenerator();   // rebuild the render pipeline live
+}`,
+      lang: 'typescript',
+    },
+  ],
+};
+
+const sections = PRESETS[preset] ?? [];
+const id = 'cm-' + Math.abs([...preset].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) | 0, 7)).toString(36);
+
+const rendered = await Promise.all(
+  sections.map(async (s) => ({
+    label: s.label,
+    desc: s.desc,
+    eqHtml: s.eq ? katex.renderToString(s.eq, { displayMode: true, throwOnError: false }) : '',
+    codeHtml: await codeToHtml(s.code, { lang: s.lang ?? 'typescript', theme: 'github-light' }),
+  })),
+);
+---
+<div class="cm-line">
+  <button class="klein-source-btn cm-trigger" data-cm-target={id}>{trigger}</button>
+</div>
+
+<dialog id={id} class="klein-dialog cm-dialog">
+  <div class="klein-dialog-inner">
+    <button class="klein-dialog-close cm-close" aria-label="Close">&times;</button>
+    {rendered.map((s) => (
+      <section class="klein-dialog-section">
+        <h3 class="klein-dialog-label">{s.label}</h3>
+        {s.desc && <p class="klein-dialog-desc">{s.desc}</p>}
+        {s.eqHtml && <div class="klein-dialog-eq" set:html={s.eqHtml} />}
+        <div class="klein-dialog-code" set:html={s.codeHtml} />
+      </section>
+    ))}
+  </div>
+</dialog>
+
+<script>
+  // Astro bundles this once; wire every CodeModal on the page.
+  document.querySelectorAll<HTMLButtonElement>('.cm-trigger').forEach((btn) => {
+    if (btn.dataset.wired) return;
+    btn.dataset.wired = '1';
+    const dialog = document.getElementById(btn.dataset.cmTarget!) as HTMLDialogElement | null;
+    if (!dialog) return;
+    btn.addEventListener('click', () => dialog.showModal());
+    dialog.querySelector('.cm-close')?.addEventListener('click', () => dialog.close());
+    dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });
+  });
+</script>
+
+<style>
+  .cm-line { margin: 0.4rem 0 0; text-align: center; }
+  .cm-dialog .klein-dialog-code { margin-top: 4px; }
+</style>

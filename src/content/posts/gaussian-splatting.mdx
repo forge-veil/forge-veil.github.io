@@ -15,6 +15,7 @@ import TransmittanceSplatViz from '../../components/TransmittanceSplatViz.astro'
 import GaussianSplatLab from '../../components/GaussianSplatLab.astro';
 import SphericalHarmonicsViz from '../../components/SphericalHarmonicsViz.astro';
 import ViewDependentSplatViz from '../../components/ViewDependentSplatViz.astro';
+import CodeModal from '../../components/CodeModal.astro';
 
 <SplatHero side />
 
@@ -107,6 +108,8 @@ $$C = \sum_{\nu} T_\nu\, \alpha_\nu\, c_\nu.$$
 
 <TransmittanceSplatViz />
 
+<CodeModal preset="volume-rendering" />
+
 This is **alpha compositing**: walk the segments front to back, and each one lays down its color $c_\nu$, painted at strength $\alpha_\nu$ and faded by everything already in front of it, $T_\nu$. It is the exact same "over" operation that stacks semi-transparent layers in any image editor, here derived from the physics of light through fog rather than assumed. The interactive figure above makes this real, on the same captured scene from the top of the post, now with a slider on every splat's opacity. Turn it down and each splat blocks almost nothing: light passes straight through and the scene is a translucent haze, transmittance near 1 everywhere. Turn it up and the front splats begin to hide the ones behind them, transmittance falls off with depth, and the solid photoreal image accumulates, one $\alpha_\nu\, c_\nu$ at a time.
 
 That one equation, $C = \sum_{\nu} T_\nu\, \alpha_\nu\, c_\nu$, is the spine of this entire post. Fix it in your mind, because from here on nothing about the goal changes: every method we meet is producing exactly this weighted sum of colors along a ray. What changes is only *how each method stores the field and finds the segments*. NeRF, in the next section, will answer by asking a neural network for $\sigma$ and $c$ at hundreds of sampled points per ray. 3D Gaussian splatting will answer by skipping the ray march entirely and letting explicit blobs deposit their own $\alpha_\nu\, c_\nu$ onto the pixels they cover. Two machines, wildly different in speed, both evaluating this same sum.
@@ -188,6 +191,8 @@ Here $S$ is a diagonal matrix of three positive **scales**, the blob's radius al
 
 <GaussianSplatLab />
 
+<CodeModal preset="ewa-projection" />
+
 **Projecting a blob to the screen.** A Gaussian lives in 3D, but a pixel lives on a flat screen, so before we can composite anything we have to ask what a 3D blob *looks like* from the camera: what 2D footprint does it cast?
 
 <div class="intuition">
@@ -216,9 +221,13 @@ Each $Y_{\ell m}$ is one of those fixed patterns on the sphere (the index $\ell$
 
 <SphericalHarmonicsViz />
 
+<CodeModal preset="spherical-harmonics" />
+
 The abstract sphere above shows what the bands do. Here they are on the real capture: toggle the harmonics off and the sunflowers and the glazed jug go matte, one flat color per splat; toggle them on and the highlights come alive, sliding across the petals and the glaze as you orbit.
 
 <ViewDependentSplatViz />
+
+<CodeModal preset="spark-sh" />
 
 **Back to the integral.** Every piece is now on the table, and the last step is the one we have been promising since section 2: it is the same sum. To render a frame, project all the blobs to the screen with the EWA map, sort them front to back by depth, and composite them with the exact spine equation,
 
