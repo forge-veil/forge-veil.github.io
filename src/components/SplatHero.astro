@@ -3,13 +3,17 @@
 // Ambient, non-interactive centrepiece for the top of "Painting with
 // Gaussians": a REAL photogrammetry-captured Gaussian splat scene, "Sunflowers
 // in a stone jug" by alfred2010 (CC BY 4.0), authored in PlayCanvas SuperSplat
-// and exported as SOGS v2. The full 336,939-splat capture was decoded from its
-// compressed webp textures, reoriented upright, cropped of floaters, and
-// importance-decimated down to about six thousand splats baked into a compact
-// binary asset (public/hero-splat.bin). It renders here through the exact same
-// transform -> project -> sort -> composite pipeline as GaussianSplatLab
-// (../lib/splat), just without controls, slowly turning in place, so the reader
-// sees the payoff, a small captured scene, before the post unpacks the math.
+// and exported as SOGS v2. The full capture (all 336,939 splats) was decoded
+// and baked, upright, into public/hero.splat (the widely supported antimatter15
+// .splat format).
+//
+// This renders the splats PHOTOREALISTICALLY on the GPU with Spark
+// (@sparkjsdev/spark), World Labs' maintained Gaussian-splat renderer for
+// three.js. Spark adds a SplatMesh to an ordinary three.js scene and handles
+// the GPU sorting and EWA splat rasterisation itself, so there is no
+// hand-rolled shader here. The scene turns slowly on its own and the reader can
+// grab it (drag to orbit, scroll to zoom), so they see the payoff, a real
+// captured scene, before the post unpacks the math.
 interface Props {
   side?: boolean;
 }
@@ -17,7 +21,7 @@ const { side = false } = Astro.props;
 ---
 <figure class={`sh-fig${side ? ' sh-side' : ''}`}>
   <div class="sh-wrap">
-    <canvas class="sh-canvas" width="200" height="240"></canvas>
+    <canvas class="sh-canvas"></canvas>
   </div>
   <figcaption class="sh-cap">
     Scene: <a href="https://superspl.at/scene/e2879fc1" target="_blank" rel="noopener noreferrer">&ldquo;Sunflowers in a stone jug&rdquo;</a> by alfred2010 (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>)
@@ -25,208 +29,67 @@ const { side = false } = Astro.props;
 </figure>
 
 <script>
-  import {
-    covariance3D,
-    projectCovariance,
-    invMat2,
-    gaussian2D,
-    alphaOver,
-  } from '../lib/splat';
-  import type { Vec3, Mat3, Mat2, Quat, RGB } from '../lib/splat';
-
-  // ── Scene model (same shape as GaussianSplatLab) ─────────────────────
-  type Splat = { pos: Vec3; scale: Vec3; quat: Quat; color: RGB; opacity: number };
-
-  // ── Load the baked capture ───────────────────────────────────────────
-  // Binary layout of public/hero-splat.bin (little-endian):
-  //   header: uint32 count
-  //   then `count` records of STRIDE=32 bytes each:
-  //     float32 x, y, z         (pos, already oriented / centred / scaled)
-  //     float32 sx, sy, sz      (per-axis gaussian scale)
-  //     int8    qw, qx, qy, qz  (unit quaternion * 127)
-  //     uint8   r, g, b         (DC colour 0..255)
-  //     uint8   opacity         (0..255)
-  const STRIDE = 32;
-
-  function parseSplats(buf: ArrayBuffer): Splat[] {
-    const dv = new DataView(buf);
-    const count = dv.getUint32(0, true);
-    const out: Splat[] = new Array(count);
-    for (let i = 0; i < count; i++) {
-      const o = 4 + i * STRIDE;
-      out[i] = {
-        pos: [dv.getFloat32(o, true), dv.getFloat32(o + 4, true), dv.getFloat32(o + 8, true)],
-        scale: [dv.getFloat32(o + 12, true), dv.getFloat32(o + 16, true), dv.getFloat32(o + 20, true)],
-        quat: [dv.getInt8(o + 24) / 127, dv.getInt8(o + 25) / 127, dv.getInt8(o + 26) / 127, dv.getInt8(o + 27) / 127],
-        color: [dv.getUint8(o + 28) / 255, dv.getUint8(o + 29) / 255, dv.getUint8(o + 30) / 255],
-        opacity: dv.getUint8(o + 31) / 255,
-      };
-    }
-    return out;
-  }
-
-  // Fetch the asset once for the whole page; the parsed list is immutable and
-  // shared read-only across every mounted instance (never mutated by render).
-  // On any failure the promise resolves to null and each canvas stays blank.
-  const splatsPromise: Promise<Splat[] | null> = (async () => {
-    try {
-      const res = await fetch(`${import.meta.env.BASE_URL}hero-splat.bin`);
-      if (!res.ok) return null;
-      return parseSplats(await res.arrayBuffer());
-    } catch {
-      return null;
-    }
-  })();
-
-  // ── Small matrix helpers (row-major flat 3x3), same as GaussianSplatLab ──
-  function mat3mul(A: Mat3, B: Mat3): Mat3 {
-    const C = new Array(9) as unknown as Mat3;
-    for (let r = 0; r < 3; r++)
-      for (let c = 0; c < 3; c++)
-        C[r * 3 + c] = A[r * 3] * B[c] + A[r * 3 + 1] * B[3 + c] + A[r * 3 + 2] * B[6 + c];
-    return C;
-  }
-  function transpose3(A: Mat3): Mat3 {
-    return [A[0], A[3], A[6], A[1], A[4], A[7], A[2], A[5], A[8]];
-  }
-  function mat3vec(A: Mat3, v: Vec3): Vec3 {
-    return [
-      A[0] * v[0] + A[1] * v[1] + A[2] * v[2],
-      A[3] * v[0] + A[4] * v[1] + A[5] * v[2],
-      A[6] * v[0] + A[7] * v[1] + A[8] * v[2],
-    ];
-  }
-
-  // World→camera rotation W = Rx(el)·Ry(az), same convention as the lab.
-  function camMatrix(az: number, el: number): Mat3 {
-    const ca = Math.cos(az), sa = Math.sin(az);
-    const ce = Math.cos(el), se = Math.sin(el);
-    return [
-      ca, 0, sa,
-      sa * se, ce, -ca * se,
-      -sa * ce, se, ca * ce,
-    ];
-  }
-
-  // ── Canvas / render config (modest internal resolution, CSS-scaled up) ──
-  const W = 200, H = 240;
-  const CX = W / 2, CY = H / 2;
-  const FOCAL = 220;      // pixels
-  const CAM_R = 6.4;      // camera distance from target
-  const EPS_Z = 0.05;     // cull Gaussians at/behind the camera (z <= eps)
-  const EL = 0.18;        // fixed, gentle downward camera tilt
-  const AZ_RATE = 0.12;   // radians / second, slow continuous turn
-  const BG: RGB = [0.980, 0.980, 0.980]; // #fafafa, matches the site vizzes
-
-  type Item = { z: number; sx: number; sy: number; inv: Mat2; cov2: Mat2; color: RGB; opacity: number };
+  // ── Framing constants ───────────────────────────────────────────────
+  // The baked scene (public/hero.splat) is roughly centred on the origin
+  // with a vertical half-extent of about 1.45 units. The camera orbits the
+  // vertical axis at a fixed radius / elevation, looking at a target a touch
+  // above the origin so the bouquet sits centred in the portrait frame.
+  const CAM_R = 7.0;          // camera distance from target (pulled back so the
+                              // full bouquet clears the frame at every angle)
+  const CAM_EL = 0.14;        // gentle downward tilt (radians)
+  const CAM_FOV = 42;         // vertical field of view (degrees)
+  const TARGET_Y = 0.05;      // look slightly above the origin
+  const AZ_START = Math.PI;   // start on the flowers-facing side
+  const MAX_DPR = 2;          // cap devicePixelRatio for fragment cost
+  const HERO_ROT = [0, 0, -0.4]; // tilt correction (Euler XYZ, radians)
 
   const REDUCE_MOTION =
     typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // An Astro bundled <script> runs once per page, so ALL mutable per-instance
-  // state (rotation angle, rAF id, observer, accumulation buffers) lives
-  // inside init() below, one closure per mounted component so multiple
-  // embeds on the same page never share state or clobber each other's pixels.
+  // An Astro bundled <script> runs once per page, so ALL per-instance state
+  // lives inside init(), one closure per mounted component; multiple embeds
+  // never share renderer state.
   document.querySelectorAll<HTMLElement>('.sh-wrap').forEach(init);
 
   function init(root: HTMLElement) {
     const canvas = root.querySelector<HTMLCanvasElement>('.sh-canvas')!;
-    const ctx = canvas.getContext('2d')!;
-    const img = ctx.createImageData(W, H);
 
-    // ── Per-instance mutable state ───────────────────────────────────────
-    let splats: Splat[] = []; // populated once the binary asset resolves
-    let az = 0;
+    // ── Per-instance mutable state ─────────────────────────────────────
+    let started = false;      // heavy init (import + GPU) has begun
+    let ready = false;        // splat loaded, first frame drawn
+    let isVisible = false;
     let rafId = 0;
-    let lastT = 0;
-    const accR = new Float32Array(W * H);
-    const accG = new Float32Array(W * H);
-    const accB = new Float32Array(W * H);
-    const accA = new Float32Array(W * H);
+    let renderer: any = null;
+    let sparkScene: any = null;
+    let camera: any = null;
+    let controls: any = null;
 
-    // ── The render pipeline: transform → project → sort → composite ─────
-    function render() {
-      const Rc = camMatrix(az, EL);
-      const Rct = transpose3(Rc);
-
-      const items: Item[] = [];
-      for (const s of splats) {
-        const mc = mat3vec(Rc, s.pos);
-        mc[2] += CAM_R; // push the target distance R in front of the camera
-        if (mc[2] <= EPS_Z) continue; // cull at/behind camera
-
-        const cov3 = covariance3D(s.scale, s.quat);
-        const covCam = mat3mul(mat3mul(Rc, cov3), Rct); // Σ_cam = W Σ Wᵀ
-        const cov2raw = projectCovariance(covCam, mc, FOCAL); // Σ' = J Σ_cam Jᵀ
-
-        const sx = CX + FOCAL * (mc[0] / mc[2]);
-        const sy = CY - FOCAL * (mc[1] / mc[2]); // y-flip: +y world up → image down
-        const cov2: Mat2 = [cov2raw[0], -cov2raw[1], -cov2raw[1], cov2raw[3]];
-        const inv = invMat2(cov2);
-
-        items.push({ z: mc[2], sx, sy, inv, cov2, color: s.color, opacity: s.opacity });
-      }
-
-      items.sort((a, b) => a.z - b.z); // near→far so front-to-back "over" accumulates right
-
-      accR.fill(0); accG.fill(0); accB.fill(0); accA.fill(0);
-
-      for (const it of items) {
-        const rx = Math.max(1, Math.ceil(3 * Math.sqrt(Math.max(it.cov2[0], 1e-6))));
-        const ry = Math.max(1, Math.ceil(3 * Math.sqrt(Math.max(it.cov2[3], 1e-6))));
-        const x0 = Math.max(0, Math.floor(it.sx - rx));
-        const x1 = Math.min(W - 1, Math.ceil(it.sx + rx));
-        const y0 = Math.max(0, Math.floor(it.sy - ry));
-        const y1 = Math.min(H - 1, Math.ceil(it.sy + ry));
-        const op = it.opacity;
-        for (let py = y0; py <= y1; py++) {
-          const dy = py - it.sy;
-          const rowBase = py * W;
-          for (let px = x0; px <= x1; px++) {
-            const idx = rowBase + px;
-            const dstA = accA[idx];
-            if (dstA >= 0.999) continue;
-            const g = gaussian2D(px - it.sx, dy, it.inv);
-            const srcA = op * g;
-            if (srcA < 0.003) continue;
-            const res = alphaOver([accR[idx], accG[idx], accB[idx]], dstA, it.color, srcA);
-            accR[idx] = res.rgb[0];
-            accG[idx] = res.rgb[1];
-            accB[idx] = res.rgb[2];
-            accA[idx] = res.a;
-          }
-        }
-      }
-
-      const data = img.data;
-      for (let p = 0; p < W * H; p++) {
-        const a = accA[p];
-        const t = 1 - a;
-        const r = accR[p] + t * BG[0];
-        const g = accG[p] + t * BG[1];
-        const b = accB[p] + t * BG[2];
-        const o = p * 4;
-        data[o] = Math.min(255, r * 255);
-        data[o + 1] = Math.min(255, g * 255);
-        data[o + 2] = Math.min(255, b * 255);
-        data[o + 3] = 255;
-      }
-      ctx.putImageData(img, 0, 0);
+    function resize() {
+      if (!renderer || !camera) return;
+      const dpr = Math.min(MAX_DPR, window.devicePixelRatio || 1);
+      const w = Math.max(1, canvas.clientWidth);
+      const h = Math.max(1, canvas.clientHeight);
+      renderer.setPixelRatio(dpr);
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
     }
 
-    // ── Rotation loop, paused off-screen ─────────────────────────────────
-    function frame(t: number) {
-      if (lastT === 0) lastT = t;
-      const dt = (t - lastT) / 1000;
-      lastT = t;
-      az += AZ_RATE * dt;
-      render();
+    function draw() {
+      if (!renderer || !sparkScene || !camera) return;
+      resize();
+      if (controls) controls.update();
+      renderer.render(sparkScene, camera);
+    }
+
+    // ── Render loop (damping + optional auto orbit), paused off-screen ──
+    function frame() {
+      draw();
       rafId = requestAnimationFrame(frame);
     }
     function start() {
-      if (rafId || REDUCE_MOTION) return;
-      lastT = 0;
+      if (rafId || !ready || !isVisible) return;
       rafId = requestAnimationFrame(frame);
     }
     function stop() {
@@ -235,27 +98,91 @@ const { side = false } = Astro.props;
       rafId = 0;
     }
 
-    // The scene is loaded asynchronously: paint (and, unless reduced-motion,
-    // begin observing for the rotation loop) only once the asset resolves. A
-    // failed fetch resolves to null and the canvas is simply left blank.
-    splatsPromise.then((data) => {
-      if (!data) return;
-      splats = data;
+    // ── Heavy, lazy initialisation ─────────────────────────────────────
+    // Dynamically import three + Spark and fetch the multi-MB asset only
+    // when the hero nears the viewport, so the initial page paint is never
+    // blocked. Any failure (no WebGL2, import error, bad asset) leaves a
+    // blank #fafafa canvas plus the caption, never a crash.
+    async function boot() {
+      if (started) return;
+      started = true;
+      try {
+        const three = await import('three');
+        const { SparkRenderer, SplatMesh } = await import('@sparkjsdev/spark');
+        const { OrbitControls } = await import('three/addons/controls/OrbitControls.js');
 
-      render(); // first paint, including the reduced-motion single static frame
+        renderer = new three.WebGLRenderer({
+          canvas,
+          alpha: true,
+          antialias: true,
+          premultipliedAlpha: true,
+        });
+        renderer.setClearColor(0x000000, 0);
 
-      if (REDUCE_MOTION) return;
+        sparkScene = new three.Scene();
+        camera = new three.PerspectiveCamera(CAM_FOV, 1, 0.05, 200);
+        camera.position.set(
+          CAM_R * Math.cos(CAM_EL) * Math.sin(AZ_START),
+          TARGET_Y + CAM_R * Math.sin(CAM_EL),
+          CAM_R * Math.cos(CAM_EL) * Math.cos(AZ_START),
+        );
 
-      const observer = new IntersectionObserver(
-        (entries) => {
-          for (const entry of entries) {
-            if (entry.isIntersecting) start();
-            else stop();
+        // Orbit + zoom + pan. Damped, with a gentle idle auto orbit that the
+        // reader can grab and take over (drag to orbit, scroll to zoom).
+        controls = new OrbitControls(camera, canvas);
+        controls.target.set(0, TARGET_Y, 0);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.08;
+        controls.enablePan = true;
+        controls.enableZoom = true;
+        controls.minDistance = CAM_R * 0.3;
+        controls.maxDistance = CAM_R * 2.4;
+        controls.autoRotate = !REDUCE_MOTION; // idle spin, off for reduce-motion
+        controls.autoRotateSpeed = 0.8;
+        controls.update();
+
+        const spark = new SparkRenderer({ renderer });
+        sparkScene.add(spark);
+
+        const mesh = new SplatMesh({
+          url: `${import.meta.env.BASE_URL}hero.splat`,
+        });
+        // Baked up = +Y. HERO_ROT is a fine tilt correction (Euler XYZ radians)
+        // that brings the real capture's true up onto vertical.
+        mesh.rotation.set(HERO_ROT[0], HERO_ROT[1], HERO_ROT[2]);
+        sparkScene.add(mesh);
+
+        await mesh.initialized;
+
+        ready = true;
+        resize();
+        draw(); // first paint, also the reduced-motion single static frame
+        if (isVisible) start();
+      } catch {
+        // Leave the blank canvas + caption in place.
+        stop();
+      }
+    }
+
+    // ── Lazy-load + visibility ─────────────────────────────────────────
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          isVisible = entry.isIntersecting;
+          if (isVisible) {
+            boot();
+            start();
+          } else {
+            stop();
           }
-        },
-        { threshold: 0.01 },
-      );
-      observer.observe(canvas);
+        }
+      },
+      { threshold: 0.01, rootMargin: '200px' },
+    );
+    observer.observe(canvas);
+
+    window.addEventListener('resize', () => {
+      if (ready && (REDUCE_MOTION || !rafId)) draw();
     });
   }
 </script>
