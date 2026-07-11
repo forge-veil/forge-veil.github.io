@@ -1,0 +1,177 @@
+---
+// src/components/ViewDependentSplatViz.astro
+// Real view-dependent color on the captured scene. The same "Sunflowers in a
+// stone jug" scene from the hero, but loaded from the full SOGS bundle so the
+// higher spherical-harmonic bands survive (the hero .spz is DC color only).
+// Rendered with Spark, with a toggle for the SH bands. ON: each splat's color
+// is a function of view direction, so specular highlights on the petals and the
+// glaze shift as you orbit (mesh.maxSh = 3). OFF: every splat collapses to one
+// flat DC color and the scene goes matte (mesh.maxSh = 0). That is
+// c(d) = sum_lm c_lm Y_lm(d) at work on real data. Scene by alfred2010, CC BY 4.0.
+import katex from 'katex';
+const eq = katex.renderToString(
+  String.raw`c(\mathbf{d}) \;=\; \sum_{\ell,m} c_{\ell m}\, Y_{\ell m}(\mathbf{d})`,
+  { displayMode: true, throwOnError: false }
+);
+---
+<figure class="viz vdsplat">
+  <div class="viz-eq" set:html={eq} />
+  <div class="vd-wrap"><canvas class="vd-canvas"></canvas></div>
+  <div class="viz-controls">
+    <label class="vd-toggle-label">
+      <input class="vd-toggle" type="checkbox" checked />
+      View-dependent color (spherical harmonics)
+    </label>
+    <span class="vd-readout viz-readout"></span>
+  </div>
+  <figcaption>
+    The real captured scene with its spherical-harmonic bands intact. With SH on, each splat's color is a function of view direction (the sum above, evaluated at the current view), so the specular highlights on the petals and the glaze on the jug shift as you orbit. Turn it off and every splat drops to a single flat color and the scene goes matte. Drag to orbit, scroll to zoom.
+    <span class="vd-credit">Scene: <a href="https://superspl.at/scene/e2879fc1" target="_blank" rel="noopener noreferrer">&ldquo;Sunflowers in a stone jug&rdquo;</a> by alfred2010 (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>)</span>
+  </figcaption>
+</figure>
+
+<script>
+  const CAM_R = 7.0, CAM_EL = 0.14, CAM_FOV = 42, TARGET_Y = 0.05;
+  const AZ_START = Math.PI, MAX_DPR = 2;
+  const HERO_ROT = [0, 0, -0.4]; // same upright correction as the hero
+  const CAPTURE_UP = [-0.315, -0.821, -0.475]; // raw capture up-vector
+
+  document.querySelectorAll<HTMLElement>('.vdsplat').forEach(init);
+
+  function init(root: HTMLElement) {
+    const canvas = root.querySelector<HTMLCanvasElement>('.vd-canvas')!;
+    const toggle = root.querySelector<HTMLInputElement>('.vd-toggle')!;
+    const readout = root.querySelector<HTMLElement>('.vd-readout')!;
+
+    const REDUCE_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const shOn = () => toggle.checked;
+
+    let started = false, ready = false, isVisible = false, rafId = 0;
+    let renderer: any = null, scene: any = null, camera: any = null;
+    let controls: any = null, mesh: any = null;
+
+    function updateReadout() {
+      readout.textContent = shOn()
+        ? 'SH on   ·   highlights shift with view direction'
+        : 'SH off   ·   flat color, matte surfaces';
+    }
+
+    function applySh() {
+      if (!mesh) return;
+      // SplatMesh has no setMaxSh method; the generator reads mesh.maxSh, so set
+      // it and mark the generator dirty to rebuild the pipeline live.
+      mesh.maxSh = shOn() ? 3 : 0;
+      mesh.updateGenerator();
+    }
+
+    function resize() {
+      if (!renderer || !camera) return;
+      const dpr = Math.min(MAX_DPR, window.devicePixelRatio || 1);
+      const w = Math.max(1, canvas.clientWidth), h = Math.max(1, canvas.clientHeight);
+      renderer.setPixelRatio(dpr);
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }
+
+    function draw() {
+      if (!renderer || !scene || !camera) return;
+      resize();
+      if (controls) controls.update();
+      renderer.render(scene, camera);
+    }
+    function frame() { draw(); rafId = requestAnimationFrame(frame); }
+    function start() { if (!rafId && ready && isVisible) rafId = requestAnimationFrame(frame); }
+    function stop() { if (rafId) { cancelAnimationFrame(rafId); rafId = 0; } }
+
+    async function boot() {
+      if (started) return;
+      started = true;
+      try {
+        const three = await import('three');
+        const { SparkRenderer, SplatMesh } = await import('@sparkjsdev/spark');
+        const { OrbitControls } = await import('three/addons/controls/OrbitControls.js');
+
+        renderer = new three.WebGLRenderer({ canvas, alpha: true, antialias: true, premultipliedAlpha: true });
+        renderer.setClearColor(0x000000, 0);
+
+        scene = new three.Scene();
+        camera = new three.PerspectiveCamera(CAM_FOV, 1, 0.05, 200);
+        camera.position.set(
+          CAM_R * Math.cos(CAM_EL) * Math.sin(AZ_START),
+          TARGET_Y + CAM_R * Math.sin(CAM_EL),
+          CAM_R * Math.cos(CAM_EL) * Math.cos(AZ_START),
+        );
+
+        controls = new OrbitControls(camera, canvas);
+        controls.target.set(0, TARGET_Y, 0);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.08;
+        controls.enablePan = true;
+        controls.enableZoom = true;
+        controls.minDistance = CAM_R * 0.3;
+        controls.maxDistance = CAM_R * 2.4;
+        controls.autoRotate = !REDUCE_MOTION;
+        controls.autoRotateSpeed = 0.7;
+        controls.update();
+
+        scene.add(new SparkRenderer({ renderer }));
+
+        mesh = new SplatMesh({ url: `${import.meta.env.BASE_URL}hero-sh.sog` });
+        // This SOGS is the raw (tilted) capture. Stand it upright exactly like
+        // the hero: rotate the capture up-vector onto world +Y (qAlign), then
+        // apply the hero's extra Euler tweak (qHeroRot). Compose via quaternion.
+        const up = new three.Vector3(CAPTURE_UP[0], CAPTURE_UP[1], CAPTURE_UP[2]).normalize();
+        const qAlign = new three.Quaternion().setFromUnitVectors(up, new three.Vector3(0, 1, 0));
+        const qHeroRot = new three.Quaternion().setFromEuler(
+          new three.Euler(HERO_ROT[0], HERO_ROT[1], HERO_ROT[2]),
+        );
+        mesh.quaternion.copy(qHeroRot.multiply(qAlign));
+        scene.add(mesh);
+        await mesh.initialized;
+
+        applySh();
+
+        ready = true;
+        resize();
+        draw();
+        if (isVisible) start();
+      } catch {
+        stop();
+      }
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          isVisible = e.isIntersecting;
+          if (isVisible) { boot(); start(); } else { stop(); }
+        }
+      },
+      { threshold: 0.01, rootMargin: '200px' },
+    );
+    observer.observe(canvas);
+
+    toggle.addEventListener('change', () => {
+      updateReadout();
+      applySh();
+      if (ready && (REDUCE_MOTION || !rafId)) draw();
+    });
+    window.addEventListener('resize', () => { if (ready && (REDUCE_MOTION || !rafId)) draw(); });
+    updateReadout();
+  }
+</script>
+
+<style>
+  .viz { margin: 2rem 0; }
+  .viz-eq { margin-bottom: 1rem; overflow-x: auto; }
+  .vd-wrap { width: 100%; max-width: 460px; margin: 0 auto; aspect-ratio: 4 / 3; }
+  .vd-canvas { width: 100%; height: 100%; display: block; cursor: grab; }
+  .vd-canvas:active { cursor: grabbing; }
+  .viz-controls { display: flex; align-items: center; gap: 1rem; margin-top: 0.75rem; font-family: var(--font-sans); font-size: 0.85rem; color: var(--color-ink-4); flex-wrap: wrap; }
+  .vd-toggle-label { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
+  .viz-controls input[type="checkbox"] { accent-color: var(--color-ink); cursor: pointer; }
+  .viz-readout { color: var(--color-ink-3); }
+  .viz figcaption { font-family: var(--font-sans); font-size: 0.82rem; color: var(--color-ink-4); margin-top: 0.75rem; line-height: 1.5; }
+  .vd-credit { display: block; margin-top: 0.4rem; color: var(--color-ink-5); font-size: 0.76rem; }
+</style>

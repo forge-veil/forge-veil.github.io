@@ -11,9 +11,10 @@ published: false
 ---
 
 import SplatHero from '../../components/SplatHero.astro';
-import RayMarchViz from '../../components/RayMarchViz.astro';
+import TransmittanceSplatViz from '../../components/TransmittanceSplatViz.astro';
 import GaussianSplatLab from '../../components/GaussianSplatLab.astro';
 import SphericalHarmonicsViz from '../../components/SphericalHarmonicsViz.astro';
+import ViewDependentSplatViz from '../../components/ViewDependentSplatViz.astro';
 
 <SplatHero side />
 
@@ -104,9 +105,9 @@ Each factor $(1 - \alpha_\mu)$ is the fraction of light that survived segment $\
 
 $$C = \sum_{\nu} T_\nu\, \alpha_\nu\, c_\nu.$$
 
-<RayMarchViz />
+<TransmittanceSplatViz />
 
-This is **alpha compositing**: walk the segments front to back, and each one lays down its color $c_\nu$, painted at strength $\alpha_\nu$ and faded by everything already in front of it, $T_\nu$. It is the exact same "over" operation that stacks semi-transparent layers in any image editor, here derived from the physics of light through fog rather than assumed. The interactive figure above is this sum, made literal: drag the sample point along the ray and watch each segment add its color, watch the transmittance bar drain as opaque fog accumulates, and watch the running color converge to the pixel's final value.
+This is **alpha compositing**: walk the segments front to back, and each one lays down its color $c_\nu$, painted at strength $\alpha_\nu$ and faded by everything already in front of it, $T_\nu$. It is the exact same "over" operation that stacks semi-transparent layers in any image editor, here derived from the physics of light through fog rather than assumed. The interactive figure above makes this real, on the same captured scene from the top of the post, now with a slider on every splat's opacity. Turn it down and each splat blocks almost nothing: light passes straight through and the scene is a translucent haze, transmittance near 1 everywhere. Turn it up and the front splats begin to hide the ones behind them, transmittance falls off with depth, and the solid photoreal image accumulates, one $\alpha_\nu\, c_\nu$ at a time.
 
 That one equation, $C = \sum_{\nu} T_\nu\, \alpha_\nu\, c_\nu$, is the spine of this entire post. Fix it in your mind, because from here on nothing about the goal changes: every method we meet is producing exactly this weighted sum of colors along a ray. What changes is only *how each method stores the field and finds the segments*. NeRF, in the next section, will answer by asking a neural network for $\sigma$ and $c$ at hundreds of sampled points per ray. 3D Gaussian splatting will answer by skipping the ray march entirely and letting explicit blobs deposit their own $\alpha_\nu\, c_\nu$ onto the pixels they cover. Two machines, wildly different in speed, both evaluating this same sum.
 
@@ -214,6 +215,10 @@ $$c(\mathbf{d}) = \sum_{\ell,\, m} c_{\ell m}\, Y_{\ell m}(\mathbf{d}).$$
 Each $Y_{\ell m}$ is one of those fixed patterns on the sphere (the index $\ell$ sets how fine the pattern is, $m$ which variant at that fineness), and each $c_{\ell m}$ is the blob's own learned weight for it. A few weights buy a soft, believable glint: keep only the first, constant term and the blob is flatly colored from every side; add the higher terms and it can brighten on one flank and dim on another, exactly the moving highlight. Drag the direction below and watch a fixed set of weights repaint the sphere as the viewpoint moves.
 
 <SphericalHarmonicsViz />
+
+The abstract sphere above shows what the bands do. Here they are on the real capture: toggle the harmonics off and the sunflowers and the glazed jug go matte, one flat color per splat; toggle them on and the highlights come alive, sliding across the petals and the glaze as you orbit.
+
+<ViewDependentSplatViz />
 
 **Back to the integral.** Every piece is now on the table, and the last step is the one we have been promising since section 2: it is the same sum. To render a frame, project all the blobs to the screen with the EWA map, sort them front to back by depth, and composite them with the exact spine equation,
 
