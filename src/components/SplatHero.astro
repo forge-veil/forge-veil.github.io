@@ -4,8 +4,8 @@
 // Gaussians": a REAL photogrammetry-captured Gaussian splat scene, "Sunflowers
 // in a stone jug" by alfred2010 (CC BY 4.0), authored in PlayCanvas SuperSplat
 // and exported as SOGS v2. The full capture (all 336,939 splats) was decoded
-// and baked, upright, into public/hero.splat (the widely supported antimatter15
-// .splat format).
+// and baked, upright, then compressed to public/hero.spz (Niantic's gzip-packed
+// SPZ format, natively loaded by Spark).
 //
 // This renders the splats PHOTOREALISTICALLY on the GPU with Spark
 // (@sparkjsdev/spark), World Labs' maintained Gaussian-splat renderer for
@@ -30,7 +30,7 @@ const { side = false } = Astro.props;
 
 <script>
   // ── Framing constants ───────────────────────────────────────────────
-  // The baked scene (public/hero.splat) is roughly centred on the origin
+  // The baked scene (public/hero.spz) is roughly centred on the origin
   // with a vertical half-extent of about 1.45 units. The camera orbits the
   // vertical axis at a fixed radius / elevation, looking at a target a touch
   // above the origin so the bouquet sits centred in the portrait frame.
@@ -145,7 +145,7 @@ const { side = false } = Astro.props;
         sparkScene.add(spark);
 
         const mesh = new SplatMesh({
-          url: `${import.meta.env.BASE_URL}hero.splat`,
+          url: `${import.meta.env.BASE_URL}hero.spz`,
         });
         // Baked up = +Y. HERO_ROT is a fine tilt correction (Euler XYZ radians)
         // that brings the real capture's true up onto vertical.
