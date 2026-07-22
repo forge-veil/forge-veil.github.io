@@ -8,6 +8,7 @@
 // this component only does presentation: the view matrix, the per-pixel
 // compositing loop, and the controls.
 import katex from 'katex';
+import CodeModal from './CodeModal.astro';
 const eqCov = katex.renderToString(
   String.raw`\Sigma \;=\; R\,S\,S^{\top} R^{\top}`,
   { displayMode: true, throwOnError: false }
@@ -18,35 +19,39 @@ const eqProj = katex.renderToString(
 );
 ---
 <figure class="viz gslab">
-  <div class="gs-eqs">
-    <div class="viz-eq" set:html={eqCov} />
-    <div class="viz-eq" set:html={eqProj} />
-  </div>
+  <div class="viz-row">
+    <div class="viz-eq gs-eqs">
+      <div class="gs-eq-line" set:html={eqCov} />
+      <div class="gs-eq-line" set:html={eqProj} />
+    </div>
 
-  <div class="gs-stage">
-    <canvas class="gs-canvas" width="360" height="240"></canvas>
-    <canvas class="gs-overlay"></canvas>
-  </div>
+    <div class="viz-render">
+      <div class="gs-stage">
+        <canvas class="gs-canvas" width="360" height="240"></canvas>
+        <canvas class="gs-overlay"></canvas>
+      </div>
 
-  <div class="viz-controls gs-controls">
-    <span class="gs-hint">Drag to orbit · click a blob to select</span>
-    <label class="gs-field">length
-      <input class="gs-along" type="range" min="0.05" max="1.2" step="0.01" value="0.5" disabled />
-    </label>
-    <label class="gs-field">width
-      <input class="gs-across" type="range" min="0.05" max="1.2" step="0.01" value="0.5" disabled />
-    </label>
-    <label class="gs-field">opacity
-      <input class="gs-opacity" type="range" min="0.1" max="1" step="0.01" value="0.85" disabled />
-    </label>
-    <label class="gs-check"><input class="gs-ellipses" type="checkbox" /> show ellipses</label>
-  </div>
+      <div class="viz-controls gs-controls">
+        <span class="gs-hint">Drag to orbit · click a blob to select</span>
+        <label class="gs-field">length
+          <input class="gs-along" type="range" min="0.05" max="1.2" step="0.01" value="0.5" disabled />
+        </label>
+        <label class="gs-field">width
+          <input class="gs-across" type="range" min="0.05" max="1.2" step="0.01" value="0.5" disabled />
+        </label>
+        <label class="gs-field">opacity
+          <input class="gs-opacity" type="range" min="0.1" max="1" step="0.01" value="0.85" disabled />
+        </label>
+        <label class="gs-check"><input class="gs-ellipses" type="checkbox" /> show ellipses</label>
+      </div>
 
-  <div class="viz-controls gs-controls">
-    <button class="gs-btn gs-add" type="button">add Gaussian</button>
-    <button class="gs-btn gs-remove" type="button" disabled>remove selected</button>
-    <button class="gs-btn gs-reset" type="button">reset scene</button>
-    <span class="gs-readout viz-readout">Selected: none</span>
+      <div class="viz-controls gs-controls">
+        <button class="gs-btn gs-add" type="button">add Gaussian</button>
+        <button class="gs-btn gs-remove" type="button" disabled>remove selected</button>
+        <button class="gs-btn gs-reset" type="button">reset scene</button>
+        <span class="gs-readout viz-readout">Selected: none</span>
+      </div>
+    </div>
   </div>
 
   <figcaption>
@@ -55,7 +60,7 @@ const eqProj = katex.renderToString(
     squashes it onto the screen as a 2D covariance Σ&#8242;. Blobs are sorted by
     depth and blended front to back. Tilt a flat disc edge-on and its footprint
     collapses to a sliver, which is exactly what the projected covariance says
-    should happen.
+    should happen. <CodeModal preset="ewa-projection" trigger="equations & code" />
   </figcaption>
 </figure>
 
@@ -425,13 +430,16 @@ const eqProj = katex.renderToString(
 </script>
 
 <style>
-  .viz { margin: 2rem 0; }
-  .gs-eqs { display: flex; flex-wrap: wrap; gap: 1.5rem 2.5rem; margin-bottom: 1.25rem; }
-  .viz-eq { overflow-x: auto; }
+  .viz { margin: 1.5rem auto; max-width: 860px; }
+  .viz-row { display: flex; gap: 1.6rem; align-items: center; justify-content: center; flex-wrap: wrap; }
+  .viz-eq { flex: 0 1 auto; min-width: 0; margin: 0; }
+  .gs-eqs { display: flex; flex-direction: column; gap: 1.25rem; }
+  .gs-eq-line { overflow-x: auto; }
+  .viz-render { flex: 0 0 380px; max-width: 100%; }
   .gs-stage {
     position: relative;
     width: 100%;
-    max-width: 560px;
+    max-width: 380px;
     margin: 0 auto;
     aspect-ratio: 3 / 2;
   }
@@ -482,7 +490,7 @@ const eqProj = katex.renderToString(
   .gs-btn:hover { border-color: rgba(0, 0, 0, 0.28); color: var(--color-ink); }
   .gs-btn:disabled { opacity: 0.4; cursor: default; }
   .gs-readout { color: var(--color-ink-3); font-variant-numeric: tabular-nums; }
-  .gslab figcaption {
+  .viz figcaption {
     font-family: var(--font-sans);
     font-size: 0.82rem;
     color: var(--color-ink-4);

@@ -1,0 +1,230 @@
+---
+// src/components/CameraFrustumViz.astro
+// Primer for "Painting with Gaussians", ahead of the volume-rendering section:
+// a clean top-down schematic of a camera looking at a small foggy object. It
+// grounds three words the post is about to lean on: view (a camera position and
+// direction), frustum (the wedge of space the camera can see), and ray (one line
+// per pixel). A fan of rays marches through the fog and each becomes one cell of
+// the "photo" strip, so the reader sees a viewpoint turn into an image. Drag to
+// move the camera around the object, or change its field of view.
+---
+<figure class="viz camfrustum">
+  <div class="cf-stage"><canvas class="cf-canvas" width="680" height="400"></canvas></div>
+  <div class="viz-controls">
+    <label>Field of view
+      <input class="cf-fov" type="range" min="20" max="70" value="42" step="1" />
+    </label>
+    <span class="cf-readout viz-readout"></span>
+  </div>
+  <figcaption>
+    The camera records only what falls inside its frustum, the wedge between its boundary rays. Each of the nine rays marches through the fog and lands as one cell of the photo strip. Drag to move the camera to a new viewpoint and the photo changes, which is exactly the problem novel view synthesis has to solve.
+  </figcaption>
+</figure>
+
+<script>
+  const N_RAYS = 9;
+  const ink = (a: number) => `rgba(28,28,30,${a})`;
+
+  // The foggy object: a few soft blobs with muted colors. Density and color are
+  // sampled from these both to draw the cloud and to expose each ray.
+  type Blob = { x: number; y: number; r: number; c: [number, number, number] };
+
+  document.querySelectorAll<HTMLElement>('.camfrustum').forEach(init);
+
+  function init(root: HTMLElement) {
+    const canvas = root.querySelector<HTMLCanvasElement>('.cf-canvas')!;
+    const ctx = canvas.getContext('2d')!;
+    const fovEl = root.querySelector<HTMLInputElement>('.cf-fov')!;
+    const readoutEl = root.querySelector<HTMLElement>('.cf-readout')!;
+
+    const REDUCE_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const W = canvas.width, H = canvas.height;
+    const OBJ = { x: W * 0.52, y: H * 0.42 }; // the object, upper-middle
+    const R = 150;                             // camera orbit radius (px)
+    const FAR = R + 120;                       // how far rays are drawn
+
+    // Object made of soft muted blobs around OBJ.
+    const blobs: Blob[] = [
+      { x: OBJ.x, y: OBJ.y, r: 34, c: [116, 116, 124] },
+      { x: OBJ.x + 26, y: OBJ.y + 8, r: 26, c: [92, 112, 150] },
+      { x: OBJ.x - 24, y: OBJ.y + 14, r: 24, c: [156, 104, 82] },
+      { x: OBJ.x + 6, y: OBJ.y - 22, r: 22, c: [140, 140, 148] },
+    ];
+
+    let camAngle = Math.PI * 0.5;      // camera position around OBJ (radians)
+    let fovDeg = parseFloat(fovEl.value);
+    let rafId = 0, lastT = 0, visible = false;
+    let dragging = false;
+
+    function densityColorAt(x: number, y: number): { d: number; c: [number, number, number] } {
+      let d = 0, cr = 0, cg = 0, cb = 0;
+      for (const b of blobs) {
+        const dx = x - b.x, dy = y - b.y;
+        const g = Math.exp(-(dx * dx + dy * dy) / (2 * b.r * b.r));
+        d += g;
+        cr += g * b.c[0]; cg += g * b.c[1]; cb += g * b.c[2];
+      }
+      const c: [number, number, number] = d > 1e-4 ? [cr / d, cg / d, cb / d] : [128, 128, 128];
+      return { d, c };
+    }
+
+    // March one ray, front to back, accumulating colour weighted by fog (the
+    // very volume-rendering sum from the next section, in miniature).
+    function marchRay(camX: number, camY: number, ang: number): [number, number, number] {
+      const steps = 46, dt = FAR / steps;
+      let T = 1, r = 0, g = 0, bl = 0;
+      const dxs = Math.cos(ang), dys = Math.sin(ang);
+      for (let s = 0; s < steps; s++) {
+        const t = (s + 0.5) * dt;
+        const px = camX + dxs * t, py = camY + dys * t;
+        const { d, c } = densityColorAt(px, py);
+        const alpha = 1 - Math.exp(-d * 1.6);
+        const w = T * alpha;
+        r += w * c[0]; g += w * c[1]; bl += w * c[2];
+        T *= 1 - alpha;
+        if (T < 0.01) break;
+      }
+      // composite over the light page background
+      const bg = 250;
+      return [r + T * bg, g + T * bg, bl + T * bg];
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+      const halfFov = ((fovDeg / 2) * Math.PI) / 180;
+      const camX = OBJ.x + R * Math.cos(camAngle);
+      const camY = OBJ.y + R * Math.sin(camAngle);
+      const toObj = Math.atan2(OBJ.y - camY, OBJ.x - camX);
+
+      // ── the fog object ──
+      for (const b of blobs) {
+        const grad = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.r * 1.7);
+        grad.addColorStop(0, `rgba(${b.c[0]},${b.c[1]},${b.c[2]},0.72)`);
+        grad.addColorStop(1, `rgba(${b.c[0]},${b.c[1]},${b.c[2]},0)`);
+        ctx.fillStyle = grad;
+        ctx.beginPath(); ctx.arc(b.x, b.y, b.r * 1.7, 0, Math.PI * 2); ctx.fill();
+      }
+
+      // ── frustum wedge ──
+      const aL = toObj - halfFov, aR = toObj + halfFov;
+      ctx.beginPath();
+      ctx.moveTo(camX, camY);
+      ctx.lineTo(camX + Math.cos(aL) * FAR, camY + Math.sin(aL) * FAR);
+      ctx.lineTo(camX + Math.cos(aR) * FAR, camY + Math.sin(aR) * FAR);
+      ctx.closePath();
+      ctx.fillStyle = ink(0.05); ctx.fill();
+      ctx.strokeStyle = ink(0.3); ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(camX + Math.cos(aL) * FAR, camY + Math.sin(aL) * FAR);
+      ctx.lineTo(camX, camY);
+      ctx.lineTo(camX + Math.cos(aR) * FAR, camY + Math.sin(aR) * FAR);
+      ctx.stroke();
+
+      // ── ray fan + the photo cells they produce ──
+      const cell: [number, number, number][] = [];
+      for (let i = 0; i < N_RAYS; i++) {
+        const t = i / (N_RAYS - 1) - 0.5;
+        const ang = toObj + t * 2 * halfFov;
+        ctx.strokeStyle = ink(0.16); ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(camX, camY);
+        ctx.lineTo(camX + Math.cos(ang) * FAR, camY + Math.sin(ang) * FAR);
+        ctx.stroke();
+        cell.push(marchRay(camX, camY, ang));
+      }
+
+      // ── camera glyph ──
+      ctx.save();
+      ctx.translate(camX, camY);
+      ctx.rotate(toObj);
+      ctx.fillStyle = ink(0.85);
+      ctx.beginPath();
+      ctx.moveTo(12, 0); ctx.lineTo(-8, -8); ctx.lineTo(-8, 8); ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+      label('camera', camX, camY - 18, 0.6, 'center');
+
+      // frustum label near the left boundary, a little out from the camera
+      const flx = camX + Math.cos(aL) * FAR * 0.5;
+      const fly = camY + Math.sin(aL) * FAR * 0.5;
+      label('view frustum', flx, fly, 0.5, 'center');
+
+      // ── photo strip (the image this view makes) ──
+      const stripW = 232, cw = stripW / N_RAYS, sh = 26;
+      const sx = (W - stripW) / 2, sy = H - sh - 26;
+      for (let i = 0; i < N_RAYS; i++) {
+        const c = cell[i];
+        ctx.fillStyle = `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
+        ctx.fillRect(sx + i * cw, sy, cw, sh);
+      }
+      ctx.strokeStyle = ink(0.28); ctx.lineWidth = 1;
+      ctx.strokeRect(sx + 0.5, sy + 0.5, stripW, sh);
+      label('the photo this view makes', W / 2, sy + sh + 13, 0.55, 'center');
+
+      readoutEl.textContent = `field of view ${Math.round(fovDeg)}°  ·  drag to orbit`;
+    }
+
+    function label(text: string, x: number, y: number, a: number, align: CanvasTextAlign) {
+      ctx.fillStyle = ink(a);
+      ctx.font = '600 11px Geist, -apple-system, sans-serif';
+      ctx.textAlign = align;
+      ctx.fillText(text, x, y);
+      ctx.textAlign = 'left';
+    }
+
+    function frame(t: number) {
+      const dt = lastT ? (t - lastT) / 1000 : 0;
+      lastT = t;
+      if (!dragging && !REDUCE_MOTION) camAngle += dt * 0.35;
+      draw();
+      rafId = visible && !REDUCE_MOTION ? requestAnimationFrame(frame) : 0;
+    }
+    function start() { if (!rafId && visible && !REDUCE_MOTION) { lastT = 0; rafId = requestAnimationFrame(frame); } }
+    function stop() { if (rafId) { cancelAnimationFrame(rafId); rafId = 0; } }
+
+    function pointerAngle(ev: PointerEvent) {
+      const rect = canvas.getBoundingClientRect();
+      const px = ((ev.clientX - rect.left) / rect.width) * W;
+      const py = ((ev.clientY - rect.top) / rect.height) * H;
+      camAngle = Math.atan2(py - OBJ.y, px - OBJ.x);
+      draw();
+    }
+    canvas.addEventListener('pointerdown', (e) => { dragging = true; canvas.setPointerCapture(e.pointerId); pointerAngle(e); });
+    canvas.addEventListener('pointermove', (e) => { if (dragging) pointerAngle(e); });
+    canvas.addEventListener('pointerup', () => { dragging = false; });
+    canvas.style.touchAction = 'none';
+
+    fovEl.addEventListener('input', () => { fovDeg = parseFloat(fovEl.value); draw(); });
+
+    const observer = new IntersectionObserver((entries) => {
+      for (const e of entries) { visible = e.isIntersecting; if (visible) start(); else stop(); }
+    }, { threshold: 0.01 });
+    observer.observe(canvas);
+
+    draw();
+  }
+</script>
+
+<style>
+  .viz { margin: 1.5rem auto; max-width: 660px; }
+  .cf-stage {
+    width: 100%;
+    aspect-ratio: 17 / 10;
+    border-radius: 10px;
+    background: var(--color-surface);
+    border: 0.5px solid var(--color-border);
+    overflow: hidden;
+  }
+  .cf-canvas { width: 100%; height: 100%; display: block; cursor: grab; }
+  .cf-canvas:active { cursor: grabbing; }
+  .viz-controls {
+    display: flex; align-items: center; gap: 1rem; margin-top: 0.75rem;
+    font-family: var(--font-sans); font-size: 0.85rem; color: var(--color-ink-4);
+  }
+  .viz-controls input[type='range'] { accent-color: var(--color-ink); }
+  .viz-readout { color: var(--color-ink-3); font-variant-numeric: tabular-nums; }
+  .viz figcaption {
+    font-family: var(--font-sans); font-size: 0.82rem; color: var(--color-ink-4);
+    margin-top: 0.9rem; line-height: 1.55;
+  }
+</style>

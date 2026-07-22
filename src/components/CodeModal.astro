@@ -143,9 +143,7 @@ const rendered = await Promise.all(
   })),
 );
 ---
-<div class="cm-line">
-  <button class="klein-source-btn cm-trigger" data-cm-target={id}>{trigger}</button>
-</div>
+<button class="klein-source-btn cm-trigger" data-cm-target={id}>{trigger}</button>
 
 <dialog id={id} class="klein-dialog cm-dialog">
   <div class="klein-dialog-inner">
@@ -175,6 +173,6 @@ const rendered = await Promise.all(
 </script>
 
 <style>
-  .cm-line { margin: 0.4rem 0 0; text-align: center; }
+  .cm-trigger { display: inline; }
   .cm-dialog .klein-dialog-code { margin-top: 4px; }
 </style>

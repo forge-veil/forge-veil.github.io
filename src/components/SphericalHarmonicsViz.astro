@@ -7,27 +7,31 @@
 // coefficient set produce a view-dependent sheen, and see each SH band's
 // contribution by toggling it off.
 import katex from 'katex';
+import CodeModal from './CodeModal.astro';
 const eq = katex.renderToString(
-  String.raw`c(\mathbf{d}) = \sum_{\ell,m} c_{\ell m}\, Y_{\ell m}(\mathbf{d})`,
+  String.raw`\begin{aligned} c(\mathbf{d}) &= \sum_{\ell,m} c_{\ell m}\, Y_{\ell m}(\mathbf{d}) \\[4pt] &= \sum_{\ell=0}^{2} \sum_{m=-\ell}^{\ell} c_{\ell m}\, Y_{\ell m}(\mathbf{d}) \end{aligned}`,
   { displayMode: true, throwOnError: false }
 );
 ---
 <figure class="viz shv">
-  <div class="viz-eq" set:html={eq} />
+  <div class="viz-row">
+    <div class="viz-eq" set:html={eq} />
+    <div class="viz-render">
+      <canvas class="shv-canvas" width="400" height="400"></canvas>
 
-  <canvas class="shv-canvas" width="400" height="400"></canvas>
+      <div class="viz-controls shv-controls">
+        <label>Orbit azimuth
+          <input class="shv-azimuth" type="range" min="0" max="360" value="35" step="1" />
+        </label>
+        <span class="shv-readout viz-readout"></span>
+      </div>
 
-  <div class="viz-controls shv-controls">
-    <label>Orbit azimuth
-      <input class="shv-azimuth" type="range" min="0" max="360" value="35" step="1" />
-    </label>
-    <span class="shv-readout viz-readout"></span>
-  </div>
-
-  <div class="shv-bands" role="group" aria-label="spherical harmonic bands">
-    <button class="shv-band-btn" type="button" data-mode="dc" aria-pressed="false">DC only</button>
-    <button class="shv-band-btn" type="button" data-mode="band1" aria-pressed="false">+ band 1</button>
-    <button class="shv-band-btn active" type="button" data-mode="band2" aria-pressed="true">+ band 2</button>
+      <div class="shv-bands" role="group" aria-label="spherical harmonic bands">
+        <button class="shv-band-btn" type="button" data-mode="dc" aria-pressed="false">DC only</button>
+        <button class="shv-band-btn" type="button" data-mode="band1" aria-pressed="false">+ band 1</button>
+        <button class="shv-band-btn active" type="button" data-mode="band2" aria-pressed="true">+ band 2</button>
+      </div>
+    </div>
   </div>
 
   <figcaption>
@@ -36,7 +40,7 @@ const eq = katex.renderToString(
     only the ℓ = 0 term the surface is a flat, uniform tone, since that band
     carries no directional dependence at all. Band 1 lets a warm sheen sweep
     across the sphere as you drag the azimuth slider; band 2 adds a faint
-    second lobe to its shape.
+    second lobe to its shape. <CodeModal preset="spherical-harmonics" trigger="equations & code" />
   </figcaption>
 </figure>
 
@@ -187,8 +191,10 @@ const eq = katex.renderToString(
 </script>
 
 <style>
-  .viz { margin: 2rem 0; }
-  .viz-eq { margin-bottom: 1rem; overflow-x: auto; }
+  .viz { margin: 1.5rem auto; max-width: 620px; }
+  .viz-row { display: flex; gap: 1.6rem; align-items: center; justify-content: center; flex-wrap: wrap; }
+  .viz-eq { flex: 0 1 auto; min-width: 0; margin: 0; overflow-x: auto; }
+  .viz-render { flex: 0 0 260px; max-width: 100%; }
   .viz-controls {
     display: flex;
     align-items: center;
@@ -203,7 +209,7 @@ const eq = katex.renderToString(
   .shv-canvas {
     display: block;
     width: 100%;
-    max-width: 340px;
+    max-width: 260px;
     height: auto;
     margin: 0 auto;
     border-radius: 10px;
@@ -214,6 +220,7 @@ const eq = katex.renderToString(
     display: flex;
     gap: 0.5rem;
     margin-top: 0.85rem;
+    flex-wrap: wrap;
   }
   .shv-band-btn {
     font-family: var(--font-display);
@@ -232,7 +239,7 @@ const eq = katex.renderToString(
     color: var(--color-panel);
     border-color: var(--color-ink);
   }
-  .shv figcaption {
+  .viz figcaption {
     font-family: var(--font-sans);
     font-size: 0.82rem;
     color: var(--color-ink-4);

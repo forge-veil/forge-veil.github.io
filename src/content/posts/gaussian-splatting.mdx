@@ -7,7 +7,7 @@ postLayout: longform
 ogMotif: gaussian-splat
 tags: [gaussian-splatting, radiance-fields, nerf, volume-rendering, novel-view-synthesis, neural-rendering]
 publishedAt: 2026-07-09
-published: false
+published: true
 ---
 
 import SplatHero from '../../components/SplatHero.astro';
@@ -16,16 +16,13 @@ import GaussianSplatLab from '../../components/GaussianSplatLab.astro';
 import SphericalHarmonicsViz from '../../components/SphericalHarmonicsViz.astro';
 import ViewDependentSplatViz from '../../components/ViewDependentSplatViz.astro';
 import CodeModal from '../../components/CodeModal.astro';
+import CameraFrustumViz from '../../components/CameraFrustumViz.astro';
 
 <SplatHero side />
 
-3D Gaussian splatting barely existed three years ago. It was [a single graphics paper](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/) at SIGGRAPH 2023. By 2026 it is the thing quietly rendering a photoreal [Apple Maps Flyover](https://www.apple.com/newsroom/2026/06/apple-unveils-innovative-features-and-intelligence-experiences-across-services/), unveiled at WWDC 2026, which Apple described only as "aerial imagery combined with vision intelligence models" and pointedly never named on stage, even though [the graphics world recognized it on sight](https://radiancefields.com/apple-maps-flyover-is-getting-a-gaussian-splatting-upgrade). It is also on your phone: apps like [Niantic's Scaniverse](https://nianticlabs.com/news/scaniverse4), Luma, and Polycam turn a slow walk around a room into a splat in about a minute. It is how NVIDIA renders scenes to train [robots and self-driving cars](https://developer.nvidia.com/omniverse/nurec), and how world-model startups like Fei-Fei Li's [World Labs](https://techcrunch.com/2025/11/12/fei-fei-lis-world-labs-speeds-up-the-world-model-race-with-marble-its-first-commercial-product/) generate entire 3D scenes. This post is about what that phrase, "Gaussian splatting," actually means, and why it went from niche to everywhere this fast.
+3D Gaussian splatting barely existed three years ago. It was [a single graphics paper](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/) at SIGGRAPH 2023. By 2026 it is the thing quietly rendering a photoreal [Apple Maps Flyover](https://www.apple.com/newsroom/2026/06/apple-unveils-innovative-features-and-intelligence-experiences-across-services/), unveiled at WWDC 2026, which Apple described only as "aerial imagery combined with vision intelligence models" and pointedly never named on stage, even though [the graphics world recognized it on sight](https://radiancefields.com/apple-maps-flyover-is-getting-a-gaussian-splatting-upgrade). It is also on your phone: apps like [Niantic's Scaniverse](https://nianticlabs.com/news/scaniverse4), Luma, and Polycam turn a slow walk around a room into a splat in about a minute. It is how NVIDIA renders scenes to train [robots and self-driving cars](https://developer.nvidia.com/omniverse/nurec), and how world-model startups like Fei-Fei Li's [World Labs](https://techcrunch.com/2025/11/12/fei-fei-lis-world-labs-speeds-up-the-world-model-race-with-marble-its-first-commercial-product/) generate entire 3D scenes. This post is about what that phrase actually means. The place to start is the problem it was built to solve: a photograph that does not exist.
 
 Take a few dozen photos of a statue, walking around it with your phone. Now imagine asking for a photo you never took: the statue seen from a spot you never stood in, the light glinting off the marble exactly as it would have. No new photograph exists, yet the answer is completely determined. Every viewpoint you did capture constrains what the missing one must look like. The small scene on the right is the kind of thing that fills that gap: not a mesh, not a point cloud, but a haze of overlapping colored blobs that, seen from any angle, composites back into a photograph.
-
-The task of turning a handful of photos into the ability to render any new view is called **novel view synthesis**. It is old, and for decades it was hard. What changed is a single idea: instead of trying to reconstruct the surfaces of a scene, describe the scene as a **radiance field**, a function that assigns, to every point in space and every direction you might look from, a color and a measure of how solid that point is. Formally it is a map $(\text{position}, \text{direction}) \to (\text{color}, \text{density})$. Picture a fog filling the room, and at every point in that fog, two facts: what color it glows, and how much of the light passing through it it blocks. Do this at every point and viewing angle and you have described the scene completely, without ever naming a single surface.
-
-This post walks from that idea to the technique that made it fast enough to render in real time. We build the one equation that turns a radiance field into a pixel, then meet two very different machines for evaluating it: NeRF, which hides the field inside a neural network, and 3D Gaussian splatting, which paints it directly with the blobs above.
 
 <div class="toc-card">
   <p class="toc-card-heading">In this post</p>
@@ -43,28 +40,34 @@ This post walks from that idea to the technique that made it fast enough to rend
 
 ## The problem: photos in, new views out
 
-You have a set of photographs of a scene, each taken from a known position and pointing in a known direction. You want to produce a photograph from a new position and direction, one that was never captured, and you want it to look real. That is the whole problem. Everything in this post is machinery for solving it.
+You have a set of photographs of a scene, each taken from a known position and pointing in a known direction. You want to produce a photograph from a new position and direction, one that was never captured, and you want it to look real. That is the whole problem, and it has a name: **novel view synthesis**. Everything in this post is machinery for solving it.
 
-The obvious first move is to rebuild the shape of the scene. Feed the photos to a reconstruction pipeline, recover a cloud of 3D points where the surfaces are, stitch them into a mesh of triangles, and render the mesh from the new viewpoint. This works, and for a long time it was the only game in town. But it fights the world at every step. A mesh is a hard commitment: this triangle is surface, that empty space is not, with a crisp boundary in between. Real scenes refuse to cooperate. Where exactly is the surface of a fern, a head of hair, a plume of smoke, a chain-link fence seen through fog? These are not surfaces with clean edges; they are partly-there, semi-transparent, wispy. Force a mesh onto them and you get holes, jagged silhouettes, and a plastic sheen where there should be softness.
+The obvious first move is to rebuild the shape of the scene. Feed the photos to a reconstruction pipeline, recover a cloud of 3D points where the surfaces are, stitch them into a mesh of triangles, and render the mesh from the new viewpoint. This works, and for a long time it was the only game in town. But it fights the world at every step. A mesh is a hard commitment: this triangle is surface, that empty space is not, with a crisp boundary in between. Real scenes refuse to cooperate. Where exactly is the surface of a head of hair, or a plume of smoke seen through fog? These are not surfaces with clean edges; they are partly-there, semi-transparent, wispy. Force a mesh onto them and you get holes, jagged silhouettes, and a plastic sheen where there should be softness.
 
-There is a deeper problem than geometry, and it is the one that motivates everything here: **appearance**. A mesh tells you where a surface is, but a photograph is about how a surface *looks*, and how it looks depends on where you look from. This is **view dependence**. Wet marble, a glazed ceramic, a car's hood, the surface of a lake: each throws a bright highlight that sits in a different place, or vanishes entirely, as you move. The color arriving at your eye from a single physical point is not one fixed value; it is a function of the direction you view it from. A **view direction** is just that: the direction, in 3D, along which you are looking at a point, usually written as a unit vector $\mathbf{d}$. Geometry alone, a bare mesh with one color painted per point, throws this information away. It can tell you the shape of the lake but not the glare of the sun on it, which is often the entire content of the photograph.
+There is a deeper problem than geometry, and it is the one that motivates everything here: **appearance**. A mesh tells you where a surface is, but a photograph is about how a surface *looks*, and how it looks depends on where you look from. This is **view dependence**: the color arriving at your eye from a single point is not one fixed value but a function of the direction you view it from, a unit vector $\mathbf{d}$ we will call the **view direction**. A bare mesh, one flat color painted per point, throws that information away. It is the whole reason we are about to reach past geometry, and we will pay it off in full at the end.
 
 <div class="intuition">
   <p class="intuition-label">Intuition</p>
-  <p class="intuition-text">Stop trying to say where the surfaces are. Instead, fill all of space with a colored fog. At every point, the fog has two properties: how strongly it glows, and how much of the light passing through it it stops. A solid wall is just fog that is completely opaque and glows the wall's color. Empty air is fog that is perfectly clear and glows nothing. A wisp of hair is fog that is a little opaque. There are no edges to commit to and nothing to stitch: the whole scene is one soft, continuous cloud, and rendering it is a matter of looking through it.</p>
+  <p class="intuition-text">Stop trying to say where the surfaces are. Instead, fill all of space with a colored fog. At every point, the fog has two properties: how strongly it glows, and how much of the passing light it stops. A solid wall is just fog that is completely opaque and glows the wall's color. Empty air is fog that is perfectly clear and glows nothing. A wisp of hair is fog that is a little opaque. There are no edges to commit to and nothing to stitch: the whole scene is one soft, continuous cloud, and rendering it is a matter of looking through it.</p>
 </div>
 
 This is the reframing that unlocks everything that follows. Do not model the scene as surfaces. Model it as a **radiance field**: a function defined at every point $\mathbf{x}$ in space and every view direction $\mathbf{d}$, returning a color $c$ and a density $\sigma$. In symbols,
 
 $$F(\mathbf{x}, \mathbf{d}) = \big(\, c(\mathbf{x}, \mathbf{d}),\ \sigma(\mathbf{x}) \,\big)$$
 
-where $c$ is the color the point emits toward you (allowed to change with the direction $\mathbf{d}$, which is exactly what captures the moving highlight) and $\sigma$ is the density, how solidly the point blocks light (a property of the point alone, the same from every angle: a wall is a wall no matter where you stand). We will define both precisely in the next section. The move from "surfaces" to "a field of color and density" costs us the clean geometry, but it buys us everything meshes could never represent: soft edges, semi-transparency, and view-dependent shine, all in one continuous object. The only thing left to answer is how you turn such a field into an actual pixel. That is volume rendering, and it is the heart of the post.
+where $c$ is the color the point emits toward you (allowed to change with the direction $\mathbf{d}$, which is exactly what captures the moving highlight) and $\sigma$ is the density, how solidly the point blocks light (a property of the point alone, the same from every angle: a wall is a wall no matter where you stand). We will define both precisely in the next section. The move from "surfaces" to "a field of color and density" costs us the clean geometry, but it buys us everything meshes could never represent: soft edges, semi-transparency, and view-dependent shine, all in one continuous object.
+
+But a field is not yet a photograph. A photograph is taken by a camera, and it pays to be precise about what a camera even is. A **view** is just a place to stand and a way to look: where the camera sits, the direction it faces, and how wide a cone it takes in, its **field of view**. That cone, the wedge of space actually in sight, is the camera's **view frustum**, and anything outside it never lands in the picture. Stretch a grid of pixels across the cone and each pixel singles out one **ray**: a straight line from the camera, out through that pixel, into the scene. The pixel's color is whatever that ray gathers on its way through the fog. Move the camera and you get a fresh frustum, a fresh fan of rays, and a different photograph of the same scene. That is novel view synthesis made concrete: choose a camera nobody used, and work out what each of its rays would have seen.
+
+<CameraFrustumViz />
+
+So the whole problem funnels down to a single question about a single ray: as it crosses the glowing, light-blocking fog, what color does it come back with? Answering that is volume rendering, and it is the heart of the post.
 
 ---
 
 ## Volume rendering: from a field to a pixel
 
-You have a field of glowing, light-blocking fog and a camera pointing at it. What color is a single pixel? A pixel corresponds to one ray of sight: a line shot from the camera, through that pixel, out into the scene. To find the pixel's color, walk along that ray and accumulate what the fog does to the light traveling back toward you. That walk is called **ray marching**, and doing the accumulation correctly is **volume rendering**.
+Take that one ray and follow it. Walking it from the camera outward, step by step, accumulating what the fog does to the light traveling back toward you, is called **ray marching**, and doing that accumulation correctly is **volume rendering**.
 
 <div class="intuition">
   <p class="intuition-label">Intuition</p>
@@ -76,17 +79,17 @@ Let us make that precise. Parameterize the ray by a distance $t$ from the camera
 - The **density** $\sigma(t)$, shorthand for $\sigma(\mathbf{r}(t))$. It is the amount of light-blocking per unit length at that point: the chance, per tiny step $dt$, that a photon traveling through is absorbed or scattered away. Clear air has $\sigma = 0$; the surface of a solid object has $\sigma$ shooting up very large. Density has no color and no direction; it only says how solid the fog is here.
 - The **emission**, or emitted color, $c(t)$, shorthand for $c(\mathbf{r}(t), \mathbf{d})$. It is the color the fog at this point sends back toward the camera. This is where view dependence lives: the same point can emit one color when viewed head-on and another at a glancing angle, which is how the field represents a shifting highlight.
 
-Now track the light. Send it back-to-front is confusing, so instead track how much of the light *from a given point* survives the trip forward to the camera. Define the **transmittance** $T(t)$: the fraction of light emitted at distance $t$ that makes it all the way back to the camera without being blocked by the fog in front of it. Right at the camera nothing stands in the way, so $T(0) = 1$. As the ray pushes deeper, more fog accumulates in front, so $T$ can only fall.
+Now follow the light. Rather than trace it front-to-back, ask how much of the light *from a given point* survives the trip forward to the camera. Define the **transmittance** $T(t)$: the fraction of light emitted at distance $t$ that makes it all the way back to the camera without being blocked by the fog in front of it. Right at the camera nothing stands in the way, so $T(0) = 1$. As the ray pushes deeper, more fog accumulates in front, so $T$ can only fall.
 
-How fast does it fall? Over a tiny step $dt$ at distance $t$, the fraction of light removed is exactly the density times the step, $\sigma(t)\,dt$. So the transmittance loses that fraction of itself:
+How fast does it fall? Zoom in on one tiny step $dt$ at distance $t$. The fog there has density $\sigma(t)$, and across that sliver it removes a fraction $\sigma(t)\,dt$ of the light *currently* passing through, not a fixed amount, but a fixed fraction of whatever has survived this far. That one word, *fraction*, is the whole story. Because every step skims off a slice of what is left, the surviving light shrinks in proportion to itself:
 
-$$dT = -\,\sigma(t)\, T(t)\, dt \quad\Longrightarrow\quad \frac{dT}{T} = -\,\sigma(t)\, dt.$$
+$$dT = -\,\sigma(t)\, T(t)\, dt.$$
 
-This is the equation for exponential decay, the same one that governs a dimming light through smoked glass. Integrating from the camera out to $t$ gives the transmittance in closed form:
+Anything that loses a fixed fraction of itself at every step decays exponentially, the same compounding, run in reverse, that grows a bank balance or dims a beam passing through one tinted pane after another. Accumulate the losses over the whole trip from the camera out to $t$ and that sentence becomes a formula:
 
 $$T(t) = \exp\!\left(-\int_0^t \sigma(s)\, ds\right).$$
 
-Read it directly: the integral $\int_0^t \sigma(s)\,ds$ is the total amount of fog piled up between the camera and the point at distance $t$. Pass it through $\exp(-\,\cdot\,)$ and you get a number between 0 and 1. When there is no fog in the way the integral is 0 and $T = 1$, all the light gets through. As fog accumulates the integral grows and $T$ slides toward 0, the point is buried and its light never reaches you.
+Unpack it from the inside out. The integral $\int_0^t \sigma(s)\,ds$ just adds up the density all along the path: the total fog piled between the camera and the point. Wrapping it in $\exp(-\,\cdot\,)$ squeezes that pile into a survival fraction between 0 and 1. With no fog in the way the integral is 0 and $T = 1$, so all the light gets through; as fog accumulates the integral climbs and $T$ slides toward 0, until the point is buried and its light never reaches you.
 
 We now have every piece to write the color of the pixel. The point at distance $t$ emits color $c(t)$. It emits it at a rate set by how much fog is right there, $\sigma(t)$, because clear air emits nothing and dense fog emits a lot. And whatever it emits is dimmed by the factor $T(t)$ on its way back to the camera. Multiply the three together for the contribution of the slab at $t$, then add up every slab along the ray from the near edge $t_n$ to the far edge $t_f$:
 
@@ -107,8 +110,6 @@ Each factor $(1 - \alpha_\mu)$ is the fraction of light that survived segment $\
 $$C = \sum_{\nu} T_\nu\, \alpha_\nu\, c_\nu.$$
 
 <TransmittanceSplatViz />
-
-<CodeModal preset="volume-rendering" />
 
 This is **alpha compositing**: walk the segments front to back, and each one lays down its color $c_\nu$, painted at strength $\alpha_\nu$ and faded by everything already in front of it, $T_\nu$. It is the exact same "over" operation that stacks semi-transparent layers in any image editor, here derived from the physics of light through fog rather than assumed. The interactive figure above makes this real, on the same captured scene from the top of the post, now with a slider on every splat's opacity. Turn it down and each splat blocks almost nothing: light passes straight through and the scene is a translucent haze, transmittance near 1 everywhere. Turn it up and the front splats begin to hide the ones behind them, transmittance falls off with depth, and the solid photoreal image accumulates, one $\alpha_\nu\, c_\nu$ at a time.
 
@@ -138,10 +139,7 @@ The fix is to stop feeding the network the bare coordinate and instead feed it a
 $$\gamma(p) = \big(\sin(2^0\pi p),\, \cos(2^0\pi p),\, \dots,\, \sin(2^{L-1}\pi p),\, \cos(2^{L-1}\pi p)\big).$$
 
 Each sine and cosine pair is a wave, and the multipliers $2^0, 2^1, \dots, 2^{L-1}$ make successive waves oscillate faster and faster. The slow waves let the network place broad features; the fast ones hand it a vocabulary for sharp edges and fine texture that the bare coordinate could never coax out of it. Apply $\gamma$ to each of $x$, $y$, $z$ (and to the view direction) before the first layer, and the same network that produced mush now resolves crisp detail.
-
-One practical refinement is worth naming, because sampling well is half the battle. Spreading sample points uniformly along a ray is wasteful: most of a ray is empty air, and spending network queries on empty space just to confirm it is empty burns effort for nothing. NeRF instead samples in two passes. A coarse pass scatters a modest number of samples along the whole ray to find roughly where it first meets something solid. A fine pass then concentrates a second batch of samples in just those regions, spending the query budget where the surface actually is. This coarse-to-fine, or **hierarchical**, sampling sharpens the image without inflating the count of samples.
-
-And there is the rub: NeRF is photoreal, and NeRF is slow. Look again at the spine equation and count the work. Every pixel is one ray; every ray needs many samples to approximate its integral; and every single sample is a full query of the network, a complete run through all those matrix multiplies. Multiply pixels by samples by the cost of one query and a single image can demand millions of network evaluations. The field is beautifully stored but agonizingly expensive to read back. That expense is the wall the next idea climbs over.
+And there is the rub: NeRF is photoreal, and NeRF is slow. Look again at the spine equation and count the work. Every pixel is one ray; every ray needs many samples to approximate its integral; and every single sample is a full query of the network, a complete run through all those matrix multiplies. Multiply pixels by samples by the cost of one query and a single image can demand millions of network evaluations. The field is beautifully stored but agonizingly expensive to read back. That expense is the problem the next idea was built to solve.
 
 ---
 
@@ -154,11 +152,7 @@ Notice what actually makes NeRF slow. The scene is never stored anywhere you can
   <p class="intuition-text">Stop asking "what is here?" at a dense grid of points along every ray. Instead, place a modest number of explicit little blobs directly in 3D space, each one carrying its own color and its own opacity. To render, throw the blobs forward onto the screen and let them pile up into a picture. There is no hidden field to probe and no ray to crawl along sample by sample: the scene is simply a bag of visible primitives, and rendering is a matter of painting them onto the image.</p>
 </div>
 
-Almost nothing about the goal changes, and that is the whole point. The pixel's color is still the very same compositing sum from section 2,
-
-$$C = \sum_{\nu} T_\nu\, \alpha_\nu\, c_\nu,$$
-
-with each primitive contributing a color $c_\nu$ at strength $\alpha_\nu$, faded by everything already stacked in front of it, $T_\nu$. What changes is where those $\alpha_\nu$ and $c_\nu$ come from. NeRF manufactured them on demand, one network query per sample. Now the primitives themselves carry their color and opacity as stored properties, so there is no per-sample network to run at all. The expensive middleman is gone, and the same sum is left standing. Crucially, every number describing a blob (its position, its shape, its color, its opacity) is **differentiable**, which means the whole bag of blobs can be fit to your photos by gradient descent: render the current blobs, compare against a real photo, and nudge every parameter a little in the direction that shrinks the difference, repeating until the render and the photograph agree.
+Almost nothing about the goal changes, and that is the whole point. The pixel's color is still the very same compositing sum from section 2, $C = \sum_{\nu} T_\nu\, \alpha_\nu\, c_\nu$, with each primitive contributing a color $c_\nu$ at strength $\alpha_\nu$, faded by everything already stacked in front of it, $T_\nu$. What changes is where those $\alpha_\nu$ and $c_\nu$ come from. NeRF manufactured them on demand, one network query per sample. Now the primitives themselves carry their color and opacity as stored properties, so there is no per-sample network to run at all. The expensive middleman is gone, and the same sum is left standing. Crucially, every number describing a blob (its position, its shape, its color, its opacity) is **differentiable**, which means the whole bag of blobs can be fit to your photos by gradient descent: render the current blobs, compare against a real photo, and nudge every parameter a little in the direction that shrinks the difference, repeating until the render and the photograph agree.
 
 The word for throwing a primitive forward onto the image plane, rather than shooting a ray out to hunt for it, is **splatting**, and it is what makes this fast enough to render in real time. The one question left is what the blobs should be. The answer, and the reason the whole method is named for it, is Gaussians.
 
@@ -179,7 +173,9 @@ $$G(\mathbf{x}) = \exp\!\left(-\tfrac12\, (\mathbf{x}-\boldsymbol{\mu})^\top\, \
 
 Two objects define its shape. The **mean** $\boldsymbol{\mu}$ is a point in 3D space: it is simply where the blob sits, the location of its bright center. The **covariance** $\Sigma$ is a $3\times 3$ matrix that encodes the blob's shape, size, and orientation all at once: how far it reaches, and in which directions it reaches farthest. A blob that reaches equally in every direction is a round ball, or **isotropic**. A blob that stretches by different amounts along different axes, wide in one direction and thin in another, is **anisotropic**, and that is exactly what you want: a thin flake to sit flat against a wall, a long sliver to trace an edge, a fat lump to fill a volume.
 
-Walk the exponent to see why it falls off. The vector $\mathbf{x}-\boldsymbol{\mu}$ is the offset from the center to the point you are asking about. At the center that offset is zero, so the exponent is zero, and $\exp(0) = 1$: the blob is at full strength. Move away and the offset grows, the exponent goes increasingly negative, and $\exp$ of a negative number slides toward 0: the blob fades. The matrix $\Sigma^{-1}$ sitting between the two offset vectors is what makes the falloff directional. It measures the offset not in plain distance but in units of the blob's own spread: a step along a direction the blob is stretched costs little (you are still well inside the bell), while the same step along a thin direction costs a lot (you fall off the edge fast). So $\Sigma^{-1}$ turns raw distance from the center into "how many blob-widths away am I," and $\exp(-\tfrac12\,\cdot\,)$ turns that into a smooth brightness that is 1 at the core and trails gently to nothing.
+Walk the exponent to see why it falls off. The vector $\mathbf{x}-\boldsymbol{\mu}$ is the offset from the center to the point you are asking about. At the center that offset is zero, so the exponent is zero, and $\exp(0) = 1$: the blob is at full strength. Move away and the offset grows, the exponent goes increasingly negative, and $\exp$ of a negative number slides toward 0: the blob fades.
+
+The matrix $\Sigma^{-1}$ sitting between the two offset vectors is what makes the falloff directional. It measures the offset not in plain distance but in units of the blob's own spread: a step along a direction the blob is stretched costs little (you are still well inside the bell), while the same step along a thin direction costs a lot (you fall off the edge fast). So $\Sigma^{-1}$ turns raw distance from the center into "how many blob-widths away am I," and $\exp(-\tfrac12\,\cdot\,)$ turns that into a smooth brightness that is 1 at the core and trails gently to nothing.
 
 **Why factor the covariance.** Here is a snag that comes straight from section 4. We fit these blobs to the photos by gradient descent: render the current heap, compare it to a real photograph, and nudge every parameter a little to shrink the difference. That means $\Sigma$ has to be nudged too. But not every $3\times 3$ matrix is a legal blob shape. To describe a real ellipsoid, a covariance must be **symmetric positive semidefinite**: symmetric, and never assigning a negative spread to any direction. Freely nudging the six independent numbers inside $\Sigma$ will, sooner or later, push it out of that legal set, and you get a "shape" that curves the wrong way or collapses to nonsense, which the renderer cannot draw and the gradient cannot recover from.
 
@@ -190,8 +186,6 @@ $$\Sigma = R\, S\, S^\top\, R^\top.$$
 Here $S$ is a diagonal matrix of three positive **scales**, the blob's radius along each of its own three axes (this is the stretching), and $R$ is a **rotation** that turns those axes to any orientation (this is the tilting). Read left to right, the product takes a unit ball, stretches it by $S$ into an ellipsoid, and spins it by $R$. Any $\Sigma$ built this way is automatically symmetric positive semidefinite, a valid shape *by construction*, no matter how the optimizer pushes $R$ and $S$ around. We have moved the gradient descent onto three scales and a rotation, quantities that cannot represent an illegal blob, and recover the covariance from them only when we need it. Build a scene below: drop a few Gaussians, set their scales and orientations, then orbit the camera and watch each 3D blob project down to a 2D footprint, sort by depth, and blend.
 
 <GaussianSplatLab />
-
-<CodeModal preset="ewa-projection" />
 
 **Projecting a blob to the screen.** A Gaussian lives in 3D, but a pixel lives on a flat screen, so before we can composite anything we have to ask what a 3D blob *looks like* from the camera: what 2D footprint does it cast?
 
@@ -221,13 +215,9 @@ Each $Y_{\ell m}$ is one of those fixed patterns on the sphere (the index $\ell$
 
 <SphericalHarmonicsViz />
 
-<CodeModal preset="spherical-harmonics" />
-
 The abstract sphere above shows what the bands do. Here they are on the real capture: toggle the harmonics off and the sunflowers and the glazed jug go matte, one flat color per splat; toggle them on and the highlights come alive, sliding across the petals and the glaze as you orbit.
 
 <ViewDependentSplatViz />
-
-<CodeModal preset="spark-sh" />
 
 **Back to the integral.** Every piece is now on the table, and the last step is the one we have been promising since section 2: it is the same sum. To render a frame, project all the blobs to the screen with the EWA map, sort them front to back by depth, and composite them with the exact spine equation,
 
