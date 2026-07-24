@@ -2151,6 +2151,43 @@ body:has(.essay-hero) {
   color: var(--color-ink-2);
 }
 
+/* ── Riemannian geometry — collapsible derivations ── */
+
+.derivation {
+  margin: 1.6em 0;
+  border: 0.5px solid rgba(0,0,0,0.08);
+  border-radius: 10px;
+  background: #f6f6fa;
+  padding: 0 1.1em;
+}
+
+.derivation > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 0.85em 0;
+  font-family: 'Menlo', 'Courier New', monospace;
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+  color: var(--color-ink-5);
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+.derivation > summary::-webkit-details-marker { display: none; }
+
+.derivation > summary::before {
+  content: '▸';
+  transition: transform 0.15s ease;
+  font-size: 0.7em;
+}
+
+.derivation[open] > summary::before { transform: rotate(90deg); }
+
+.derivation[open] > summary { border-bottom: 0.5px solid rgba(0,0,0,0.08); }
+
+.derivation-body { padding: 0.4em 0 1.1em; }
+
 /* ── Floating TOC panel ── */
 
 /* ── Sphere section (grid: prose left, widget right) ── */

@@ -1,7 +1,7 @@
 ---
 title: "The Geometry of Curved Spaces"
 seoTitle: "Riemannian Geometry: Curved Spaces, Curvature & Geodesics"
-description: "An introduction to Riemannian geometry and the mathematics of curved space: manifolds, metric tensors, curvature, geodesics, and covariant derivatives."
+description: "An introduction to Riemannian geometry that derives the tools of curved space from the metric alone: distances, geodesics, curvature, and Gauss's Theorema Egregium, the proof that curvature is intrinsic."
 topic: mathematics
 postLayout: longform
 ogMotif: riemannian-grid
@@ -19,21 +19,21 @@ import RiemannianSurface from '../../components/RiemannianSurface.astro';
 
 <RiemannianSurface mode="flat" side />
 
-You are standing on a flat x-y plane. To measure the distance of a tiny step, you square each coordinate change and add them together: $ds^2 = dx^2 + dy^2$. This is the simplest metric imaginable, Pythagoras applied infinitesimally. Every step in every direction is governed by the same formula, uniformly, everywhere.
+You are standing on a flat $xy$-plane. To measure the distance of a tiny step, you square each coordinate change and add them together: $ds^2 = dx^2 + dy^2$. This is the most familiar metric there is, Pythagoras applied infinitesimally. Every step in every direction is governed by the same formula, uniformly, everywhere.
 
 Now look at the surface. It is the same plane, but with a bump. Spin it and watch the coordinate grid. Near the peak, a step of the same coordinate size covers more actual surface area than the same step on the flat rim. The coordinate step and the real distance have come apart. The formula $ds^2 = dx^2 + dy^2$ no longer works; it would lie to you about distances near that peak.
 
-This is the problem Riemannian geometry was invented to solve. This post is meant to be visual explainer of basics of Riemannian geometry. 
+Making that measurement precise, even on a surface where the coordinate grid can no longer be trusted, is what Riemannian geometry is for.
 
 <div class="toc-card">
   <p class="toc-card-heading">In this post</p>
   <ol class="toc-card-list">
     <li><a class="toc-card-item" href="#manifolds-what-is-a-curved-space"><span class="toc-n">1</span>Manifolds: what is a curved space?</a></li>
-    <li><a class="toc-card-item" href="#the-metric-tensor-how-do-you-measure-distances"><span class="toc-n">2</span>The metric tensor: how do you measure distances?</a></li>
-    <li><a class="toc-card-item" href="#signature-what-kind-of-metric-is-this"><span class="toc-n">3</span>Signature: what kind of metric is this?</a></li>
+    <li><a class="toc-card-item" href="#the-metric-how-do-you-measure-distance"><span class="toc-n">2</span>The metric: how do you measure distance?</a></li>
+    <li><a class="toc-card-item" href="#straight-lines-what-is-a-geodesic"><span class="toc-n">3</span>Straight lines: what is a geodesic?</a></li>
     <li><a class="toc-card-item" href="#curvature-does-the-space-bend"><span class="toc-n">4</span>Curvature: does the space bend?</a></li>
-    <li><a class="toc-card-item" href="#geodesics-what-is-a-straight-line"><span class="toc-n">5</span>Geodesics: what is a straight line?</a></li>
-    <li><a class="toc-card-item" href="#connections-and-covariant-derivatives"><span class="toc-n">6</span>Connections: how do you differentiate?</a></li>
+    <li><a class="toc-card-item" href="#theorema-egregium-curvature-is-intrinsic"><span class="toc-n">5</span>Theorema Egregium: curvature is intrinsic</a></li>
+    <li><a class="toc-card-item" href="#beyond-surfaces-the-riemann-tensor"><span class="toc-n">6</span>Beyond surfaces: the Riemann tensor</a></li>
   </ol>
 </div>
 
@@ -48,23 +48,25 @@ This is the problem Riemannian geometry was invented to solve. This post is mean
 
 <RiemannianSurface mode="bump" side />
 
-Imagine an ant living on the surface of a sphere. It cannot fly off the surface and look at the sphere from outside. Yet it can still discover that its world is curved: if it draws a large enough triangle, the angles add up to more than 180°. If it walks two paths that start out parallel, they will eventually meet. Curvature is not a property of how the surface sits inside some larger space; it is an intrinsic property of the surface itself, discoverable from within.
+Imagine an ant living on the surface of a sphere. It cannot fly off the surface and look at the sphere from outside. Yet it can still find signs that its world is curved: if it draws a large enough triangle, the angles add up to more than 180°, and two paths that start out parallel will eventually meet. Does that mean curvature belongs to the surface itself, rather than to how it happens to sit inside some larger space? It is tempting to assume so, but that is a claim we will have to earn rather than assert. We return to it near the end, once we can compute curvature directly.
 
-To do any calculation, the ant needs a way to label points. It lays down coordinates $x^\mu$ at every location, a coordinate chart. On a flat plane these are just $x$ and $y$. On the bump, they might be latitude and longitude, or radial distance from the peak, or any other convenient labelling. The choice is arbitrary. The coordinates are a filing system we impose on the surface, not a feature of the surface itself.
+To do any calculation, the ant needs a way to label points. It lays down coordinates $x^\mu$ at every location, a coordinate chart, where the index $\mu$ simply numbers the axes: $x^1, x^2$, and so on. On a flat plane these are just the familiar $x$ and $y$, so $x^1 = x$ and $x^2 = y$. On the bump, they might be latitude and longitude, or radial distance from the peak, or any other convenient labelling. The choice is arbitrary. The coordinates are a filing system we impose on the surface, not a feature of the surface itself.
 
-The abstract object, the surface, without any particular coordinate labels, is called a **manifold**, written $M$. Formally, a manifold is a smooth space with the property that any small enough patch looks flat: if you zoom in close enough to any point, the surface is locally indistinguishable from an ordinary Euclidean plane. Globally it can curve, fold, and close on itself. But locally, coordinates always behave like $x$ and $y$.
+The abstract object, the surface, without any particular coordinate labels, is called a **manifold**, written $M$. The idea is that any small enough patch looks flat: zoom in close enough to any point and the surface becomes locally indistinguishable from ordinary flat $\mathbb{R}^n$. Globally it can curve, fold, and close on itself; locally, coordinates always behave like ordinary Cartesian axes.
 
-Formally: a manifold $M$ is a set of points that locally looks like $\mathbb{R}^n$. Around every point there exists a small open neighborhood that can be mapped smoothly to $\mathbb{R}^n$ and back — that neighborhood is a **coordinate patch**, or **chart**. Within it, points carry coordinates $(x^1, x^2, \ldots, x^n)$ that behave just like ordinary Cartesian coordinates.
+Made precise, this is the statement that $M$ is covered by an **atlas** of **charts**, each one a homeomorphism from a patch of $M$ onto an open set of $\mathbb{R}^n$, with smooth transition maps wherever two charts overlap. Around every point there is a small neighborhood that maps smoothly to $\mathbb{R}^n$ and back; within it, points carry coordinates $(x^1, x^2, \ldots, x^n)$.
 
-The surface in the animation is the manifold $M$. The blue region $U_1$ and the amber region $U_2$ are two such coordinate patches. Inside each one the local axes $(x^1, x^2)$ are drawn — two perpendicular directions spanning $\mathbb{R}^2$ at that location. The purple strip is $U_1 \cap U_2$, the overlap where both charts are simultaneously valid. On that overlap, the coordinates assigned by $U_1$ and those assigned by $U_2$ are smooth functions of each other. That compatibility condition is precisely what makes $M$ a smooth manifold rather than an arbitrary set of points.
+The surface in the animation is the manifold $M$. The blue region $U_1$ and the amber region $U_2$ are two such coordinate patches. Inside each one the local axes $(x^1, x^2)$ are drawn, two perpendicular directions spanning $\mathbb{R}^2$ at that location. The purple strip is $U_1 \cap U_2$, the overlap where both charts are simultaneously valid. On that overlap, the coordinates assigned by $U_1$ and those assigned by $U_2$ are smooth functions of each other. That compatibility condition is precisely what makes $M$ a smooth manifold rather than an arbitrary set of points.
+
+Two questions now drive everything that follows. On a surface like this, what does distance actually mean, once a coordinate step can no longer be trusted to measure real length? And once distance is settled, what counts as a straight line, the shortest path between two points, when there is no flat page to draw one on? Answering the first question gives the metric tensor. Answering the second gives the geodesic. Everything else in this article grows out of those two questions.
 
 ---
 
-## The metric tensor: how do you measure distances?
+## The metric: how do you measure distance?
 
 <div class="intuition">
   <p class="intuition-label">Intuition</p>
-  <p class="intuition-text">Imagine stretching a piece of paper more in some directions than others. Your ruler starts behaving oddly: distances change depending on where you place it and which direction you measure. The metric is this ruler, carried to every point on the surface. It encodes how lengths and angles work at each location, even when the surface curves or when time behaves differently from space.</p>
+  <p class="intuition-text">Imagine stretching a piece of paper more in some directions than others. Your ruler starts behaving oddly: distances change depending on where you place it and which direction you measure. The metric is this ruler, carried to every point on the surface. It encodes how lengths and angles work at each location, even where the surface curves and a coordinate step no longer measures true distance.</p>
 </div>
 
 <RiemannianSurface mode="distances" side />
@@ -82,63 +84,52 @@ Reading the formula term by term:
 - $g_{\mu\nu}(x)$ is the **metric tensor**, a symmetric matrix at every point $x \in M$. Its entries encode how coordinate steps scale into real distances at that location.
 - $dx^\mu$ and $dx^\nu$ are infinitesimal displacements in the coordinate directions.
 
-For our bump surface, $g_{11}$ stretches distances along $x^1$, $g_{22}$ along $x^2$, and $g_{12} = g_{21}$ captures coupling when the coordinate directions are not orthogonal. Two standard forms anchor the intuition:
+That is the shape of the answer, but it is still abstract. What has not been done yet is to compute an actual $g_{\mu\nu}$ for the bump sitting in the figure above, and it turns out to be a short calculation, one worth doing by hand, since curvature, geodesics, and parallel transport in the sections ahead are all built entirely out of this one object.
 
-$$\text{Euclidean }\mathbb{R}^3\colon \quad ds^2 = dx^2 + dy^2 + dz^2 \qquad g_{\mu\nu} = \delta_{\mu\nu}$$
+<details class="derivation">
+  <summary>Show the derivation</summary>
+  <div class="derivation-body">
 
-$$\text{Spacetime }\colon \quad ds^2 = -dt^2 + dx^2 + dy^2 + dz^2 \qquad g_{\mu\nu} = \operatorname{diag}(-1,+1,+1,+1)$$
+Write the bump as a height function over the coordinate plane: a point on the surface sits at
 
-The Euclidean case is Pythagoras at infinitesimal scale. The spacetime case introduces a minus sign for the time direction — and that sign changes everything.
+$$\mathbf{r}(x^1, x^2) = \left(x^1,\, x^2,\, f(x^1, x^2)\right)$$
 
-<div class="note">
-  <p class="note-label">Riemannian vs semi-Riemannian</p>
-  <p class="note-text">When all eigenvalues of $g_{\mu\nu}$ are positive, the metric is **Riemannian**: $ds^2 \geq 0$ always, distances are real, and the geometry is that of an ordinary curved surface. Our bump lives here.</p>
-  <p class="note-text">When one or more eigenvalues are negative, the metric is **semi-Riemannian** (or pseudo-Riemannian). The physically important case is **Lorentzian**: one negative eigenvalue for the time direction. In that setting $ds^2$ can be positive (spacelike separation, two events that are purely spatial), zero (lightlike, the path a photon takes), or negative (timelike, the path a massive object follows). The metric tensor is the same object in both cases — the only difference is the sign pattern of its eigenvalues, called the **signature**.</p>
-</div>
+for some function $f$ giving the height at each coordinate pair. Moving a little in the $x^1$ direction, holding $x^2$ fixed, traces out a tangent vector found by differentiating $\mathbf{r}$, and likewise for $x^2$:
+
+$$\mathbf{r}_1 = \frac{\partial \mathbf{r}}{\partial x^1} = (1,\, 0,\, f_1), \qquad \mathbf{r}_2 = \frac{\partial \mathbf{r}}{\partial x^2} = (0,\, 1,\, f_2)$$
+
+where $f_\mu = \partial f / \partial x^\mu$. These two vectors span the tangent plane at that point, sitting inside the ambient $\mathbb{R}^3$. The metric is nothing more than their dot products with one another:
+
+$$g_{\mu\nu} = \mathbf{r}_\mu \cdot \mathbf{r}_\nu$$
+
+Working out the three distinct entries:
+
+$$g_{11} = \mathbf{r}_1 \cdot \mathbf{r}_1 = 1 + f_1^2, \qquad g_{12} = g_{21} = \mathbf{r}_1 \cdot \mathbf{r}_2 = f_1 f_2, \qquad g_{22} = \mathbf{r}_2 \cdot \mathbf{r}_2 = 1 + f_2^2$$
+
+  </div>
+</details>
+
+For the bump in the figure, this gives a concrete, computed metric:
+
+$$g_{11} = 1 + f_1^2, \qquad g_{12} = g_{21} = f_1 f_2, \qquad g_{22} = 1 + f_2^2$$
+
+and the distance formula becomes:
+
+$$ds^2 = \left(1 + f_1^2\right)(dx^1)^2 + 2 f_1 f_2 \, dx^1 dx^2 + \left(1 + f_2^2\right)(dx^2)^2$$
+
+Where the surface is flat, $f_1 = f_2 = 0$, and this collapses back to plain Pythagoras. Near the peak, $f_1$ and $f_2$ grow, and the extra terms are exactly the correction that keeps $ds^2$ honest. This is not a schematic formula standing in for the idea of a metric: it is the actual ruler for the actual surface spinning in the figure above, and it is the object that curvature and geodesics, later in this article, are computed from.
+
+The familiar anchor is still the flat case. In ordinary Euclidean $\mathbb{R}^3$ with coordinates $x, y, z$:
+
+$$ds^2 = dx^2 + dy^2 + dz^2, \qquad g_{\mu\nu} = \delta_{\mu\nu}$$
+
+no stretching anywhere, every direction on equal footing. Flip a sign in this metric and you get the geometry of spacetime, which we return to at the end.
 
 The full metric tensor is one symmetric matrix at every point of $M$. From it alone you can derive distances, angles, volumes, and every geometric quantity that follows. The component above shows $g_{11}$, $g_{12}$, $g_{22}$, and $ds^2$ live when you click two nearby points.
 
 ---
 
-## Signature: what kind of metric is this?
-
-<div class="intuition">
-  <p class="intuition-label">Intuition</p>
-  <p class="intuition-text">Think of a video game map: every direction you can move is a direction in space. Now add a dimension for time, which behaves differently: you can never turn around in it. The signature tells you which directions are time-like and which are space-like. In relativity the signature is (−, +, +, +): one time direction and three spatial ones, and that single minus sign is what makes the geometry of spacetime different from ordinary curved space.</p>
-</div>
-
-At any point on $M$, the metric matrix $g_{\mu\nu}$ is symmetric and can be diagonalised. The signs of its eigenvalues, all positive or some negative, classify the geometry at that point.
-
-For our bump surface, both eigenvalues are positive at every point. The **signature** is $(+,+)$. This is a **Riemannian** metric: $ds^2 \geq 0$ always, distances are real and positive, and two distinct points are always separated by a positive distance.
-
-Flip one sign, allow one negative eigenvalue, and you get a **Lorentzian** metric. The Minkowski metric of special relativity has signature $(-,+,+,+)$: one time direction and three spatial directions, with $ds^2 = -c^2 dt^2 + dx^2 + dy^2 + dz^2$. Distances can be zero between distinct events, or imaginary. The null interval, $ds^2 = 0$, is exactly what light travels along. These are not pathological cases; they are the geometry of spacetime.
-
-This section earns its place by naming the vocabulary. The follow-up post on the Schwarzschild solution opens with a Lorentzian metric, one sign flipped from everything built here, and the geometry of that single sign change is what makes black holes possible.
-
----
-
-## Curvature: does the space bend?
-
-<div class="intuition">
-  <p class="intuition-label">Intuition</p>
-  <p class="intuition-text">Roll a marble on three different surfaces. On a flat table it goes straight. On a sphere it curves inward, parallel paths that start out side by side will eventually meet. On a saddle it curves outward, parallel paths that start together spread apart. Curvature tells you which of these three worlds you are in, and it shapes how everything moves through the space, just as gravity shapes how objects fall.</p>
-</div>
-
-<RiemannianSurface mode="curvature" side />
-
-The simplest measure of curvature at a point is **Gaussian curvature**, written $K$, a single number. At the peak of the bump: $K > 0$, the surface curves inward like the top of a sphere. On the flat rim: $K = 0$. Between the peak and the flat rim, the surface bends outward in one direction and inward in another, a saddle shape, giving $K < 0$. The heat map on the component above shows this variation across the surface.
-
-The remarkable theorem that makes curvature intrinsic is Gauss's **Theorema Egregium**: $K$ can be computed from $g_{\mu\nu}$ and its derivatives alone. No knowledge of how the surface sits in 3D space is needed. For the bump surface, write the height as $f(x^1, x^2)$; then:
-
-$$K = \frac{f_{11} f_{22} - f_{12}^2}{\left(1 + f_1^2 + f_2^2\right)^2}$$
-
-where $f_\mu = \partial f / \partial x^\mu$ and $f_{\mu\nu} = \partial^2 f / \partial x^\mu \partial x^\nu$. The numerator involves second derivatives of the height, the rate at which the slope itself is changing. The denominator is the square of the metric determinant factor. Every piece of this formula is computable by an ant on the surface who can measure distances but has never seen the third dimension.
-
-For spaces of higher dimension, $K$ is no longer sufficient; we need a richer object. The **Riemann curvature tensor** $R^\lambda{}_{\mu\nu\rho}$ is a rank-4 tensor derived from $g_{\mu\nu}$ and its second derivatives; it encodes the curvature in every pair of directions simultaneously. Successive compressions extract coarser information: the **Ricci tensor** $R_{\mu\nu} = R^\lambda{}_{\mu\lambda\nu}$ contracts one pair of indices, leaving a symmetric matrix. The **Ricci scalar** $R = g^{\mu\nu} R_{\mu\nu}$ contracts again, leaving a single number. (Here $g^{\mu\nu}$ denotes the matrix inverse of $g_{\mu\nu}$, the "raised-index" version of the metric, satisfying $g^{\mu\lambda} g_{\lambda\nu} = \delta^\mu_\nu$.) Each compression loses detail but becomes more tractable. Einstein's field equations, the equations governing general relativity, are written in terms of $R_{\mu\nu}$ and $R$, with the metric $g_{\mu\nu}$ as the fundamental unknown. Hover any point on the surface above to read $K$ at that location.
-
----
-
-## Geodesics: what is a straight line?
+## Straight lines: what is a geodesic?
 
 <div class="intuition">
   <p class="intuition-label">Intuition</p>
@@ -147,54 +138,199 @@ For spaces of higher dimension, $K$ is no longer sufficient; we need a richer ob
 
 <RiemannianSurface mode="geodesic" side />
 
-On a flat plane, the shortest path between two points is a straight line. On a curved surface, "straight" needs a new definition. A path that bends to follow the surface geometry, never turning left or right relative to the surface itself, is called a **geodesic**. It is the shortest path between two points, or more precisely, the path that locally minimises length.
+On a flat plane, the shortest path between two points is a straight line, and nothing more needs to be said. On the bump, "straight" has no obvious meaning left: there is no flat page to draw one on, only the surface itself. A **geodesic** is the replacement idea: the locally shortest path, the straightest route the geometry allows.
 
-Parameterise a path on $M$ as $\gamma(t)$, where $t$ runs from 0 to 1 and $\gamma$ traces a curve on the surface. The velocity in coordinates is $\dot{x}^\mu = dx^\mu/dt$. To find the shortest path we minimise the arc-length integral using the calculus of variations. The result is the **geodesic equation**:
+With a concrete metric $g_{\mu\nu}$ for the bump now in hand, "shortest" can be made precise and solved for directly. Parameterise a curve on $M$ as $\gamma(t)$, with velocity $\dot{x}^\mu = dx^\mu/dt$. Extremising the length of $\gamma$ turns out to be equivalent to extremising a simpler **energy functional**, whose extremal curves are exactly the geodesics, traced at constant speed:
 
-$$\ddot{x}^\mu + \Gamma^\mu_{\nu\rho} \, \dot{x}^\nu \dot{x}^\rho = 0$$
+$$S[\gamma] = \int \frac{1}{2} \, g_{\mu\nu}(x) \, \dot{x}^\mu \dot{x}^\nu \, dt$$
 
-The term $\Gamma^\mu_{\nu\rho}$, pronounced "Christoffel symbol", corrects for the curvature of the surface. It bends the path to follow the geometry rather than the coordinate grid. Think of it as the term that says: account for the fact that the coordinate basis vectors themselves are changing direction as you move across the curved surface. We will define $\Gamma^\mu_{\nu\rho}$ precisely in the next section.
+That is now an ordinary problem in the calculus of variations: find the $x^\mu(t)$ that extremises $S$. Applying the Euler-Lagrange equations (the full algebra is below) produces two things at once, together. The **geodesic equation**:
 
-On the bump, a geodesic between two points on opposite sides does not always pass over the peak. The path over the top may be longer in the intrinsic metric $g_{\mu\nu}$ than an arc that curves around the side, even though the route over the peak looks shorter when you draw it on a flat map. This is the core lesson of geodesics: the shortest path is determined by the geometry, not by the coordinates. Click two points on the surface above to trace the geodesic between them.
+$$\ddot{x}^\mu + \Gamma^\mu_{\nu\rho}\, \dot{x}^\nu \dot{x}^\rho = 0$$
+
+and, forced out by the very same calculation, the **Christoffel symbols**:
+
+$$\Gamma^\mu_{\nu\rho} = \frac{1}{2}\, g^{\mu\sigma}\left(\partial_\nu g_{\sigma\rho} + \partial_\rho g_{\sigma\nu} - \partial_\sigma g_{\nu\rho}\right)$$
+
+where $g^{\mu\sigma}$ is the inverse metric, satisfying $g^{\mu\sigma} g_{\sigma\nu} = \delta^\mu_\nu$.
+
+Notice what did not happen here. The Christoffel symbols were not postulated, nor handed down as a new piece of structure bolted onto the manifold. They fell out of a single demand: that the path be as short as possible. The connection, the machinery needed to differentiate and transport vectors on a curved surface, is nothing but the metric's own derivatives, assembled in this particular combination. Everything needed to do calculus on the surface is already sitting inside $g_{\mu\nu}$; the derivation below simply reads it out.
+
+<details class="derivation">
+  <summary>Show the derivation</summary>
+  <div class="derivation-body">
+
+Write the Lagrangian as $L = \frac{1}{2} g_{\mu\nu}(x)\, \dot{x}^\mu \dot{x}^\nu$. Since $g_{\mu\nu}$ does not depend on velocity, its derivative with respect to $\dot{x}^\sigma$ is simple:
+
+$$\frac{\partial L}{\partial \dot{x}^\sigma} = g_{\sigma\nu}\dot{x}^\nu$$
+
+Differentiating this along the path, using the chain rule on $g_{\sigma\nu}(x(t))$:
+
+$$\frac{d}{dt}\left(g_{\sigma\nu}\dot{x}^\nu\right) = g_{\sigma\nu}\ddot{x}^\nu + \partial_\rho g_{\sigma\nu}\,\dot{x}^\rho \dot{x}^\nu$$
+
+Meanwhile the derivative of $L$ with respect to position, holding velocity fixed, is
+
+$$\frac{\partial L}{\partial x^\sigma} = \frac{1}{2}\,\partial_\sigma g_{\mu\nu}\,\dot{x}^\mu \dot{x}^\nu$$
+
+The Euler-Lagrange equation, $\dfrac{d}{dt}\dfrac{\partial L}{\partial \dot{x}^\sigma} - \dfrac{\partial L}{\partial x^\sigma} = 0$, then reads:
+
+$$g_{\sigma\nu}\ddot{x}^\nu + \partial_\rho g_{\sigma\nu}\dot{x}^\rho\dot{x}^\nu - \frac{1}{2}\partial_\sigma g_{\mu\nu}\dot{x}^\mu\dot{x}^\nu = 0$$
+
+The middle term is not yet in a useful shape, since nothing marks it as symmetric in the two velocities it carries. Relabel dummy indices and symmetrise:
+
+$$\partial_\rho g_{\sigma\nu}\dot{x}^\rho\dot{x}^\nu = \frac{1}{2}\left(\partial_\rho g_{\sigma\nu} + \partial_\nu g_{\sigma\rho}\right)\dot{x}^\rho\dot{x}^\nu$$
+
+so the bracket collapses to
+
+$$\frac{1}{2}\left(\partial_\rho g_{\sigma\nu} + \partial_\nu g_{\sigma\rho} - \partial_\sigma g_{\rho\nu}\right)$$
+
+and the whole equation becomes
+
+$$g_{\sigma\nu}\ddot{x}^\nu + \frac{1}{2}\left(\partial_\rho g_{\sigma\nu} + \partial_\nu g_{\sigma\rho} - \partial_\sigma g_{\rho\nu}\right)\dot{x}^\rho\dot{x}^\nu = 0$$
+
+Finally, multiply through by the inverse metric $g^{\mu\sigma}$ to strip the free index off $\ddot{x}^\nu$ and isolate $\ddot{x}^\mu$:
+
+$$\ddot{x}^\mu + \frac{1}{2}\,g^{\mu\sigma}\left(\partial_\rho g_{\sigma\nu} + \partial_\nu g_{\sigma\rho} - \partial_\sigma g_{\rho\nu}\right)\dot{x}^\rho\dot{x}^\nu = 0$$
+
+Reading off the coefficient of $\dot{x}^\rho\dot{x}^\nu$ gives exactly $\Gamma^\mu_{\nu\rho}$ as defined above, and the equation itself is the geodesic equation.
+
+  </div>
+</details>
+
+On the bump, a geodesic between two points on opposite sides does not always pass over the peak; the route over the top can be longer in the intrinsic metric $g_{\mu\nu}$ than an arc curving around the side, even though it looks shorter drawn on a flat map. Click two points on the surface above to trace the geodesic between them.
 
 ---
 
-## Connections and covariant derivatives
+## Curvature: does the space bend?
+
+<div class="intuition">
+  <p class="intuition-label">Intuition</p>
+  <p class="intuition-text">Send two ants out from nearby starting points, each walking a geodesic, the straightest path the surface allows. On a flat table their paths stay the same distance apart forever. On a sphere, geodesics that start out parallel bend toward each other and eventually cross, the way meridians converge at the poles. On a saddle, they bend the other way, drifting further apart the longer the ants walk. Curvature is what measures this: how neighboring geodesics deviate from staying parallel.</p>
+</div>
+
+<RiemannianSurface mode="curvature" side />
+
+The simplest measure of this at a point is **Gaussian curvature**, written $K$, a single number. At the peak of the bump: $K > 0$, nearby geodesics converge, the way they would on a sphere. On the flat rim: $K = 0$, geodesics stay parallel, exactly as on a plane. Between the peak and the rim the surface bends outward in one direction and inward in another, a saddle shape, and there $K < 0$: geodesics spread apart. The heat map on the component above shows $K$ varying across the surface, point by point.
+
+There is a direct way to compute $K$ using nothing but how the surface sits in $\mathbb{R}^3$. Two objects are needed. The first is the metric $g_{\mu\nu}$ already in hand, here called the **first fundamental form**. The second is new: the **second fundamental form** $\mathrm{II}_{\mu\nu}$, which tracks how the surface's normal vector tips over as you move across it, how fast the surface curves away from its own tangent plane. Gaussian curvature is the ratio of their determinants, $K = \det \mathrm{II} / \det g$. Worked out for the bump, with height function $f(x^1, x^2)$ as before, this becomes:
+
+$$K = \frac{f_{11} f_{22} - f_{12}^2}{\left(1 + f_1^2 + f_2^2\right)^2}$$
+
+where $f_\mu = \partial f / \partial x^\mu$ and $f_{\mu\nu} = \partial^2 f / \partial x^\mu \partial x^\nu$. The full derivation of both determinants is below.
+
+<details class="derivation">
+  <summary>Show the derivation</summary>
+  <div class="derivation-body">
+
+The first fundamental form is just the metric computed earlier, $g_{11} = 1 + f_1^2$, $g_{12} = f_1 f_2$, $g_{22} = 1 + f_2^2$, so its determinant is
+
+$$\det g = g_{11} g_{22} - g_{12}^2 = \left(1 + f_1^2\right)\left(1 + f_2^2\right) - \left(f_1 f_2\right)^2 = 1 + f_1^2 + f_2^2$$
+
+The second fundamental form measures curvature along the unit normal $\mathbf{n} = (-f_1,\, -f_2,\, 1) / \sqrt{1 + f_1^2 + f_2^2}$, the direction pointing straight off the surface. Its entries are the surface's second derivatives, projected onto that normal:
+
+$$\mathrm{II}_{\mu\nu} = \frac{f_{\mu\nu}}{\sqrt{1 + f_1^2 + f_2^2}}$$
+
+with determinant
+
+$$\det \mathrm{II} = \frac{f_{11} f_{22} - f_{12}^2}{1 + f_1^2 + f_2^2}$$
+
+Dividing $\det \mathrm{II}$ by $\det g$, the two factors of $1 + f_1^2 + f_2^2$ combine into a single squared term in the denominator, matching the formula above.
+
+  </div>
+</details>
+
+Notice what this derivation leaned on. It needed the height function $f$, and it needed a normal vector, a direction pointing off the surface into the third dimension. Both live outside the surface itself: an ant confined to $M$, able to measure only $g_{\mu\nu}$, has no obvious way to get at either one. By every appearance, $K$ is an extrinsic quantity, a fact about how the surface happens to be embedded, not a fact the surface carries on its own terms.
+
+And yet that appearance turns out to be misleading. The very same number, this exact $K$, can be rewritten using only $g_{\mu\nu}$ and its derivatives, with no normal vector and no third dimension anywhere in sight. That rewriting, and what it means for the question left open at the start of this article, is the subject of the next section.
+
+---
+
+## Theorema Egregium: curvature is intrinsic
+
+The previous section computed $K$ two ways, and both leaned entirely on the third dimension. The height function $f$ told us how the surface rose above the coordinate plane, and the normal vector $\mathbf{n}$ told us which way was off the surface, and neither one is something an ant confined to $M$ can lay hands on. That is why the section ended by calling $K$ extrinsic: a fact about the embedding, not about the surface.
+
+That verdict does not survive. The very same number, this exact $K$, can be rewritten using nothing but $g_{\mu\nu}$ and its first and second derivatives, no height function, no normal vector, no third dimension anywhere in sight. Gauss proved this in 1827 and was struck enough by it to name it the **Theorema Egregium**, the "remarkable theorem." It predates Riemann's general theory of curved spaces by decades; Riemann's contribution, later, was to notice that the same idea survives in any number of dimensions, not just two.
+
+The route to the rewriting starts with an object already sitting in hand. The Christoffel symbols $\Gamma^\mu_{\nu\rho}$, derived earlier from nothing more than extremising path length, are built entirely out of $g_{\mu\nu}$ and its first derivatives:
+
+$$\Gamma^\mu_{\nu\rho} = \frac{1}{2}\, g^{\mu\sigma}\left(\partial_\nu g_{\sigma\rho} + \partial_\rho g_{\sigma\nu} - \partial_\sigma g_{\nu\rho}\right)$$
+
+They carry no memory of any third dimension; they only know the metric. Assemble them, together with their own derivatives, into a new object, the **Riemann curvature tensor**:
+
+$$R^\rho{}_{\sigma\mu\nu} = \partial_\mu \Gamma^\rho_{\nu\sigma} - \partial_\nu \Gamma^\rho_{\mu\sigma} + \Gamma^\rho_{\mu\lambda}\Gamma^\lambda_{\nu\sigma} - \Gamma^\rho_{\nu\lambda}\Gamma^\lambda_{\mu\sigma}$$
+
+Lower one index with the metric, $R_{\rho\sigma\mu\nu} = g_{\rho\alpha} R^\alpha{}_{\sigma\mu\nu}$. On a two-dimensional surface the symmetries of $R_{\rho\sigma\mu\nu}$ collapse almost everything to zero, leaving essentially one independent number, $R_{1212}$, and Gaussian curvature turns out to be exactly:
+
+$$K = \frac{R_{1212}}{\det g}$$
+
+Follow the chain of dependence and the whole point is right there in it. $\Gamma$ is built from $g$ alone. $R$ is built from $\Gamma$ and its derivatives. $K$ is built from $R$ and $\det g$. At no step does anything leave the surface. $K$ depends on nothing but the metric and its derivatives, up to second order, and on nothing else.
+
+<details class="derivation">
+  <summary>Show the derivation</summary>
+  <div class="derivation-body">
+
+Setting the free indices to $\rho=1,\sigma=2,\mu=1,\nu=2$ in the general formula for $R^\rho{}_{\sigma\mu\nu}$ and lowering with $g_{1\alpha}$ gives
+
+$$R_{1212} = g_{1\alpha}\left(\partial_1 \Gamma^\alpha_{22} - \partial_2 \Gamma^\alpha_{12} + \Gamma^\alpha_{1\lambda}\Gamma^\lambda_{22} - \Gamma^\alpha_{2\lambda}\Gamma^\lambda_{12}\right)$$
+
+Every $\Gamma^\alpha_{\mu\nu}$ appearing here is exactly the combination derived earlier, $\Gamma^\mu_{\nu\rho} = \tfrac12 g^{\mu\sigma}(\partial_\nu g_{\sigma\rho} + \partial_\rho g_{\sigma\nu} - \partial_\sigma g_{\nu\rho})$, so the entire right-hand side reduces, in the end, to a specific and rather long combination of $g_{\mu\nu}$ and its first and second partial derivatives. Nothing else enters anywhere in the expression.
+
+Now substitute the bump metric computed earlier, $g_{11} = 1+f_1^2$, $g_{12}=f_1f_2$, $g_{22}=1+f_2^2$, into this intrinsic expression. Each $\Gamma$ becomes a specific combination of $f_1, f_2, f_{11}, f_{12}, f_{22}$, and carrying those through $R_{1212}$ and dividing by $\det g = 1+f_1^2+f_2^2$ is lengthy but entirely mechanical algebra: index contractions and cancellations, no new ideas required. What survives at the end is exactly
+
+$$K = \frac{f_{11}f_{22}-f_{12}^2}{\left(1+f_1^2+f_2^2\right)^2}$$
+
+the same formula reached extrinsically in the previous section, from the height function and the normal vector. Two entirely different routes, one starting outside the surface and one that never leaves it, land on the same number. That equality is the Theorema Egregium.
+
+  </div>
+</details>
+
+This is the promise made at the start of this article, discharged. An ant confined to $M$, equipped with nothing but a ruler, the metric $g_{\mu\nu}$, and enough patience to differentiate it twice, can compute $K$ without ever stepping outside its own world: without knowing whether $M$ sits inside $\mathbb{R}^3$ or any larger space at all, without a normal vector, without a third dimension. Curvature is not a fact about how the surface happens to be embedded. It is a fact the surface carries within itself, and now that claim is earned rather than assumed.
+
+---
+
+## Beyond surfaces: the Riemann tensor
+
+Everything so far lived on a two-dimensional surface, where a single number $K$ at each point captured all the curvature there was to know. In higher dimensions that stops being enough: curvature can differ from one pair of directions to another, and the full object needed to hold all of it is the **Riemann curvature tensor** $R^\rho{}_{\sigma\mu\nu}$ met in the previous section. Nothing about its definition changes; what changes is how much work it now has to do, since a single number can no longer summarise it.
+
+Its contractions strip that fuller object down to coarser summaries, each one trading detail for tractability. The **Ricci tensor** contracts one pair of indices, $R_{\mu\nu} = R^\lambda{}_{\mu\lambda\nu}$, leaving a symmetric matrix rather than a four-index tensor. The **Ricci scalar** contracts once more, $R = g^{\mu\nu} R_{\mu\nu}$, collapsing everything down to a single number at each point, distinct from the Gaussian $K$ but playing a related role.
+
+These contractions are not just bookkeeping. **Einstein's field equations**, the equations governing general relativity, are written entirely in terms of $R_{\mu\nu}$, $R$, and $g_{\mu\nu}$, with the metric itself as the unknown to be solved for. That equation is not the business of this article, only its destination: everything built here, the metric, the Christoffel symbols, the Riemann tensor, is the machinery the field equations are eventually written in.
+
+<div class="intuition">
+  <p class="intuition-label">Intuition</p>
+  <p class="intuition-text">Carry a gyroscope around a closed loop on a curved surface and it comes back pointing somewhere new, even though you never turned it by hand. On a flat floor it would return exactly as it started. A connection is the rule for moving a vector across a surface without rotating it, and on a curved surface that rule has a consequence: the vector quietly remembers the curvature it passed through. This is how an ant trapped on the surface can measure curvature without ever leaving it.</p>
+</div>
 
 <RiemannianSurface mode="parallel-transport" side />
 
-On flat space, moving a vector from point $A$ to point $B$ is trivial: just slide it along without rotating it. On a curved surface, this breaks down. The **tangent plane** at $A$, the flat plane that best approximates the surface there, is a different plane from the tangent plane at $B$. There is no obvious way to compare a vector at $A$ with a vector at $B$, because they live in different planes. We need a rule for transporting vectors between points in a way that is consistent with the geometry.
+The Riemann tensor was assembled from the connection, but we have not yet said what the connection actually does. Its job is to let you compare vectors at different points, and on a curved surface that is not automatic: on flat space, moving a vector from point $A$ to point $B$ is trivial, just slide it along without rotating it, but on a curved surface the tangent plane at $A$ is a different plane from the tangent plane at $B$, and there is no obvious way to line them up. The rule that fixes this is a **connection**, and the one used throughout this article, the **Levi-Civita connection**, is the unique choice that is torsion-free and metric-compatible, meaning it preserves lengths and angles under transport. Its components are exactly the Christoffel symbols $\Gamma^\mu_{\nu\rho}$ already derived: the connection was hiding in $g_{\mu\nu}$ all along.
 
-That rule is a **connection**. For a Riemannian manifold the natural choice is the **Levi-Civita connection**: the unique connection that is torsion-free ($\Gamma^\mu_{\nu\rho} = \Gamma^\mu_{\rho\nu}$, so the order of the lower indices does not matter) and metric-compatible ($\nabla g = 0$, meaning it preserves lengths and angles under transport). Both conditions together pin down a single connection. Its concrete expression, the **Christoffel symbols**, is:
-
-$$\Gamma^\mu_{\nu\rho} = \frac{1}{2} \, g^{\mu\lambda} \left(\partial_\nu g_{\rho\lambda} + \partial_\rho g_{\nu\lambda} - \partial_\lambda g_{\nu\rho}\right)$$
-
-This is the same $\Gamma$ that appeared in the geodesic equation. It was hiding in $g_{\mu\nu}$ all along: the connection is nothing more than the metric's own derivatives, assembled in the right combination. Knowing $g_{\mu\nu}$ at every point is enough to recover $\Gamma^\mu_{\nu\rho}$ everywhere.
-
-**Parallel transport** is what happens when you carry a vector $w$ along a path $\gamma$ using this connection, moving it without rotating it relative to the surface at each step. Mathematically, the transported vector satisfies:
+**Parallel transport** is what happens when you carry a vector $w$ along a path using this connection, moving it without rotating it relative to the surface at each step:
 
 $$\frac{dw^\mu}{dt} = -\Gamma^\mu_{\nu\rho} \, \dot{x}^\nu \, w^\rho$$
 
-On a curved surface, something unexpected happens: if you parallel-transport a vector around a closed loop, it returns rotated. The rotation angle is called the **holonomy** of the loop, and it is directly proportional to the Gaussian curvature enclosed by the path. An ant living on the surface can discover exactly how much the space curves by carrying a gyroscope around a closed path and measuring the rotation when it returns home. The component above lets you draw a closed path; the arrow shows the transported vector and updates the holonomy angle when the loop closes.
+On a curved surface, something unexpected happens: if you parallel-transport a vector around a closed loop, it returns rotated. The rotation angle is called the **holonomy** of the loop, and it is directly proportional to the curvature enclosed by the path. This is the operational version of everything the Theorema Egregium proved abstractly: an ant living on the surface can discover exactly how much the space curves by carrying a gyroscope around a closed path and measuring the rotation when it returns home. The component above lets you draw a closed path; the arrow shows the transported vector and updates the holonomy angle when the loop closes.
 
-The **covariant derivative** $\nabla_X Y$ is the infinitesimal version of this idea: it measures how a vector field $Y$ changes in the direction of $X$, corrected for the connection. In coordinates:
+The **covariant derivative** $\nabla_X Y$ is the infinitesimal version of the same idea: it measures how a vector field $Y$ changes in the direction of $X$, corrected for the connection. In coordinates:
 
 $$(\nabla_X Y)^\mu = X^\nu \partial_\nu Y^\mu + \Gamma^\mu_{\nu\rho} \, X^\nu Y^\rho$$
 
-The first term $X^\nu \partial_\nu Y^\mu$ is the ordinary directional derivative. On a flat space that would be the whole story. On a curved surface it is not a tensor; if you change coordinates, it picks up spurious extra terms from the fact that the coordinate basis vectors are changing direction. The $\Gamma$ term exactly subtracts those spurious contributions, leaving a quantity that genuinely measures how $Y$ changes relative to the geometry, independent of the coordinate choice.
+The first term $X^\nu \partial_\nu Y^\mu$ is the ordinary directional derivative. On a flat space that would be the whole story. On a curved surface it is not a tensor; if you change coordinates, it picks up spurious extra terms from the fact that the coordinate basis vectors are themselves turning. The $\Gamma$ term exactly subtracts those spurious contributions, leaving something that genuinely measures how $Y$ changes relative to the geometry, independent of the coordinate choice.
 
 ---
 
-A Riemannian manifold $(M, g_{\mu\nu})$ is a smooth space $M$ equipped with a metric tensor $g_{\mu\nu}$. The metric defines distances, angles, and volumes at every point. Its signature classifies the geometry, Riemannian or Lorentzian. From $g_{\mu\nu}$ alone you can derive the Riemann curvature tensor $R^\lambda{}_{\mu\nu\rho}$, which measures how the space bends in every direction. Geodesics, the solutions to $\ddot{x}^\mu + \Gamma^\mu_{\nu\rho} \dot{x}^\nu \dot{x}^\rho = 0$, are the shortest paths. The Levi-Civita connection $\Gamma^\mu_{\nu\rho}$ encodes how to differentiate vector fields, carrying the geometry's effect into calculus itself.
+A Riemannian manifold $(M, g_{\mu\nu})$ is a smooth space $M$ equipped with a metric tensor $g_{\mu\nu}$, and that one object turns out to determine everything else in this article. It gives distances, angles, and volumes at every point. It gives geodesics, the solutions to $\ddot{x}^\mu + \Gamma^\mu_{\nu\rho} \dot{x}^\nu \dot{x}^\rho = 0$, as the shortest paths the surface allows. And, by the Theorema Egregium, it gives curvature: Gaussian curvature $K$ on a surface, and more generally the Riemann curvature tensor $R^\rho{}_{\sigma\mu\nu}$, can both be computed from $g_{\mu\nu}$ and its derivatives alone, with no reference to any embedding or any space the manifold might sit inside. The Levi-Civita connection, whose components are the Christoffel symbols $\Gamma^\mu_{\nu\rho}$, is what makes differentiating vectors on that curved space possible at all.
+
+Everything in this article assumed a metric whose eigenvalues are all positive: a Riemannian metric, ordinary curved space. Flip a single sign, let one eigenvalue go negative, and the metric becomes **Lorentzian**. That sign pattern is called the **signature**. A Lorentzian metric is the geometry of spacetime, where one direction, time, behaves unlike the spatial ones. The follow-up post, on the Schwarzschild solution, opens exactly there: same machinery, one sign flipped, and that flip is what makes black holes possible.
 
 <div class="summary">
   <p class="summary-label">In plain language</p>
   <ul class="summary-list">
-    <li><span class="summary-term">Manifold</span> — a surface that is curved globally but looks flat up close, like the Earth beneath your feet.</li>
-    <li><span class="summary-term">Metric tensor</span> — a ruler that adjusts itself at every point so you always measure real distance, not just coordinate distance.</li>
-    <li><span class="summary-term">Signature</span> — the sign pattern that tells you whether you are in ordinary curved space or spacetime, where time behaves differently from every spatial direction.</li>
-    <li><span class="summary-term">Curvature</span> — a number (or tensor) that captures how much the surface bends: zero on a flat table, positive on a sphere, negative on a saddle.</li>
-    <li><span class="summary-term">Geodesics</span> — the straightest paths available on a curved surface, the routes a planet, a photon, or an aeroplane traces when nothing is pushing it off course.</li>
-    <li><span class="summary-term">Connection</span> — the rule for sliding a vector across a curved surface without rotating it, and the correction term that makes calculus work correctly in curved coordinates.</li>
+    <li><span class="summary-term">Manifold</span>: a surface that is curved globally but looks flat up close, like the Earth beneath your feet.</li>
+    <li><span class="summary-term">Metric</span>: a ruler that adjusts itself at every point so you always measure real distance, not just coordinate distance.</li>
+    <li><span class="summary-term">Geodesic</span>: the straightest path available on a curved surface, the route a planet, a photon, or an aeroplane traces when nothing is pushing it off course.</li>
+    <li><span class="summary-term">Curvature</span>: a number (or tensor) that captures how much the surface bends: zero on a flat table, positive on a sphere, negative on a saddle.</li>
+    <li><span class="summary-term">Theorema Egregium</span>: curvature is intrinsic, computable from the metric alone, with no need to know how (or whether) the surface sits inside a larger space.</li>
+    <li><span class="summary-term">Riemann tensor</span>: the connection is the rule for sliding a vector across curved space without rotating it, and the Riemann tensor is what that rule reveals once a surface has more than one pair of directions to curve in; flip a sign in the metric and the same machinery describes spacetime.</li>
   </ul>
 </div>

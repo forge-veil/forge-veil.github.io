@@ -389,8 +389,8 @@ function setupFlat(
     draw(')² + (dx',  false, '#1c1c1e', baseAlpha);
     draw('2',         true,  '#1c1c1e', baseAlpha);
     draw(')²',        false, '#1c1c1e', baseAlpha);
-    // + (dz)² — fades in during bump
-    if (dzAlpha > 0.01) draw(' + (dz)²', false, '#c0392b', dzAlpha);
+    // + (dh)² — fades in during bump
+    if (dzAlpha > 0.01) draw(' + (dh)²', false, '#c0392b', dzAlpha);
     ctx.globalAlpha = 1;
   }
 
@@ -479,7 +479,7 @@ function setupFlat(
       ctx.stroke();
     }
 
-    // ── dz lift lines: base → surface at P and Q ─────────────────────
+    // ── dh lift lines: base → surface at P and Q ─────────────────────
     if (bumpFrac > 0.02) {
       const dzAlpha = Math.min(1, bumpFrac * 3);
       ctx.globalAlpha = dzAlpha;
@@ -489,11 +489,11 @@ function setupFlat(
       ctx.beginPath(); ctx.moveTo(p0x, p0y); ctx.lineTo(px, py); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(q0x, q0y); ctx.lineTo(qx, qy); ctx.stroke();
       ctx.setLineDash([]);
-      // dz label at P
+      // dh label at P
       ctx.font = "10px 'Menlo', monospace";
       ctx.fillStyle = '#c0392b';
       ctx.textAlign = 'left';
-      ctx.fillText('dz', (p0x + px) / 2 + 5, (p0y + py) / 2);
+      ctx.fillText('dh', (p0x + px) / 2 + 5, (p0y + py) / 2);
       ctx.globalAlpha = 1;
     }
 
