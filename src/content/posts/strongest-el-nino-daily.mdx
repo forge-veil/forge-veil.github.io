@@ -1,0 +1,107 @@
+---
+title: "Watching the strongest El Niño ever, one grid cell at a time"
+seoTitle: "The 2026 El Niño, Measured Daily: SST Anomalies, Niño 3.4, Forecast Models, and RONI"
+description: "A daily-updating map of the 2026 El Niño built from NOAA satellite data, and the science of how a record ocean is actually measured and forecast: anomalies, grids, the Niño index, seasonal models, and RONI."
+topic: science
+postLayout: longform
+tags: [climate, el-nino, enso, sea-surface-temperature, noaa, data-visualization, forecasting]
+publishedAt: 2026-07-28
+published: true
+---
+
+import EnsoTracker from '../../components/EnsoTracker.astro';
+
+It started with a YouTube video. [Just Have a Think](https://www.youtube.com/watch?v=aErvUF2PHew) had a new one out with a title that did not do subtlety: "El Niño is here and it has SMASHED all records." It pointed at a piece by Zeke Hausfather in The Climate Brink, [The Strongest El Niño Ever](https://www.theclimatebrink.com/p/the-strongest-el-nino-ever), which laid out the case with numbers: seasonal forecast models putting roughly a 90 percent chance on a record event, and a median forecast for the central Pacific peaking near **+3.6 °C** by November or December 2026, comfortably past the 2015 to 2016 super El Niño.
+
+That is a striking claim. But the thing that actually caught me was smaller and more basic: *how does anyone know?* What does it even mean to say the Pacific is 3.6 degrees warm, and how do you measure the temperature of an ocean well enough to break a record by a specific decimal? That question sent me down a rabbit hole through satellites, climatologies, grid cells, forecast ensembles, and a correction with the unfortunate acronym RONI. This post is what I found, built around a map that redraws itself from NOAA data every day, so we can all watch how this plays out through December.
+
+<div class="toc-card">
+  <p class="toc-card-heading">In this post</p>
+  <ol class="toc-card-list">
+    <li><a class="toc-card-item" href="#temperature-is-the-wrong-number"><span class="toc-n">1</span>Temperature is the wrong number</a></li>
+    <li><a class="toc-card-item" href="#the-ocean-lives-on-a-grid"><span class="toc-n">2</span>The ocean lives on a grid</a></li>
+    <li><a class="toc-card-item" href="#the-index-is-a-box"><span class="toc-n">3</span>The index is a box</a></li>
+    <li><a class="toc-card-item" href="#the-forecast-is-a-crowd"><span class="toc-n">4</span>The forecast is a crowd</a></li>
+    <li><a class="toc-card-item" href="#the-warming-underneath-roni"><span class="toc-n">5</span>The warming underneath: RONI</a></li>
+    <li><a class="toc-card-item" href="#watching-it-play-out"><span class="toc-n">6</span>Watching it play out</a></li>
+  </ol>
+</div>
+
+---
+
+## Temperature is the wrong number
+
+Start with the obvious thing you cannot do. You cannot point at a thermometer and read off "the El Niño." The tropical Pacific in July sits around 27 to 29 °C over huge stretches, and it is warmer near the equator, cooler toward the poles, warmer in boreal summer, cooler in winter. All of that seasonal and geographic variation is enormous, and it has nothing to do with El Niño. If you plotted raw temperature, the El Niño signal would be a rounding error buried under the ordinary rhythm of the seasons.
+
+So climate science almost never plots the temperature. It plots the **anomaly**: the departure from what is normal for that exact place on that exact day of the year.
+
+$$\text{anomaly}(\text{place}, \text{day}) = T(\text{place}, \text{day}) - \overline{T}(\text{place}, \text{day})$$
+
+The second term is the **climatology**, a long-term average for each location and each day of the year, computed here over the 1971 to 2000 baseline. Subtract it and the seasonal cycle vanishes. What is left is the part that is unusual: this spot is 2 degrees warmer than it has any business being in late July. That red tongue reaching west along the equator in the map below is not the temperature of the Pacific. It is the anomaly, the ocean's deviation from its own normal, and it is the only view in which El Niño is even visible.
+
+<div class="intuition">
+  <p class="intuition-label">Intuition</p>
+  <p class="intuition-text">Raw temperature answers "how warm is it?" The anomaly answers "how warm is it, compared to how warm it usually is right here, right now?" Only the second question can see a climate signal, because the first is dominated by the sun and the seasons.</p>
+</div>
+
+## The ocean lives on a grid
+
+The map is built from a NOAA product called **OISST**, the Optimum Interpolation Sea Surface Temperature analysis, version 2.1. It is a daily best estimate of the ocean's skin temperature everywhere on Earth, and it is stitched together from satellite infrared measurements blended with in-situ readings from ships, buoys, and Argo floats. No single instrument sees the whole ocean, so OISST interpolates them into one complete field, one value per cell, every day back to 1981.
+
+And that is the key word: **cell**. The ocean is not stored as a smooth sheet. It is chopped into a grid of squares, each a quarter of a degree of latitude and longitude on a side, roughly 25 kilometers. Every square holds one number: the anomaly, averaged over that patch of sea. What looks like a continuous field of color is really a mosaic of these little tiles, and everything downstream, every index and every forecast, is arithmetic on that mosaic.
+
+You can see the mosaic directly. Scroll to zoom into the map and the smooth field resolves into discrete squares. Each square is one OISST cell. Drag the timeline and watch the anomaly build, day by day, from a near-neutral Pacific in the spring toward the deep reds of a strong event.
+
+<EnsoTracker />
+
+That is the whole dataset the record claim rests on: a daily mosaic of quarter-degree cells, each holding one anomaly. Now we can ask what "the El Niño number" actually is.
+
+## The index is a box
+
+El Niño is not measured over the whole Pacific. It is measured inside named rectangles straddling the equator. The map draws all four. From west to east they are **Niño 4**, **Niño 3.4**, **Niño 3**, and **Niño 1+2** (the small box hard against the coast of Peru). By long convention, the one that defines the event is **Niño 3.4**, spanning 170°W to 120°W along the equator.
+
+The index is nothing more exotic than an average. Take every OISST cell whose center falls inside the Niño 3.4 box, average their anomalies, and you get a single number for that day. Toggle "Grid" in the map to light up the cells inside the box and see the definition made literal: a few thousand quarter-degree tiles collapsing into one value. The official **Oceanic Niño Index**, the ONI that agencies use to declare an event, is just a three-month running mean of that box average. El Niño conditions begin around +0.5 °C; a "very strong" event is +2.0 °C or more.
+
+<div class="intuition">
+  <p class="intuition-label">Intuition</p>
+  <p class="intuition-text">Grid, then box, then number. The map is a field of cells. The index is the average of the cells inside one rectangle. Every headline about a record "Niño 3.4" is a statement about the mean of that box.</p>
+</div>
+
+The scorecard in the map tracks all four boxes at once as the days advance. Notice that they do not move together: the warmth concentrates in the eastern boxes (Niño 3 and Niño 1+2 run hotter) while Niño 4 in the west lags. That eastward-leaning pattern is the fingerprint of a classic, strong El Niño.
+
+## The forecast is a crowd
+
+Measuring today is one thing. The record claim is about a **peak** in November or December, months in the future. That number does not come from a single crystal ball. It comes from a crowd of physics simulations, each initialized from the observed ocean state in July 2026 and run forward through the end of the year.
+
+These are **seasonal forecast models**, drawn from two big collections: the North American Multi-Model Ensemble ([NMME](https://www.cpc.ncep.noaa.gov/products/NMME/)) and the Copernicus Climate Change Service ([C3S](https://climate.copernicus.eu/seasonal-forecasts)). Each model runs many slightly perturbed copies of itself, an **ensemble**, so that the spread of outcomes traces the uncertainty. The article's figure distilled 14 of them, several hundred ensemble members in total, down to one peak Niño 3.4 value each. They range widely, from a relatively tame +2.2 °C (SINTEX-F) up to a startling +5.3 °C (CMCC), with a median near +3.6 °C.
+
+The map plots those 14 forecasts as dots, colored by collection, sitting at each model's own predicted peak month. The actual observed line climbs from the left toward that cluster. The gap between where the ocean is today and where the models say it is heading is the whole story, drawn to scale. One honest caveat: those dots are the models' raw Niño 3.4 peaks, which is exactly what makes the next correction matter.
+
+## The warming underneath: RONI
+
+Here is the subtlety that separates a good measurement from a misleading one. The entire tropical ocean has warmed over the past half century. When we compute an anomaly against a 1971 to 2000 baseline, part of the "warm" we see is not El Niño at all: it is the background warming of the whole planet, riding underneath the event and inflating every number.
+
+The fix is the **Relative Oceanic Niño Index**, RONI. Instead of comparing the Niño 3.4 box to a fixed historical baseline, you subtract off what the *rest of the tropics* is doing at the same moment:
+
+$$\text{RONI} = \text{anomaly}_{\text{Niño 3.4}} - \overline{\text{anomaly}}_{\text{tropics}}$$
+
+Subtracting the tropical-mean anomaly removes the uniform warming that lifts the whole ocean together, leaving the part that is genuinely the El Niño *pattern*: warm where the event concentrates it, relative to a warming world.
+
+Toggle "RONI" in the map and watch two things happen. The whole field cools, because the broad background warmth is stripped away, and what remains is the sharp equatorial pattern rather than a uniformly toasty ocean. And the Niño 3.4 number in the scorecard drops by most of a degree. In mid-July the raw index sat near +2.2 °C; in RONI terms it is closer to +1.4 °C. Same ocean, two honest numbers, measuring two different things. This is why the article leans on RONI to compare 2026 fairly against events from decades ago, when the background was cooler. (The model dots stay in raw terms, since the article does not publish a per-model RONI, so that half of the comparison is not yet strictly like-for-like. It is a real limitation, flagged in the map.)
+
+## Watching it play out
+
+The map is not a snapshot. A small pipeline fetches the latest NOAA OISST field every morning, recomputes the anomalies and the box averages, and redraws the whole thing, keeping a rolling window of the most recent four months. So this post is less an article than a scoreboard.
+
+The question it is keeping score on is simple. As of mid-July, the observed Niño 3.4 was climbing steadily but still sat well short of that cluster of model peaks out in November and December. Will the real ocean reach up into the crowd of forecasts, and vindicate the "strongest ever" call? Will it stall in the low end of the range? Come back through the autumn and watch the actual line move. The data will settle it, one grid cell at a time.
+
+---
+
+### Sources and data
+
+- Video: [Just Have a Think, "El Niño is here and it has SMASHED all records"](https://www.youtube.com/watch?v=aErvUF2PHew).
+- Article: Zeke Hausfather, [The Strongest El Niño Ever](https://www.theclimatebrink.com/p/the-strongest-el-nino-ever), The Climate Brink, July 2026. The 14-model forecast figure is drawn from this piece.
+- Sea surface temperature: [NOAA OISST v2.1](https://www.ncei.noaa.gov/products/optimum-interpolation-sst), accessed daily through the [NOAA CoastWatch ERDDAP](https://coastwatch.pfeg.noaa.gov/erddap/griddap/ncdcOisst21Agg.html) service.
+- Forecast models: the [North American Multi-Model Ensemble](https://www.cpc.ncep.noaa.gov/products/NMME/) and [Copernicus C3S seasonal forecasts](https://climate.copernicus.eu/seasonal-forecasts).
+- Niño regions, ONI, and RONI definitions: [NOAA Climate Prediction Center](https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/ensostuff/ONI_v5.php).
+- Map rendering: [Deck.gl](https://deck.gl). The colormap is the standard blue-to-red diverging scale used for anomalies.

@@ -9,7 +9,7 @@
 <figure class="enso" id="enso-root">
   <div class="enso-head">
     <span class="enso-h-title">The 2026 El Niño, day by day</span>
-    <span class="enso-h-sub">NOAA OISST v2.1 daily anomaly &middot; baseline 1971&ndash;2000 &middot; <b id="enso-range-label">&mdash;</b></span>
+    <span class="enso-h-sub">NOAA OISST v2.1 daily anomaly &middot; baseline 1971&ndash;2000 &middot; <b id="enso-range-label">&ndash;</b></span>
   </div>
 
   <div class="enso-stage rail-on">
@@ -23,7 +23,7 @@
         <button class="act" id="enso-t-roni" type="button" aria-pressed="false"><span class="dot"></span>RONI</button>
       </div>
       <button class="act solo" id="enso-panels" type="button" aria-pressed="true">Panels</button>
-      <div class="zoomhint" id="enso-zoomhint">Scroll to zoom in &mdash; the grid cells appear</div>
+      <div class="zoomhint" id="enso-zoomhint">Scroll in to reveal the grid cells</div>
     </div>
 
     <div class="enso-rail" id="enso-rail">
@@ -31,13 +31,13 @@
         <button class="dismiss" data-card="card-scorecard" type="button" aria-label="Dismiss"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 2l8 8M10 2l-8 8"></path></svg></button>
         <div class="sc-head">
           <div class="sc-eyebrow" id="enso-sc-eyebrow">Box-mean anomaly &middot; actual</div>
-          <div class="sc-title">Niño indices <span id="enso-sc-date">&mdash;</span></div>
+          <div class="sc-title">Niño indices <span id="enso-sc-date">&ndash;</span></div>
         </div>
         <div class="sc-rows">
-          <div class="sc-row"><span class="chip" id="enso-sc-c-n4"></span><span class="sc-name">Niño 4</span><span class="sc-val" id="enso-sc-n4">&mdash;</span></div>
-          <div class="sc-row on"><span class="chip" id="enso-sc-c-n34"></span><span class="sc-name"><b>Niño 3.4</b> &middot; the index</span><span class="sc-val" id="enso-sc-n34">&mdash;</span></div>
-          <div class="sc-row"><span class="chip" id="enso-sc-c-n3"></span><span class="sc-name">Niño 3</span><span class="sc-val" id="enso-sc-n3">&mdash;</span></div>
-          <div class="sc-row"><span class="chip" id="enso-sc-c-n12"></span><span class="sc-name">Niño 1+2</span><span class="sc-val" id="enso-sc-n12">&mdash;</span></div>
+          <div class="sc-row"><span class="chip" id="enso-sc-c-n4"></span><span class="sc-name">Niño 4</span><span class="sc-val" id="enso-sc-n4">&ndash;</span></div>
+          <div class="sc-row on"><span class="chip" id="enso-sc-c-n34"></span><span class="sc-name"><b>Niño 3.4</b> &middot; the index</span><span class="sc-val" id="enso-sc-n34">&ndash;</span></div>
+          <div class="sc-row"><span class="chip" id="enso-sc-c-n3"></span><span class="sc-name">Niño 3</span><span class="sc-val" id="enso-sc-n3">&ndash;</span></div>
+          <div class="sc-row"><span class="chip" id="enso-sc-c-n12"></span><span class="sc-name">Niño 1+2</span><span class="sc-val" id="enso-sc-n12">&ndash;</span></div>
         </div>
       </aside>
 
@@ -54,7 +54,7 @@
             <canvas id="enso-tracker-cv"></canvas>
             <div class="tk-tip" id="enso-tk-tip"></div>
           </div>
-          <div class="tk-foot">Today <b id="enso-tk-now">&mdash;</b> &middot; <span id="enso-tk-note">dots are each model&rsquo;s forecast peak (Jul 2026 init), plotted at its peak month: <b>+2.2</b> to <b>+5.3&thinsp;&deg;C</b>, median <b>+3.6</b>.</span></div>
+          <div class="tk-foot">Today <b id="enso-tk-now">&ndash;</b> &middot; <span id="enso-tk-note">dots are each model&rsquo;s forecast peak (Jul 2026 init), plotted at its peak month: <b>+2.2</b> to <b>+5.3&thinsp;&deg;C</b>, median <b>+3.6</b>.</span></div>
         </div>
       </section>
 
@@ -69,17 +69,17 @@
     </div>
 
     <div class="grid-note" id="enso-grid-note" hidden>
-      <b id="enso-grid-cells">&mdash;</b> cells inside the box <span class="eq">&nbsp;&rarr; averaged &rarr;&nbsp;</span> Niño 3.4 = <b id="enso-grid-mean">&mdash;</b>&deg;C
+      <b id="enso-grid-cells">&ndash;</b> cells inside the box <span class="eq">&nbsp;&rarr; averaged &rarr;&nbsp;</span> Niño 3.4 = <b id="enso-grid-mean">&ndash;</b>&deg;C
     </div>
 
     <div class="transport" id="enso-transport">
       <button class="play" id="enso-play" type="button" aria-label="Play">
         <svg id="enso-play-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.5v11l9-5.5z"></path></svg>
       </button>
-      <div class="date"><span id="enso-cur-date">&mdash;</span><small id="enso-cur-idx">&mdash;</small></div>
+      <div class="date"><span id="enso-cur-date">&ndash;</span><small id="enso-cur-idx">&ndash;</small></div>
       <div class="scrub">
         <input type="range" id="enso-slider" min="0" max="0" value="0" step="1" aria-label="Day" />
-        <div class="scrub-ends"><span id="enso-end-a">&mdash;</span><span id="enso-end-b">&mdash;</span></div>
+        <div class="scrub-ends"><span id="enso-end-a">&ndash;</span><span id="enso-end-b">&ndash;</span></div>
       </div>
       <button class="speed" id="enso-speed" type="button">2&times;</button>
     </div>
@@ -213,7 +213,7 @@
 </style>
 
 <script>
-  // @ts-nocheck — vanilla-JS client island (DOM + canvas + WebGL); not type-checked.
+  // @ts-nocheck: vanilla-JS client island (DOM + canvas + WebGL); not type-checked.
   import { Deck, OrthographicView, COORDINATE_SYSTEM } from '@deck.gl/core'
   import { BitmapLayer, PolygonLayer, TextLayer, PathLayer, LineLayer } from '@deck.gl/layers'
   import { rdbu, NINO_BOXES, BOX_KEYS, MODELS, MEDIAN, SHIFT } from '../lib/enso'
@@ -447,7 +447,7 @@
 
     // ---------- controls ----------
     const zoomHintEl = $('zoomhint')
-    function updateZoomHint() { zoomHintEl.textContent = state.zoom > 5.4 ? 'Each square is one 0.25° NOAA grid cell (~25 km)' : state.zoom > 4.2 ? 'Keep zooming — the field resolves into cells' : 'Scroll to zoom in — the grid cells appear' }
+    function updateZoomHint() { zoomHintEl.textContent = state.zoom > 5.4 ? 'Each square is one 0.25° NOAA grid cell (~25 km)' : state.zoom > 4.2 ? 'Keep zooming: the field resolves into cells' : 'Scroll in to reveal the grid cells' }
     $('t-boxes').addEventListener('click', (e) => { state.showBoxes = !state.showBoxes; e.currentTarget.setAttribute('aria-pressed', state.showBoxes); render() })
     $('t-grid').addEventListener('click', (e) => { state.showGrid = !state.showGrid; e.currentTarget.setAttribute('aria-pressed', state.showGrid); $('grid-note').hidden = !state.showGrid; render() })
     const btnRoni = $('t-roni')
