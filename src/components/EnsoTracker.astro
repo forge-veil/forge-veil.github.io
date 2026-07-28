@@ -18,9 +18,9 @@
 
     <div class="enso-actions">
       <div class="act-group">
-        <button class="act" id="enso-t-boxes" type="button" aria-pressed="true"><span class="dot"></span>Niño boxes</button>
-        <button class="act" id="enso-t-grid" type="button" aria-pressed="false"><span class="dot"></span>Grid</button>
-        <button class="act" id="enso-t-roni" type="button" aria-pressed="false"><span class="dot"></span>RONI</button>
+        <button class="act" id="enso-t-boxes" type="button" aria-pressed="true" title="Show or hide the four Niño region boxes on the map."><span class="dot"></span>Niño boxes</button>
+        <button class="act" id="enso-t-grid" type="button" aria-pressed="false" title="Draw the 0.25° NOAA grid cells inside the Niño 3.4 box, to show that the index is their average."><span class="dot"></span>Grid</button>
+        <button class="act" id="enso-t-roni" type="button" aria-pressed="false" title="RONI: subtract the tropical-mean warming so the map shows the El Niño pattern itself, not the warming background. Niño 3.4 drops by roughly the tropical-mean anomaly."><span class="dot"></span>RONI</button>
       </div>
       <button class="act solo" id="enso-panels" type="button" aria-pressed="true">Panels</button>
       <div class="zoomhint" id="enso-zoomhint">Scroll in to reveal the grid cells</div>
@@ -136,7 +136,8 @@
   .enso-stage.rail-on #enso-map { right: 300px; }
   #enso-map canvas { outline: none; }
 
-  .enso-actions { position: absolute; left: 14px; top: 14px; z-index: 7; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; pointer-events: none; }
+  .enso-actions { position: absolute; left: 14px; right: 14px; top: 14px; z-index: 7; display: flex; flex-flow: row wrap; gap: 8px; align-items: center; pointer-events: none; }
+  .enso-stage.rail-on .enso-actions { right: 306px; }
   .enso-actions > * { pointer-events: auto; }
   .act-group { display: flex; gap: 4px; flex-wrap: wrap; padding: 4px; background: var(--act-bg); border-radius: 11px; box-shadow: var(--shadow); }
   .act { font-size: 12px; font-weight: 600; color: var(--act-fg); background: transparent; border: 0; border-radius: 8px; padding: 6px 11px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; opacity: .68; transition: opacity .12s, background .12s; }
