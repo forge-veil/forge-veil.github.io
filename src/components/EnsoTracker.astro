@@ -54,7 +54,7 @@
             <canvas id="enso-tracker-cv"></canvas>
             <div class="tk-tip" id="enso-tk-tip"></div>
           </div>
-          <div class="tk-foot">Today <b id="enso-tk-now">&ndash;</b> &middot; <span id="enso-tk-note">dots are each model&rsquo;s forecast peak (Jul 2026 init), plotted at its peak month: <b>+2.2</b> to <b>+5.3&thinsp;&deg;C</b>, median <b>+3.6</b>.</span></div>
+          <div class="tk-foot">Today <b id="enso-tk-now">&ndash;</b> &middot; <span id="enso-tk-note">model peaks (Jul 2026 init): <b>+2.2</b> to <b>+5.3&thinsp;&deg;C</b>, median <b>+3.6</b>.</span></div>
         </div>
       </section>
 
@@ -107,9 +107,10 @@
     --sans: var(--font-sans);
     --mono: 'SF Mono', 'Fira Code', ui-monospace, monospace;
 
+    /* Tall enough to hold all HUD cards without scrolling the rail. */
     position: relative;
     width: 100%;
-    height: min(78vh, 720px);
+    height: clamp(620px, 80vh, 740px);
     margin: 2rem 0;
     border: 1px solid var(--panel-brd);
     border-radius: 14px;
@@ -147,7 +148,7 @@
   .act.solo:hover { opacity: 1; }
   .zoomhint { font-size: 11px; color: var(--slate); background: var(--panel); border: 1px solid var(--panel-brd); border-radius: 999px; padding: 4px 11px; box-shadow: var(--shadow); }
 
-  .enso-rail { position: absolute; right: 14px; top: 14px; bottom: 80px; z-index: 4; width: 286px; max-width: calc(100% - 28px); display: flex; flex-direction: column; gap: 10px; overflow-y: auto; pointer-events: none; }
+  .enso-rail { position: absolute; right: 14px; top: 14px; bottom: 74px; z-index: 4; width: 286px; max-width: calc(100% - 28px); display: flex; flex-direction: column; gap: 9px; overflow-y: auto; pointer-events: none; }
   .enso-rail::-webkit-scrollbar { width: 0; }
   .enso-rail > * { pointer-events: auto; }
   .card { position: relative; background: var(--panel); border: 1px solid var(--panel-brd); border-radius: 12px; box-shadow: var(--shadow); flex: none; }
@@ -160,8 +161,8 @@
   .sc-eyebrow { font-size: 10px; text-transform: uppercase; letter-spacing: .09em; color: var(--slate-2); font-weight: 600; }
   .sc-title { font-size: 13px; font-weight: 600; margin-top: 2px; }
   .sc-title span { color: var(--slate); font-weight: 500; font-variant-numeric: tabular-nums; }
-  .sc-rows { padding: 5px 7px; }
-  .sc-row { display: flex; align-items: center; gap: 9px; padding: 5px 6px; }
+  .sc-rows { padding: 4px 7px; }
+  .sc-row { display: flex; align-items: center; gap: 9px; padding: 4px 6px; }
   .sc-row.on { background: var(--color-tag-bg); border-radius: 8px; }
   .chip { width: 11px; height: 11px; border-radius: 3px; flex: none; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .15); }
   .sc-name { font-size: 12.5px; flex: 1; }
@@ -174,7 +175,7 @@
   .tk-leg { display: flex; gap: 13px; margin: 6px 0 2px; font-size: 10.5px; color: var(--slate); }
   .tk-leg i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; vertical-align: -1px; }
   .tk-canvas-wrap { position: relative; margin-top: 4px; }
-  #enso-tracker-cv { display: block; width: 100%; height: 150px; }
+  #enso-tracker-cv { display: block; width: 100%; height: 138px; }
   .tk-tip { position: absolute; pointer-events: none; z-index: 2; background: rgba(28, 28, 30, .95); color: #fff; font-size: 11px; font-family: var(--mono); padding: 4px 7px; border-radius: 5px; white-space: nowrap; transform: translate(-50%, -120%); opacity: 0; transition: opacity .1s; }
   .tk-foot { font-size: 11px; color: var(--slate); line-height: 1.45; margin-top: 6px; }
   .tk-foot b { color: var(--ink); font-variant-numeric: tabular-nums; }
@@ -193,7 +194,7 @@
   .play { flex: none; width: 36px; height: 36px; border-radius: 50%; border: 0; background: var(--accent); color: #fff; cursor: pointer; display: grid; place-items: center; transition: transform .08s; margin-left: 2px; }
   .play:active { transform: scale(.94); }
   .play svg { width: 15px; height: 15px; }
-  .date { flex: none; font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 13px; font-weight: 600; min-width: 96px; color: var(--act-fg); }
+  .date { flex: none; font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 12.5px; font-weight: 600; min-width: 150px; color: var(--act-fg); }
   .date small { display: block; font-size: 9.5px; color: rgba(255, 255, 255, .55); font-weight: 500; }
   .scrub { flex: 1; display: flex; flex-direction: column; gap: 3px; }
   #enso-slider { width: 100%; -webkit-appearance: none; appearance: none; height: 4px; border-radius: 3px; background: rgba(255, 255, 255, .22); outline: none; cursor: pointer; }
@@ -335,7 +336,7 @@
         const latD = y >= 0 ? y.toFixed(2) + '°N' : (-y).toFixed(2) + '°S'
         if (a === null) return { html: `<b>${latD}, ${lonD}</b><br/>land / no data` }
         const av = a - off(state.frame), tag = state.roni ? ' RONI' : ''
-        return { html: `<b>${latD}, ${lonD}</b><br/>${dates[state.frame]}: <b>${av >= 0 ? '+' : ''}${av.toFixed(2)} °C</b>${tag}`, style: TIP }
+        return { html: `<b>${latD}, ${lonD}</b><br/>${humanDate(dates[state.frame])}: <b>${av >= 0 ? '+' : ''}${av.toFixed(2)} °C</b>${tag}`, style: TIP }
       },
     })
     function render() { deckgl.setProps({ layers: layers(), viewState: state.viewState }) }
@@ -344,10 +345,14 @@
 
     // ---------- DOM wiring ----------
     const fmt = (v) => (v >= 0 ? '+' : '') + v.toFixed(2)
+    const MONTHS_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+    const MONTHS_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    const humanDate = (iso) => { const p = iso.split('-'); return `${MONTHS_FULL[+p[1] - 1]} ${+p[2]}, ${p[0]}` }
+    const shortDate = (iso) => { const p = iso.split('-'); return `${MONTHS_ABBR[+p[1] - 1]} ${+p[2]}` }
     const slider = $('slider'), playBtn = $('play'), playIcon = $('play-icon')
     slider.max = String(NF - 1)
-    $('range-label').textContent = `${dates[0]} to ${dates[NF - 1]}`
-    $('end-a').textContent = dates[0]; $('end-b').textContent = dates[NF - 1]
+    $('range-label').textContent = `${humanDate(dates[0])} to ${humanDate(dates[NF - 1])}`
+    $('end-a').textContent = shortDate(dates[0]); $('end-b').textContent = shortDate(dates[NF - 1])
     $('grid-cells').textContent = N34_CELLS.toLocaleString()
 
     function setChip(id, v) { const [r, g, b] = rdbu(v); $(id).style.background = `rgb(${r},${g},${b})` }
@@ -355,9 +360,9 @@
       state.frame = Math.max(0, Math.min(NF - 1, fi))
       if (!fromSlider) slider.value = String(state.frame)
       const m = means[state.frame], o = off(state.frame)
-      $('cur-date').textContent = dates[state.frame]
+      $('cur-date').textContent = humanDate(dates[state.frame])
       $('cur-idx').textContent = `day ${state.frame + 1} / ${NF}`
-      $('sc-date').textContent = '· ' + dates[state.frame]
+      $('sc-date').textContent = '· ' + humanDate(dates[state.frame])
       $('sc-n4').textContent = fmt(m['nino4'] - o); $('sc-n34').textContent = fmt(m['nino3.4'] - o)
       $('sc-n3').textContent = fmt(m['nino3'] - o); $('sc-n12').textContent = fmt(m['nino1+2'] - o)
       $('grid-mean').textContent = fmt(m['nino3.4'] - o)
@@ -373,12 +378,11 @@
     const SERIES = means.map((m) => m['nino3.4'])
     const dayX = dates.map((d) => Date.parse(d))
     const modelXY = []
-    const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
     function monthTicks() {
       const out = []; const start = new Date(dates[0] + 'T00:00:00Z'); start.setUTCDate(1)
       const end = new Date(T1); let i = 0
       for (let d = new Date(start); d <= end; d.setUTCMonth(d.getUTCMonth() + 1), i++) {
-        out.push({ t: d.getTime(), lab: MONTHS[d.getUTCMonth()], show: true })
+        out.push({ t: d.getTime(), lab: MONTHS_ABBR[d.getUTCMonth()], show: true })
       }
       if (out.length > 7) out.forEach((o, k) => { o.show = k % 2 === 0 || k === out.length - 1 })
       return out
@@ -455,8 +459,8 @@
     function updateModeLabels() {
       $('sc-eyebrow').textContent = state.roni ? 'Relative anomaly (RONI) · actual' : 'Box-mean anomaly · actual'
       $('tk-note').innerHTML = state.roni
-        ? 'actual is <b>RONI</b> (minus the tropical-mean warming). Model dots stay raw N3.4; the article gives no per-model RONI, so this half is not yet like-for-like.'
-        : 'dots are each model&rsquo;s forecast peak (Jul 2026 init), plotted at its peak month: <b>+2.2</b> to <b>+5.3&thinsp;°C</b>, median <b>+3.6</b>.'
+        ? 'actual is <b>RONI</b> (minus tropical-mean warming). Model dots stay raw N3.4, so not yet like-for-like.'
+        : 'model peaks (Jul 2026 init): <b>+2.2</b> to <b>+5.3&thinsp;°C</b>, median <b>+3.6</b>.'
     }
     btnRoni.addEventListener('click', (e) => { state.roni = !state.roni; e.currentTarget.setAttribute('aria-pressed', state.roni); updateModeLabels(); setFrame(state.frame) })
 
