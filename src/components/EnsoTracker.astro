@@ -10,6 +10,8 @@
   <div class="enso-head">
     <span class="enso-h-title">The 2026 El Niño, day by day</span>
     <span class="enso-h-sub">NOAA OISST v2.1 daily anomaly &middot; baseline 1971&ndash;2000 &middot; <b id="enso-range-label">&ndash;</b></span>
+    <span class="enso-h-spacer"></span>
+    <span class="enso-live" title="This map refetches the latest NOAA data and redeploys every morning."><i></i>Updated daily</span>
   </div>
 
   <div class="enso-stage rail-on">
@@ -131,6 +133,9 @@
   .enso-h-title { font-family: var(--font-display); font-size: 16px; font-weight: 500; letter-spacing: -.01em; }
   .enso-h-sub { font-size: 12px; color: var(--slate); }
   .enso-h-sub b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .enso-h-spacer { flex: 1 1 auto; }
+  .enso-live { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; color: var(--slate); white-space: nowrap; }
+  .enso-live i { width: 6px; height: 6px; border-radius: 50%; background: #2f9e6d; box-shadow: 0 0 0 3px rgba(47, 158, 109, .15); }
 
   .enso-stage { position: absolute; left: 0; right: 0; top: 0; bottom: 0; margin-top: 41px; background: var(--map-bg); }
   #enso-map { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
