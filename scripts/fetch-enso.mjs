@@ -177,8 +177,11 @@ async function run() {
     tropMean.push(s.tropMean)
   })
 
+  // Neutral extension on purpose: a ".gz" name makes static hosts send
+  // Content-Encoding: gzip, which auto-decompresses on fetch and breaks our
+  // manual inflate. ".bin" keeps the gzip payload opaque to the transport.
   const gz = gzipSync(Buffer.from(frames.buffer))
-  writeFileSync(join(OUT, 'frames.i8.gz'), gz)
+  writeFileSync(join(OUT, 'frames.bin'), gz)
   const meta = {
     source: 'NOAA OISST v2.1 (CoastWatch ERDDAP: ncdcOisst21Agg)',
     variable: 'anom', baseline: '1971-2000 climatology',
@@ -186,7 +189,7 @@ async function run() {
     means, tropMean, models: MODELS,
   }
   writeFileSync(join(OUT, 'enso.json'), JSON.stringify(meta))
-  console.log(`wrote ${have.length} frames; grid ${nLat}x${nLon}; frames.i8.gz ${(gz.length / 1024 / 1024).toFixed(1)}MB; n3.4 ${means[0]['nino3.4']} -> ${means.at(-1)['nino3.4']}`)
+  console.log(`wrote ${have.length} frames; grid ${nLat}x${nLon}; frames.bin ${(gz.length / 1024 / 1024).toFixed(1)}MB; n3.4 ${means[0]['nino3.4']} -> ${means.at(-1)['nino3.4']}`)
 
   // prune cache days outside the window
   const keep = new Set(dates)

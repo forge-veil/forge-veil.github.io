@@ -1,0 +1,494 @@
+---
+// EnsoTracker.astro
+// Interactive daily map of the 2026 El Niño: NOAA OISST anomalies (Deck.gl,
+// equirectangular), a Niño-index scorecard, a 14-model forecast tracker, and a
+// RONI toggle. Data comes from /data/enso/ (built by scripts/fetch-enso.mjs).
+// Light-only, to match the site.
+---
+
+<figure class="enso" id="enso-root">
+  <div class="enso-head">
+    <span class="enso-h-title">The 2026 El Niño, day by day</span>
+    <span class="enso-h-sub">NOAA OISST v2.1 daily anomaly &middot; baseline 1971&ndash;2000 &middot; <b id="enso-range-label">&mdash;</b></span>
+  </div>
+
+  <div class="enso-stage rail-on">
+    <div id="enso-map"></div>
+    <div class="enso-loading" id="enso-loading">Loading daily fields&hellip;</div>
+
+    <div class="enso-actions">
+      <div class="act-group">
+        <button class="act" id="enso-t-boxes" type="button" aria-pressed="true"><span class="dot"></span>Niño boxes</button>
+        <button class="act" id="enso-t-grid" type="button" aria-pressed="false"><span class="dot"></span>Grid</button>
+        <button class="act" id="enso-t-roni" type="button" aria-pressed="false"><span class="dot"></span>RONI</button>
+      </div>
+      <button class="act solo" id="enso-panels" type="button" aria-pressed="true">Panels</button>
+      <div class="zoomhint" id="enso-zoomhint">Scroll to zoom in &mdash; the grid cells appear</div>
+    </div>
+
+    <div class="enso-rail" id="enso-rail">
+      <aside class="card" id="enso-card-scorecard" aria-label="Niño index readout">
+        <button class="dismiss" data-card="card-scorecard" type="button" aria-label="Dismiss"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 2l8 8M10 2l-8 8"></path></svg></button>
+        <div class="sc-head">
+          <div class="sc-eyebrow" id="enso-sc-eyebrow">Box-mean anomaly &middot; actual</div>
+          <div class="sc-title">Niño indices <span id="enso-sc-date">&mdash;</span></div>
+        </div>
+        <div class="sc-rows">
+          <div class="sc-row"><span class="chip" id="enso-sc-c-n4"></span><span class="sc-name">Niño 4</span><span class="sc-val" id="enso-sc-n4">&mdash;</span></div>
+          <div class="sc-row on"><span class="chip" id="enso-sc-c-n34"></span><span class="sc-name"><b>Niño 3.4</b> &middot; the index</span><span class="sc-val" id="enso-sc-n34">&mdash;</span></div>
+          <div class="sc-row"><span class="chip" id="enso-sc-c-n3"></span><span class="sc-name">Niño 3</span><span class="sc-val" id="enso-sc-n3">&mdash;</span></div>
+          <div class="sc-row"><span class="chip" id="enso-sc-c-n12"></span><span class="sc-name">Niño 1+2</span><span class="sc-val" id="enso-sc-n12">&mdash;</span></div>
+        </div>
+      </aside>
+
+      <section class="card" id="enso-card-tracker" aria-label="Actual vs forecast tracker">
+        <button class="dismiss" data-card="card-tracker" type="button" aria-label="Dismiss"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 2l8 8M10 2l-8 8"></path></svg></button>
+        <div class="tk-pad">
+          <div class="tk-title">Niño 3.4: actual <span>vs 14 model forecasts</span></div>
+          <div class="tk-leg">
+            <span><i style="background:var(--ink)"></i>actual</span>
+            <span><i style="background:var(--nmme)"></i>NMME</span>
+            <span><i style="background:var(--c3s)"></i>C3S</span>
+          </div>
+          <div class="tk-canvas-wrap">
+            <canvas id="enso-tracker-cv"></canvas>
+            <div class="tk-tip" id="enso-tk-tip"></div>
+          </div>
+          <div class="tk-foot">Today <b id="enso-tk-now">&mdash;</b> &middot; <span id="enso-tk-note">dots are each model&rsquo;s forecast peak (Jul 2026 init), plotted at its peak month: <b>+2.2</b> to <b>+5.3&thinsp;&deg;C</b>, median <b>+3.6</b>.</span></div>
+        </div>
+      </section>
+
+      <div class="card" id="enso-card-legend" aria-label="Colour scale">
+        <button class="dismiss" data-card="card-legend" type="button" aria-label="Dismiss"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 2l8 8M10 2l-8 8"></path></svg></button>
+        <div class="lg-pad">
+          <div class="lg-lab">SST anomaly (&deg;C)</div>
+          <div class="bar"></div>
+          <div class="ticks"><span>&minus;5</span><span>&minus;3</span><span>&minus;1</span><span>0</span><span>+1</span><span>+3</span><span>+5</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-note" id="enso-grid-note" hidden>
+      <b id="enso-grid-cells">&mdash;</b> cells inside the box <span class="eq">&nbsp;&rarr; averaged &rarr;&nbsp;</span> Niño 3.4 = <b id="enso-grid-mean">&mdash;</b>&deg;C
+    </div>
+
+    <div class="transport" id="enso-transport">
+      <button class="play" id="enso-play" type="button" aria-label="Play">
+        <svg id="enso-play-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.5v11l9-5.5z"></path></svg>
+      </button>
+      <div class="date"><span id="enso-cur-date">&mdash;</span><small id="enso-cur-idx">&mdash;</small></div>
+      <div class="scrub">
+        <input type="range" id="enso-slider" min="0" max="0" value="0" step="1" aria-label="Day" />
+        <div class="scrub-ends"><span id="enso-end-a">&mdash;</span><span id="enso-end-b">&mdash;</span></div>
+      </div>
+      <button class="speed" id="enso-speed" type="button">2&times;</button>
+    </div>
+  </div>
+</figure>
+
+<style>
+  .enso {
+    /* chrome tokens sourced from the site, plus data-viz accents */
+    --ink: var(--color-ink);
+    --slate: var(--color-ink-4);
+    --slate-2: var(--color-ink-5);
+    --panel: var(--color-panel);
+    --panel-brd: var(--color-border);
+    --hair: var(--color-border-soft);
+    --map-bg: var(--color-surface);
+    --accent: #2166ac;
+    --warm: #b2182b;
+    --nmme: #d98324;
+    --c3s: #7a5bd0;
+    --seasonal: #6e6e73;
+    --act-bg: #1c1c1e;
+    --act-fg: #ffffff;
+    --shadow: 0 1px 2px rgba(16, 24, 33, .06), 0 8px 24px rgba(16, 24, 33, .09);
+    --sans: var(--font-sans);
+    --mono: 'SF Mono', 'Fira Code', ui-monospace, monospace;
+
+    position: relative;
+    width: 100%;
+    height: min(78vh, 720px);
+    margin: 2rem 0;
+    border: 1px solid var(--panel-brd);
+    border-radius: 14px;
+    overflow: hidden;
+    background: var(--map-bg);
+    font-family: var(--sans);
+    color: var(--ink);
+  }
+  .enso *, .enso *::before, .enso *::after { box-sizing: border-box; }
+  .enso button { font-family: inherit; }
+
+  .enso-head {
+    position: relative; z-index: 8;
+    display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+    padding: 10px 14px; border-bottom: 1px solid var(--panel-brd); background: var(--panel);
+  }
+  .enso-h-title { font-family: var(--font-display); font-size: 16px; font-weight: 500; letter-spacing: -.01em; }
+  .enso-h-sub { font-size: 12px; color: var(--slate); }
+  .enso-h-sub b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  .enso-stage { position: absolute; left: 0; right: 0; top: 0; bottom: 0; margin-top: 41px; background: var(--map-bg); }
+  #enso-map { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+  .enso-stage.rail-on #enso-map { right: 300px; }
+  #enso-map canvas { outline: none; }
+
+  .enso-actions { position: absolute; left: 14px; top: 14px; z-index: 7; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; pointer-events: none; }
+  .enso-actions > * { pointer-events: auto; }
+  .act-group { display: flex; gap: 4px; flex-wrap: wrap; padding: 4px; background: var(--act-bg); border-radius: 11px; box-shadow: var(--shadow); }
+  .act { font-size: 12px; font-weight: 600; color: var(--act-fg); background: transparent; border: 0; border-radius: 8px; padding: 6px 11px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; opacity: .68; transition: opacity .12s, background .12s; }
+  .act:hover { opacity: 1; }
+  .act .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; opacity: .5; }
+  .act[aria-pressed="true"] { opacity: 1; background: var(--accent); color: #fff; }
+  .act[aria-pressed="true"] .dot { background: #fff; opacity: 1; }
+  .act.solo { background: var(--act-bg); border-radius: 10px; padding: 7px 12px; box-shadow: var(--shadow); opacity: .82; }
+  .act.solo:hover { opacity: 1; }
+  .zoomhint { font-size: 11px; color: var(--slate); background: var(--panel); border: 1px solid var(--panel-brd); border-radius: 999px; padding: 4px 11px; box-shadow: var(--shadow); }
+
+  .enso-rail { position: absolute; right: 14px; top: 14px; bottom: 80px; z-index: 4; width: 286px; max-width: calc(100% - 28px); display: flex; flex-direction: column; gap: 10px; overflow-y: auto; pointer-events: none; }
+  .enso-rail::-webkit-scrollbar { width: 0; }
+  .enso-rail > * { pointer-events: auto; }
+  .card { position: relative; background: var(--panel); border: 1px solid var(--panel-brd); border-radius: 12px; box-shadow: var(--shadow); flex: none; }
+  .card[hidden] { display: none; }
+  .dismiss { position: absolute; top: 7px; right: 7px; z-index: 2; width: 22px; height: 22px; border-radius: 6px; border: 0; background: transparent; color: var(--slate-2); cursor: pointer; display: grid; place-items: center; }
+  .dismiss:hover { background: var(--color-tag-bg); color: var(--ink); }
+  .dismiss svg { width: 12px; height: 12px; }
+
+  .sc-head { padding: 10px 32px 8px 13px; border-bottom: 1px solid var(--hair); }
+  .sc-eyebrow { font-size: 10px; text-transform: uppercase; letter-spacing: .09em; color: var(--slate-2); font-weight: 600; }
+  .sc-title { font-size: 13px; font-weight: 600; margin-top: 2px; }
+  .sc-title span { color: var(--slate); font-weight: 500; font-variant-numeric: tabular-nums; }
+  .sc-rows { padding: 5px 7px; }
+  .sc-row { display: flex; align-items: center; gap: 9px; padding: 5px 6px; }
+  .sc-row.on { background: var(--color-tag-bg); border-radius: 8px; }
+  .chip { width: 11px; height: 11px; border-radius: 3px; flex: none; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .15); }
+  .sc-name { font-size: 12.5px; flex: 1; }
+  .sc-name b { font-weight: 600; }
+  .sc-val { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 12.5px; font-weight: 600; }
+
+  .tk-pad { padding: 10px 12px 10px; }
+  .tk-title { font-size: 12px; font-weight: 600; padding-right: 20px; }
+  .tk-title span { color: var(--slate); font-weight: 500; }
+  .tk-leg { display: flex; gap: 13px; margin: 6px 0 2px; font-size: 10.5px; color: var(--slate); }
+  .tk-leg i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; vertical-align: -1px; }
+  .tk-canvas-wrap { position: relative; margin-top: 4px; }
+  #enso-tracker-cv { display: block; width: 100%; height: 150px; }
+  .tk-tip { position: absolute; pointer-events: none; z-index: 2; background: rgba(28, 28, 30, .95); color: #fff; font-size: 11px; font-family: var(--mono); padding: 4px 7px; border-radius: 5px; white-space: nowrap; transform: translate(-50%, -120%); opacity: 0; transition: opacity .1s; }
+  .tk-foot { font-size: 11px; color: var(--slate); line-height: 1.45; margin-top: 6px; }
+  .tk-foot b { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+  .lg-pad { padding: 9px 12px; }
+  .lg-lab { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--slate-2); font-weight: 600; margin-bottom: 6px; }
+  .bar { height: 11px; border-radius: 3px; background: linear-gradient(90deg, #053061, #2166ac, #4393c3, #92c5de, #d1e5f0, #f7f7f7, #fddbc7, #f4a582, #d6604d, #b2182b, #67001f); }
+  .ticks { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 10px; color: var(--slate); margin-top: 3px; }
+
+  .grid-note { position: absolute; left: 50%; bottom: 140px; transform: translateX(-50%); z-index: 5; font-size: 12px; background: var(--panel); border: 1px solid var(--panel-brd); border-radius: 10px; padding: 7px 13px; box-shadow: var(--shadow); text-align: center; line-height: 1.5; max-width: 320px; }
+  .grid-note b { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .grid-note .eq { color: var(--slate); }
+
+  .transport { position: absolute; left: 14px; right: 314px; bottom: 14px; z-index: 7; height: 52px; display: flex; align-items: center; gap: 12px; padding: 0 8px; background: var(--act-bg); border-radius: 13px; box-shadow: var(--shadow); }
+  .transport.wide { right: 14px; }
+  .play { flex: none; width: 36px; height: 36px; border-radius: 50%; border: 0; background: var(--accent); color: #fff; cursor: pointer; display: grid; place-items: center; transition: transform .08s; margin-left: 2px; }
+  .play:active { transform: scale(.94); }
+  .play svg { width: 15px; height: 15px; }
+  .date { flex: none; font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 13px; font-weight: 600; min-width: 96px; color: var(--act-fg); }
+  .date small { display: block; font-size: 9.5px; color: rgba(255, 255, 255, .55); font-weight: 500; }
+  .scrub { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+  #enso-slider { width: 100%; -webkit-appearance: none; appearance: none; height: 4px; border-radius: 3px; background: rgba(255, 255, 255, .22); outline: none; cursor: pointer; }
+  #enso-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--accent); border: 2px solid var(--act-bg); cursor: pointer; }
+  #enso-slider::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--accent); border: 2px solid var(--act-bg); cursor: pointer; }
+  .scrub-ends { display: flex; justify-content: space-between; font-size: 9.5px; color: rgba(255, 255, 255, .5); font-variant-numeric: tabular-nums; }
+  .speed { flex: none; font-size: 12px; font-weight: 600; color: var(--act-fg); background: transparent; border: 1px solid rgba(255, 255, 255, .26); border-radius: 999px; padding: 5px 10px; cursor: pointer; font-variant-numeric: tabular-nums; margin-right: 4px; opacity: .85; }
+  .speed:hover { opacity: 1; }
+
+  .enso-loading { position: absolute; inset: 0; display: grid; place-items: center; z-index: 9; background: var(--map-bg); color: var(--slate); font-size: 14px; }
+
+  @media (max-width: 720px) {
+    .enso-rail, .zoomhint { display: none; }
+    .enso-stage.rail-on #enso-map { right: 0; }
+    .transport { right: 14px; }
+  }
+</style>
+
+<script>
+  // @ts-nocheck — vanilla-JS client island (DOM + canvas + WebGL); not type-checked.
+  import { Deck, OrthographicView, COORDINATE_SYSTEM } from '@deck.gl/core'
+  import { BitmapLayer, PolygonLayer, TextLayer, PathLayer, LineLayer } from '@deck.gl/layers'
+  import { rdbu, NINO_BOXES, BOX_KEYS, MODELS, MEDIAN, SHIFT } from '../lib/enso'
+
+  const CART = COORDINATE_SYSTEM.CARTESIAN
+  const BASE = import.meta.env.BASE_URL
+  const root: any = document.getElementById('enso-root')
+  const $ = (id: string): any => document.getElementById('enso-' + id)
+  const MONO = "'SF Mono','Fira Code',ui-monospace,monospace"
+  const SANS = "'Geist',system-ui,sans-serif"
+
+  async function main() {
+    // ---------- data (gzipped Int8 field + JSON meta) ----------
+    const meta = await (await fetch(BASE + 'data/enso/enso.json')).json()
+    // frames.bin is a gzip payload with a neutral extension (see fetch-enso.mjs)
+    // so the host does not auto-decompress it; we inflate it ourselves.
+    const gz = await (await fetch(BASE + 'data/enso/frames.bin')).arrayBuffer()
+    const inflated = await new Response(new Blob([gz]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer()
+    const FRAMES = new Int8Array(inflated)
+
+    const { nLat, nLon, dLat, dLon, scale, nodata, dates, means } = meta
+    const tropMean = Array.isArray(meta.tropMean) ? meta.tropMean : null
+    const HAS_RONI = !!tropMean
+    const off = (fi) => (state.roni && HAS_RONI ? tropMean[fi] : 0)
+    const NF = dates.length, FLEN = nLat * nLon
+    const W = meta.bounds[0] - SHIFT, S = meta.bounds[1], E = meta.bounds[2] - SHIFT, N = meta.bounds[3]
+
+    // ---------- textures (raw + RONI variants) ----------
+    const texCache = [new Array(NF), new Array(NF)]
+    function texFor(fi, roni) {
+      const mode = roni ? 1 : 0
+      if (texCache[mode][fi]) return texCache[mode][fi]
+      const shift = roni && HAS_RONI ? tropMean[fi] : 0
+      const b = fi * FLEN, cv = document.createElement('canvas'); cv.width = nLon; cv.height = nLat
+      const ctx = cv.getContext('2d'), img = ctx.createImageData(nLon, nLat)
+      for (let i = 0; i < FLEN; i++) {
+        const v = FRAMES[b + i]
+        if (v === nodata) { img.data[i * 4 + 3] = 0; continue }
+        const [r, g, bl] = rdbu(v * scale - shift)
+        img.data[i * 4] = r; img.data[i * 4 + 1] = g; img.data[i * 4 + 2] = bl; img.data[i * 4 + 3] = 255
+      }
+      ctx.putImageData(img, 0, 0); texCache[mode][fi] = cv; return cv
+    }
+    function anomalyAt(x, y, fi) {
+      const col = Math.floor((x - W) / dLon), rowN = Math.floor((N - y) / dLat)
+      if (col < 0 || col >= nLon || rowN < 0 || rowN >= nLat) return null
+      const v = FRAMES[fi * FLEN + rowN * nLon + col]
+      return v === nodata ? null : v * scale
+    }
+
+    // ---------- boxes / coastline (fixed light palette) ----------
+    const BOXES = NINO_BOXES.map((b) => ({ ...b, key: BOX_KEYS[b.id] }))
+    const boxPolygon = (b) => { const x0 = b.lon[0] - SHIFT, x1 = b.lon[1] - SHIFT, [y0, y1] = b.lat; return [[x0, y0], [x1, y0], [x1, y1], [x0, y1], [x0, y0]] }
+    const N34 = BOXES.find((b) => b.id === 'nino34')
+    const GRIDPATHS = (() => { const p = [], x0 = N34.lon[0] - SHIFT, x1 = N34.lon[1] - SHIFT, [y0, y1] = N34.lat
+      for (let x = x0; x <= x1 + 1e-6; x += dLon) p.push([[x, y0], [x, y1]])
+      for (let y = y0; y <= y1 + 1e-6; y += dLat) p.push([[x0, y], [x1, y]]); return p })()
+    function countCells(b) { let c = 0; for (let r = 0; r < nLat; r++) for (let cc = 0; cc < nLon; cc++) { const lon = W + (cc + 0.5) * dLon + SHIFT, lat = N - (r + 0.5) * dLat
+      if (lon >= b.lon[0] && lon <= b.lon[1] && lat >= b.lat[0] && lat <= b.lat[1] && FRAMES[r * nLon + cc] !== nodata) c++ } return c }
+    const N34_CELLS = countCells(N34)
+    function landEdges() {
+      const seg = [], land = (i) => FRAMES[i] === nodata
+      for (let r = 0; r < nLat; r++) for (let c = 0; c < nLon; c++) {
+        if (!land(r * nLon + c)) continue
+        const xL = W + c * dLon, xR = W + (c + 1) * dLon, yT = N - r * dLat, yB = N - (r + 1) * dLat
+        if (c + 1 < nLon && !land(r * nLon + c + 1)) seg.push({ s: [xR, yB], t: [xR, yT] })
+        if (c - 1 >= 0 && !land(r * nLon + c - 1)) seg.push({ s: [xL, yB], t: [xL, yT] })
+        if (r + 1 < nLat && !land((r + 1) * nLon + c)) seg.push({ s: [xL, yB], t: [xR, yB] })
+        if (r - 1 >= 0 && !land((r - 1) * nLon + c)) seg.push({ s: [xL, yT], t: [xR, yT] })
+      }
+      return seg
+    }
+    const LAND_EDGES = landEdges()
+    const LAND = [222, 225, 230, 255], COAST = [116, 124, 135, 255], INK = [20, 26, 34]
+    const CASING = [255, 255, 255, 225], LBLBG = [255, 255, 255, 225], GRIDCOL = [30, 40, 52, 70]
+    const DOMAIN = [[W, S], [E, S], [E, N], [W, N], [W, S]]
+
+    // ---------- state ----------
+    const state = { frame: 0, playing: false, speedIdx: 1, showBoxes: true, showGrid: false, roni: false, zoom: 3, viewState: null }
+    const SPEEDS = [1, 2, 4], BASE_FPS = 7
+
+    function layers() {
+      const ls = []
+      ls.push(new PolygonLayer({ id: 'domain', data: [DOMAIN], coordinateSystem: CART, getPolygon: (d) => d, stroked: false, filled: true, getFillColor: LAND }))
+      ls.push(new BitmapLayer({ id: 'sst', coordinateSystem: CART, image: texFor(state.frame, state.roni), bounds: [W, S, E, N], textureParameters: { minFilter: 'nearest', magFilter: 'nearest' } }))
+      ls.push(new LineLayer({ id: 'coast', coordinateSystem: CART, data: LAND_EDGES, getSourcePosition: (d) => d.s, getTargetPosition: (d) => d.t, getColor: COAST, getWidth: 1, widthUnits: 'pixels', widthMinPixels: 0.9 }))
+      if (state.showGrid) ls.push(new PathLayer({ id: 'grid', coordinateSystem: CART, data: GRIDPATHS, getPath: (d) => d, getColor: GRIDCOL, getWidth: 0.6, widthUnits: 'pixels', widthMinPixels: 0.6 }))
+      if (state.showBoxes) {
+        ls.push(new PolygonLayer({ id: 'bx-cas', coordinateSystem: CART, data: BOXES, getPolygon: boxPolygon, stroked: true, filled: false, getLineColor: CASING, getLineWidth: (d) => d.emphasis ? 5 : 4, lineWidthUnits: 'pixels', lineWidthMinPixels: 3 }))
+        ls.push(new PolygonLayer({ id: 'bx', coordinateSystem: CART, data: BOXES, getPolygon: boxPolygon, stroked: true, filled: false, getLineColor: INK, getLineWidth: (d) => d.emphasis ? 2.4 : 1.4, lineWidthUnits: 'pixels', lineWidthMinPixels: 1.2 }))
+        ls.push(new TextLayer({ id: 'lbl', coordinateSystem: CART, data: BOXES, characterSet: 'auto',
+          getPosition: (d) => [(d.lon[0] - SHIFT + d.lon[1] - SHIFT) / 2, (d.lat[0] + d.lat[1]) / 2],
+          getText: (d) => d.label, getSize: (d) => d.emphasis ? 16 : 13, getColor: INK,
+          getTextAnchor: 'middle', getAlignmentBaseline: 'center', fontFamily: "'Geist', system-ui, sans-serif", fontWeight: 700,
+          fontSettings: { sdf: true }, background: true, getBackgroundColor: LBLBG, backgroundPadding: [6, 3, 6, 3] }))
+      }
+      return ls
+    }
+
+    const TIP = { background: 'rgba(28,28,30,0.94)', color: '#fff', fontSize: '12px', padding: '6px 9px', borderRadius: '6px', fontFamily: MONO }
+    const CX = (W + E) / 2, CY = (S + N) / 2
+    function fitZoom() { const el = $('map'); const w = el.clientWidth || 900, h = el.clientHeight || 420
+      return Math.max(1.5, Math.min(Math.log2((w * 0.985) / (E - W)), Math.log2((h * 0.97) / (N - S)))) }
+    state.viewState = { target: [CX, CY, 0], zoom: fitZoom(), minZoom: 1.5, maxZoom: 8.5 }
+    state.zoom = state.viewState.zoom
+
+    const deckgl = new Deck({
+      parent: $('map'),
+      views: new OrthographicView({ flipY: false }),
+      viewState: state.viewState,
+      controller: true,
+      layers: layers(),
+      onViewStateChange: ({ viewState }) => { state.viewState = viewState; state.zoom = viewState.zoom; updateZoomHint(); render() },
+      getTooltip: ({ coordinate }) => {
+        if (!coordinate) return null
+        const [x, y] = coordinate, a = anomalyAt(x, y, state.frame)
+        let real = x + SHIFT; if (real > 360) real -= 360
+        const lonD = real > 180 ? (360 - real).toFixed(2) + '°W' : real.toFixed(2) + '°E'
+        const latD = y >= 0 ? y.toFixed(2) + '°N' : (-y).toFixed(2) + '°S'
+        if (a === null) return { html: `<b>${latD}, ${lonD}</b><br/>land / no data` }
+        const av = a - off(state.frame), tag = state.roni ? ' RONI' : ''
+        return { html: `<b>${latD}, ${lonD}</b><br/>${dates[state.frame]}: <b>${av >= 0 ? '+' : ''}${av.toFixed(2)} °C</b>${tag}`, style: TIP }
+      },
+    })
+    function render() { deckgl.setProps({ layers: layers(), viewState: state.viewState }) }
+    function refit() { state.viewState = { ...state.viewState, target: [CX, CY, 0], zoom: fitZoom() }; state.zoom = state.viewState.zoom; render() }
+    window.addEventListener('resize', () => requestAnimationFrame(refit))
+
+    // ---------- DOM wiring ----------
+    const fmt = (v) => (v >= 0 ? '+' : '') + v.toFixed(2)
+    const slider = $('slider'), playBtn = $('play'), playIcon = $('play-icon')
+    slider.max = String(NF - 1)
+    $('range-label').textContent = `${dates[0]} to ${dates[NF - 1]}`
+    $('end-a').textContent = dates[0]; $('end-b').textContent = dates[NF - 1]
+    $('grid-cells').textContent = N34_CELLS.toLocaleString()
+
+    function setChip(id, v) { const [r, g, b] = rdbu(v); $(id).style.background = `rgb(${r},${g},${b})` }
+    function setFrame(fi, fromSlider?) {
+      state.frame = Math.max(0, Math.min(NF - 1, fi))
+      if (!fromSlider) slider.value = String(state.frame)
+      const m = means[state.frame], o = off(state.frame)
+      $('cur-date').textContent = dates[state.frame]
+      $('cur-idx').textContent = `day ${state.frame + 1} / ${NF}`
+      $('sc-date').textContent = '· ' + dates[state.frame]
+      $('sc-n4').textContent = fmt(m['nino4'] - o); $('sc-n34').textContent = fmt(m['nino3.4'] - o)
+      $('sc-n3').textContent = fmt(m['nino3'] - o); $('sc-n12').textContent = fmt(m['nino1+2'] - o)
+      $('grid-mean').textContent = fmt(m['nino3.4'] - o)
+      $('tk-now').textContent = fmt(m['nino3.4'] - o) + ' °C'
+      setChip('sc-c-n4', m['nino4'] - o); setChip('sc-c-n34', m['nino3.4'] - o); setChip('sc-c-n3', m['nino3'] - o); setChip('sc-c-n12', m['nino1+2'] - o)
+      drawTracker()
+      render()
+    }
+
+    // ---------- tracker chart (DPR-correct, data-driven x-axis) ----------
+    const tcv = $('tracker-cv'), tctx = tcv.getContext('2d'), tkTip = $('tk-tip')
+    const T0 = Date.parse(dates[0]), T1 = Date.parse('2026-12-31')
+    const SERIES = means.map((m) => m['nino3.4'])
+    const dayX = dates.map((d) => Date.parse(d))
+    const modelXY = []
+    const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    function monthTicks() {
+      const out = []; const start = new Date(dates[0] + 'T00:00:00Z'); start.setUTCDate(1)
+      const end = new Date(T1); let i = 0
+      for (let d = new Date(start); d <= end; d.setUTCMonth(d.getUTCMonth() + 1), i++) {
+        out.push({ t: d.getTime(), lab: MONTHS[d.getUTCMonth()], show: true })
+      }
+      if (out.length > 7) out.forEach((o, k) => { o.show = k % 2 === 0 || k === out.length - 1 })
+      return out
+    }
+    const TICKS = monthTicks()
+    function cssVar(n) { return getComputedStyle(root).getPropertyValue(n).trim() }
+    function sizeCanvas() {
+      const dpr = window.devicePixelRatio || 1
+      const w = tcv.clientWidth || 280, h = tcv.clientHeight || 150
+      tcv.width = Math.round(w * dpr); tcv.height = Math.round(h * dpr)
+      tctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    }
+    function drawTracker() {
+      const w = tcv.clientWidth || 280, h = tcv.clientHeight || 150, mL = 22, mR = 40, mT = 12, mB = 18
+      const yMin = 0, yMax = 5.6
+      const X = (t) => mL + (w - mL - mR) * ((t - T0) / (T1 - T0))
+      const Y = (v) => mT + (h - mT - mB) * (1 - (v - yMin) / (yMax - yMin))
+      const ink = cssVar('--ink'), slate = cssVar('--slate'), slate2 = cssVar('--slate-2'), brd = cssVar('--panel-brd')
+      const warm = cssVar('--warm'), nmme = cssVar('--nmme'), c3s = cssVar('--c3s'), seasonal = cssVar('--seasonal'), panel = cssVar('--panel')
+      tctx.clearRect(0, 0, w, h)
+      tctx.font = '600 10px ' + MONO; tctx.textBaseline = 'middle'
+      for (let v = 0; v <= 5; v++) { const y = Y(v)
+        tctx.strokeStyle = brd; tctx.lineWidth = 1; tctx.beginPath(); tctx.moveTo(mL, y); tctx.lineTo(w - mR, y); tctx.stroke()
+        tctx.fillStyle = slate2; tctx.textAlign = 'right'; tctx.fillText(String(v), mL - 4, y) }
+      tctx.font = '600 9.5px ' + SANS; tctx.textBaseline = 'top'; tctx.textAlign = 'center'; tctx.fillStyle = slate2
+      for (const tk of TICKS) if (tk.show) tctx.fillText(tk.lab, X(tk.t), h - mB + 4)
+      // median reference
+      tctx.strokeStyle = warm; tctx.setLineDash([5, 4]); tctx.lineWidth = 1.5; tctx.globalAlpha = .75; tctx.beginPath(); tctx.moveTo(X(Date.parse('2026-09-20')), Y(MEDIAN)); tctx.lineTo(w - mR, Y(MEDIAN)); tctx.stroke(); tctx.setLineDash([]); tctx.globalAlpha = 1
+      tctx.fillStyle = warm; tctx.font = '700 10px ' + MONO; tctx.textAlign = 'left'; tctx.textBaseline = 'bottom'; tctx.fillText('med 3.6', X(Date.parse('2026-09-20')) + 2, Y(MEDIAN) - 3)
+      // model dots
+      modelXY.length = 0
+      for (const m of MODELS) { const px = X(Date.parse(m.date)), py = Y(m.peak)
+        const col = m.group === 'NMME' ? nmme : m.group === 'C3S' ? c3s : seasonal
+        tctx.fillStyle = col; tctx.beginPath(); tctx.arc(px, py, 4.5, 0, 7); tctx.fill()
+        tctx.strokeStyle = panel; tctx.lineWidth = 1.5; tctx.stroke(); modelXY.push({ x: px, y: py, m }) }
+      // actual line (RONI-adjusted when active)
+      const sv = (i) => SERIES[i] - off(i)
+      tctx.strokeStyle = ink; tctx.lineWidth = 2.2; tctx.beginPath()
+      SERIES.forEach((v, i) => i ? tctx.lineTo(X(dayX[i]), Y(sv(i))) : tctx.moveTo(X(dayX[i]), Y(sv(i)))); tctx.stroke()
+      const cx = X(dayX[state.frame]), cy = Y(sv(state.frame))
+      tctx.strokeStyle = slate; tctx.setLineDash([2, 3]); tctx.lineWidth = 1; tctx.beginPath(); tctx.moveTo(cx, mT); tctx.lineTo(cx, h - mB); tctx.stroke(); tctx.setLineDash([])
+      tctx.fillStyle = warm; tctx.beginPath(); tctx.arc(cx, cy, 4, 0, 7); tctx.fill(); tctx.strokeStyle = panel; tctx.lineWidth = 1.5; tctx.stroke()
+    }
+    tcv.addEventListener('mousemove', (e) => {
+      const r = tcv.getBoundingClientRect()
+      const mx = e.clientX - r.left, my = e.clientY - r.top
+      let best = null, bd = 1e9
+      for (const p of modelXY) { const d = (p.x - mx) ** 2 + (p.y - my) ** 2; if (d < bd) { bd = d; best = p } }
+      if (best && bd < 11 * 11) { tkTip.style.opacity = 1; tkTip.style.left = best.x + 'px'; tkTip.style.top = best.y + 'px'
+        tkTip.textContent = `${best.m.name} · ${best.m.group} · peaks ${best.m.month} +${best.m.peak.toFixed(2)}` }
+      else tkTip.style.opacity = 0
+    })
+    tcv.addEventListener('mouseleave', () => tkTip.style.opacity = 0)
+
+    // ---------- playback ----------
+    let rafId = null, acc = 0, last = 0
+    function play() { state.playing = true; last = 0; acc = 0; playIcon.innerHTML = '<rect x="3.5" y="2.5" width="3.2" height="11" rx="1"/><rect x="9.3" y="2.5" width="3.2" height="11" rx="1"/>'; playBtn.setAttribute('aria-label', 'Pause'); rafId = requestAnimationFrame(tick) }
+    function pause() { state.playing = false; if (rafId) cancelAnimationFrame(rafId); playIcon.innerHTML = '<path d="M4 2.5v11l9-5.5z"/>'; playBtn.setAttribute('aria-label', 'Play') }
+    function tick(ts) { if (!state.playing) return; if (!last) last = ts; acc += (ts - last) / 1000; last = ts
+      const step = 1 / (BASE_FPS * SPEEDS[state.speedIdx])
+      while (acc >= step) { acc -= step; setFrame(state.frame >= NF - 1 ? 0 : state.frame + 1) }
+      rafId = requestAnimationFrame(tick) }
+    playBtn.addEventListener('click', () => state.playing ? pause() : play())
+    slider.addEventListener('input', () => { pause(); setFrame(parseInt(slider.value, 10), true) })
+    $('speed').addEventListener('click', () => { state.speedIdx = (state.speedIdx + 1) % SPEEDS.length; $('speed').textContent = SPEEDS[state.speedIdx] + '×' })
+
+    // ---------- controls ----------
+    const zoomHintEl = $('zoomhint')
+    function updateZoomHint() { zoomHintEl.textContent = state.zoom > 5.4 ? 'Each square is one 0.25° NOAA grid cell (~25 km)' : state.zoom > 4.2 ? 'Keep zooming — the field resolves into cells' : 'Scroll to zoom in — the grid cells appear' }
+    $('t-boxes').addEventListener('click', (e) => { state.showBoxes = !state.showBoxes; e.currentTarget.setAttribute('aria-pressed', state.showBoxes); render() })
+    $('t-grid').addEventListener('click', (e) => { state.showGrid = !state.showGrid; e.currentTarget.setAttribute('aria-pressed', state.showGrid); $('grid-note').hidden = !state.showGrid; render() })
+    const btnRoni = $('t-roni')
+    if (!HAS_RONI) btnRoni.style.display = 'none'
+    function updateModeLabels() {
+      $('sc-eyebrow').textContent = state.roni ? 'Relative anomaly (RONI) · actual' : 'Box-mean anomaly · actual'
+      $('tk-note').innerHTML = state.roni
+        ? 'actual is <b>RONI</b> (minus the tropical-mean warming). Model dots stay raw N3.4; the article gives no per-model RONI, so this half is not yet like-for-like.'
+        : 'dots are each model&rsquo;s forecast peak (Jul 2026 init), plotted at its peak month: <b>+2.2</b> to <b>+5.3&thinsp;°C</b>, median <b>+3.6</b>.'
+    }
+    btnRoni.addEventListener('click', (e) => { state.roni = !state.roni; e.currentTarget.setAttribute('aria-pressed', state.roni); updateModeLabels(); setFrame(state.frame) })
+
+    // ---------- panels ----------
+    const stage = root.querySelector('.enso-stage'), rail = $('rail'), transport = $('transport'), panelsBtn = $('panels')
+    const CARDS = ['card-scorecard', 'card-tracker', 'card-legend']
+    let railOn = true
+    const anyCard = () => CARDS.some((id) => !$(id).hidden)
+    function applyPanels() {
+      const show = railOn && anyCard()
+      rail.style.display = railOn ? 'flex' : 'none'
+      stage.classList.toggle('rail-on', show)
+      transport.classList.toggle('wide', !show)
+      panelsBtn.setAttribute('aria-pressed', railOn)
+      requestAnimationFrame(() => { sizeCanvas(); drawTracker(); refit() })
+    }
+    panelsBtn.addEventListener('click', () => { railOn = !railOn; if (railOn) CARDS.forEach((id) => $(id).hidden = false); applyPanels() })
+    root.querySelectorAll('.dismiss').forEach((b) => b.addEventListener('click', () => { $(b.dataset.card).hidden = true; applyPanels() }))
+    window.addEventListener('resize', () => { sizeCanvas(); drawTracker() })
+
+    // ---------- go ----------
+    $('loading').remove()
+    $('speed').textContent = SPEEDS[state.speedIdx] + '×'
+    sizeCanvas()
+    applyPanels()
+    setFrame(0)
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) play()
+  }
+
+  main().catch((err: any) => {
+    console.error('[EnsoTracker]', err)
+    const l = document.getElementById('enso-loading')
+    if (l) l.textContent = 'The live ocean data could not be loaded. Please try again later.'
+  })
+</script>
