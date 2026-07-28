@@ -18,6 +18,11 @@ export const TOPICS = [
     description: '',
   },
   {
+    slug: 'science',
+    name: 'Science',
+    description: '',
+  },
+  {
     slug: 'security',
     name: 'Security',
     description: '',
