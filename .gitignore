@@ -26,6 +26,10 @@ pnpm-debug.log*
 # local API response cache
 .cache/
 
+# ENSO data (fetched at build time, not committed) + per-day cache
+public/data/enso/
+scripts/.enso-cache/
+
 # macOS-specific files
 .DS_Store
 
