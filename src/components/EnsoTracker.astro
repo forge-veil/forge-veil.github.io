@@ -14,6 +14,7 @@
 
   <div class="enso-stage rail-on">
     <div id="enso-map"></div>
+    <div class="enso-toast" id="enso-toast"></div>
     <div class="enso-loading" id="enso-loading">Loading daily fields&hellip;</div>
 
     <div class="enso-actions">
@@ -23,7 +24,7 @@
         <button class="act" id="enso-t-roni" type="button" aria-pressed="false" title="RONI: subtract the tropical-mean warming so the map shows the El Niño pattern itself, not the warming background. Niño 3.4 drops by roughly the tropical-mean anomaly."><span class="dot"></span>RONI</button>
       </div>
       <button class="act solo" id="enso-panels" type="button" aria-pressed="true">Panels</button>
-      <div class="zoomhint" id="enso-zoomhint">Scroll in to reveal the grid cells</div>
+      <div class="zoomhint" id="enso-zoomhint">Zoom in to reveal the grid cells</div>
     </div>
 
     <div class="enso-rail" id="enso-rail">
@@ -134,7 +135,13 @@
   .enso-stage { position: absolute; left: 0; right: 0; top: 0; bottom: 0; margin-top: 41px; background: var(--map-bg); }
   #enso-map { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
   .enso-stage.rail-on #enso-map { right: 300px; }
-  #enso-map canvas { outline: none; }
+  /* Let one-finger vertical drags scroll the page; two-finger pinch still zooms the map. */
+  #enso-map, #enso-map canvas { touch-action: pan-y !important; outline: none; }
+
+  .enso-toast { position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%); z-index: 8; pointer-events: none;
+    background: rgba(28, 28, 30, .9); color: #fff; font-size: 12.5px; font-weight: 500; padding: 8px 14px; border-radius: 999px;
+    white-space: nowrap; opacity: 0; transition: opacity .15s; }
+  .enso-toast.show { opacity: 1; }
 
   .enso-actions { position: absolute; left: 14px; right: 14px; top: 14px; z-index: 7; display: flex; flex-flow: row wrap; gap: 8px; align-items: center; pointer-events: none; }
   .enso-stage.rail-on .enso-actions { right: 306px; }
@@ -208,8 +215,9 @@
   .enso-loading { position: absolute; inset: 0; display: grid; place-items: center; z-index: 9; background: var(--map-bg); color: var(--slate); font-size: 14px; }
 
   @media (max-width: 720px) {
-    .enso-rail, .zoomhint { display: none; }
+    /* Rail overlays the map on mobile (does not inset it); it starts hidden and opens via Panels. */
     .enso-stage.rail-on #enso-map { right: 0; }
+    .enso-rail { width: min(300px, calc(100% - 28px)); }
     .transport { right: 14px; }
   }
 </style>
@@ -296,6 +304,8 @@
     // ---------- state ----------
     const state = { frame: 0, playing: false, speedIdx: 1, showBoxes: true, showGrid: false, roni: false, zoom: 3, viewState: null }
     const SPEEDS = [1, 2, 4], BASE_FPS = 7
+    const isTouch = matchMedia('(pointer: coarse)').matches
+    const isMobile = matchMedia('(max-width: 720px)').matches
 
     function layers() {
       const ls = []
@@ -326,7 +336,9 @@
       parent: $('map'),
       views: new OrthographicView({ flipY: false }),
       viewState: state.viewState,
-      controller: true,
+      // Cooperative gestures: no built-in scroll-zoom (we gate it on a modifier below),
+      // no one-finger pan on touch (that scrolls the page); two-finger pinch still zooms.
+      controller: { dragRotate: false, touchRotate: false, dragPan: !isTouch, scrollZoom: false, touchZoom: true, doubleClickZoom: true, inertia: true },
       layers: layers(),
       onViewStateChange: ({ viewState }) => { state.viewState = viewState; state.zoom = viewState.zoom; updateZoomHint(); render() },
       getTooltip: ({ coordinate }) => {
@@ -343,6 +355,19 @@
     function render() { deckgl.setProps({ layers: layers(), viewState: state.viewState }) }
     function refit() { state.viewState = { ...state.viewState, target: [CX, CY, 0], zoom: fitZoom() }; state.zoom = state.viewState.zoom; render() }
     window.addEventListener('resize', () => requestAnimationFrame(refit))
+
+    // Cooperative zoom: modifier + wheel zooms the map; a plain wheel scrolls the page.
+    let toastTimer = null
+    function flashToast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 1400) }
+    $('map').addEventListener('wheel', (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault()
+        const z = Math.max(1.5, Math.min(8.5, state.viewState.zoom - e.deltaY * 0.0018))
+        state.viewState = { ...state.viewState, zoom: z }; state.zoom = z; updateZoomHint(); render()
+      } else {
+        flashToast(isTouch ? 'Pinch with two fingers to zoom' : 'Hold ⌘ or Ctrl and scroll to zoom')
+      }
+    }, { passive: false })
 
     // ---------- DOM wiring ----------
     const fmt = (v) => (v >= 0 ? '+' : '') + v.toFixed(2)
@@ -452,7 +477,7 @@
 
     // ---------- controls ----------
     const zoomHintEl = $('zoomhint')
-    function updateZoomHint() { zoomHintEl.textContent = state.zoom > 5.4 ? 'Each square is one 0.25° NOAA grid cell (~25 km)' : state.zoom > 4.2 ? 'Keep zooming: the field resolves into cells' : 'Scroll in to reveal the grid cells' }
+    function updateZoomHint() { zoomHintEl.textContent = state.zoom > 5.4 ? 'Each square is one 0.25° NOAA grid cell (~25 km)' : state.zoom > 4.2 ? 'Keep zooming: the field resolves into cells' : (isTouch ? 'Pinch with two fingers to zoom' : 'Hold ⌘ or Ctrl and scroll to zoom') }
     $('t-boxes').addEventListener('click', (e) => { state.showBoxes = !state.showBoxes; e.currentTarget.setAttribute('aria-pressed', state.showBoxes); render() })
     $('t-grid').addEventListener('click', (e) => { state.showGrid = !state.showGrid; e.currentTarget.setAttribute('aria-pressed', state.showGrid); $('grid-note').hidden = !state.showGrid; render() })
     const btnRoni = $('t-roni')
@@ -468,7 +493,7 @@
     // ---------- panels ----------
     const stage = root.querySelector('.enso-stage'), rail = $('rail'), transport = $('transport'), panelsBtn = $('panels')
     const CARDS = ['card-scorecard', 'card-tracker', 'card-legend']
-    let railOn = true
+    let railOn = !isMobile   // HUD panels start closed on mobile; open via Panels
     const anyCard = () => CARDS.some((id) => !$(id).hidden)
     function applyPanels() {
       const show = railOn && anyCard()
@@ -487,6 +512,7 @@
     $('speed').textContent = SPEEDS[state.speedIdx] + '×'
     sizeCanvas()
     applyPanels()
+    updateZoomHint()
     setFrame(0)
     if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) play()
   }
