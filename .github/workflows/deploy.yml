@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    # Daily at 12:00 UTC. NOAA OISST posts with a ~1 day lag; this refreshes
+    # the El Niño tracker data and redeploys.
+    - cron: "0 12 * * *"
 
 permissions:
   contents: write
@@ -41,6 +45,17 @@ jobs:
 
       - name: Compile resume PDF
         run: tectonic --outdir public --outfmt pdf resume/vatsal-bakshi.tex && mv public/vatsal-bakshi.pdf public/vatsal-bakshi-resume.pdf
+
+      - name: Restore ENSO day cache
+        uses: actions/cache@v4
+        with:
+          path: scripts/.enso-cache
+          key: enso-daycache-${{ github.run_id }}
+          restore-keys: |
+            enso-daycache-
+
+      - name: Fetch ENSO data
+        run: node scripts/fetch-enso.mjs
 
       - name: Test and Build
         run: make build
