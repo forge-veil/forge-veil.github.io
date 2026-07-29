@@ -30,6 +30,10 @@ const SCALE = 0.05
 const NODATA = -128
 const WINDOW_DAYS = 120
 const CONC = 6
+// ERDDAP rejects requests without a User-Agent (403), so identify ourselves.
+const UA = 'vatsal-bakshi.github.io ENSO tracker (+https://vatsalbakshi.com; daily NOAA OISST fetch)'
+// Committed grid geometry, so a run can assemble cached days even if ERDDAP is unreachable.
+const AXES_FILE = join(__dirname, 'enso-axes.json')
 const BOXES = { 'nino4': [-5, 5, 160, 210], 'nino3.4': [-5, 5, 190, 240], 'nino3': [-5, 5, 210, 270], 'nino1+2': [-10, 0, 270, 280] }
 const MODELS = [
   { name: 'CMCC', group: 'C3S', month: 'Dec', peak: 5.26, date: '2026-12-15' },
@@ -53,23 +57,28 @@ const fieldUrl = (d) => `${BASE}?${enc(`anom[(${d}T12:00:00Z)][(0.0)][(${LAT[0]}
 const tropUrl = (d) => `${BASE}?${enc(`anom[(${d}T12:00:00Z)][(0.0)][(-20):4:(20)][(0):4:(360)]`)}`
 
 async function getText(url) {
-  for (let a = 0; a < 3; a++) {
+  for (let a = 0; a < 4; a++) {
     try {
-      const r = await fetch(url)
+      const r = await fetch(url, { headers: { 'User-Agent': UA, 'Accept': 'text/csv, text/plain, */*' } })
       if (!r.ok) throw new Error('HTTP ' + r.status)
       const t = await r.text()
       if (t.startsWith('<')) throw new Error('bad body')
       return t
     } catch (e) {
-      if (a === 2) throw e
-      await new Promise((res) => setTimeout(res, 1500))
+      if (a === 3) throw e
+      await new Promise((res) => setTimeout(res, 2000 * (a + 1)))
     }
   }
 }
 
 async function latestDate() {
-  const t = await getText(`${BASE}?${enc('anom[(last)][(0.0)][(0):(0)][(200):(200)]')}`)
-  return t.split('\n')[2].split(',')[0].slice(0, 10)
+  try {
+    const t = await getText(`${BASE}?${enc('anom[(last)][(0.0)][(0):(0)][(200):(200)]')}`)
+    return t.split('\n')[2].split(',')[0].slice(0, 10)
+  } catch (e) {
+    console.error('latestDate() failed:', e.message)
+    return null
+  }
 }
 
 function daysWindow(end, n) {
@@ -100,6 +109,8 @@ function parseField(text) {
         +(lons[lons.length - 1] + dLon / 2).toFixed(3), +(lats[lats.length - 1] + dLat / 2).toFixed(3),
       ],
     }
+    // persist geometry so cache-only runs (ERDDAP down) can still assemble frames
+    try { writeFileSync(join(CACHE, 'axes.json'), JSON.stringify(AXES)); writeFileSync(AXES_FILE, JSON.stringify(AXES)) } catch {}
   }
   const { lats, lons, nLat, nLon } = AXES
   const li = new Map(lats.map((v, i) => [v, i]))
@@ -147,7 +158,20 @@ async function ensureDay(d) {
 }
 
 async function run() {
-  const latest = await latestDate()
+  // Load grid geometry up front (committed file, then any cache) so we never
+  // depend on a live fetch just to know the grid shape.
+  for (const f of [join(CACHE, 'axes.json'), AXES_FILE]) {
+    if (!AXES && existsSync(f)) { try { AXES = JSON.parse(readFileSync(f, 'utf8')) } catch {} }
+  }
+
+  const cachedDays = () => readdirSync(CACHE).filter((f) => f.endsWith('.i8')).map((f) => f.slice(0, 10)).sort()
+  let latest = await latestDate()
+  if (!latest) {
+    const cd = cachedDays()
+    if (!cd.length) throw new Error('ERDDAP unreachable and no cached data to fall back on')
+    latest = cd[cd.length - 1]
+    console.warn(`ERDDAP unreachable; assembling from cached data through ${latest}`)
+  }
   const dates = daysWindow(latest, WINDOW_DAYS)
   const missing = dates.filter((d) => !existsSync(join(CACHE, d + '.i8')))
   console.log(`latest ${latest}; window ${dates[0]}..${dates.at(-1)}; missing ${missing.length}`)
@@ -160,11 +184,15 @@ async function run() {
     }
   }))
 
-  // AXES is set while parsing any fetched day; if every day was already cached
-  // this run, parse one day to recover the grid geometry.
-  if (!AXES) parseField(await getText(fieldUrl(dates.at(-1))))
+  // Grid geometry still unknown (no committed/cached axes, all fetches failed):
+  // one last try, otherwise we cannot assemble anything.
+  if (!AXES) {
+    try { parseField(await getText(fieldUrl(dates.at(-1)))) }
+    catch (e) { throw new Error('no grid geometry available: ' + e.message) }
+  }
 
   const have = dates.filter((d) => existsSync(join(CACHE, d + '.i8')))
+  if (!have.length) throw new Error('no frames available (fetch failed and cache empty)')
   const { nLat, nLon, dLat, dLon, bounds } = AXES
   const FLEN = nLat * nLon
   const frames = new Int8Array(have.length * FLEN)
