@@ -2,6 +2,7 @@
 import { defineConfig } from 'astro/config';
 import tailwindcss from '@tailwindcss/vite';
 import mdx from '@astrojs/mdx';
+import { unified } from '@astrojs/markdown-remark';
 import sitemap from '@astrojs/sitemap';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
@@ -19,14 +20,19 @@ export default defineConfig({
       },
     },
   },
-  integrations: [
-    sitemap(),
-    mdx({
+  // Astro 7 defaults to the Satteri processor, which ignores remark/rehype
+  // plugins. Use unified so remark-math and KaTeX run; MDX inherits these.
+  markdown: {
+    processor: unified({
       remarkPlugins: [remarkMath],
       rehypePlugins: [
         rehypeKatex,
         [rehypeExternalLinks, { target: '_blank', rel: ['noopener', 'noreferrer'], properties: { className: ['external-link'] } }],
       ],
     }),
+  },
+  integrations: [
+    sitemap(),
+    mdx(),
   ],
 });
