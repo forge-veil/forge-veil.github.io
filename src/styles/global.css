@@ -13,8 +13,8 @@
   --color-ink-2: #3a3a3c;
   --color-ink-3: #48484a;
   --color-ink-4: #6e6e73;
-  --color-ink-5: #8e8e93;
-  --color-ink-6: #aeaeb2;
+  --color-ink-5: #7c7c81;
+  --color-ink-6: #a1a1a6;
 
   --color-tag-bg: #f2f2f7;
   --color-hover-bg: #fafafa;
@@ -69,7 +69,7 @@ body {
   justify-content: center;
   font-family: var(--font-display);
   font-weight: 400;
-  font-size: 16px;
+  font-size: 17px;
   color: var(--color-ink-3);
   letter-spacing: 0.5px;
   margin-bottom: 18px;
@@ -79,7 +79,7 @@ body {
 .sb-name {
   font-family: var(--font-display);
   font-weight: 400;
-  font-size: 20px;
+  font-size: 22px;
   color: var(--color-ink);
   letter-spacing: -0.3px;
   line-height: 1.1;
@@ -91,8 +91,8 @@ body {
 .sb-name:hover { color: var(--color-ink-3); }
 
 .sb-role {
-  font-size: 11.5px;
-  font-weight: 300;
+  font-size: 13px;
+  font-weight: 400;
   color: var(--color-ink-4);
   margin-bottom: 18px;
   letter-spacing: 0.01em;
@@ -100,8 +100,8 @@ body {
 
 .sb-bio {
   font-family: var(--font-display);
-  font-size: 13px;
-  font-weight: 300;
+  font-size: 14.5px;
+  font-weight: 400;
   color: var(--color-ink-3);
   line-height: 1.65;
   font-optical-sizing: auto;
@@ -126,8 +126,8 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 12px;
-  font-weight: 300;
+  font-size: 13.5px;
+  font-weight: 400;
   color: var(--color-ink-4);
   text-decoration: none;
   transition: color 0.15s;
@@ -143,7 +143,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--color-ink-4);
   flex-shrink: 0;
   transition: background 0.15s, color 0.15s;
@@ -156,7 +156,7 @@ body {
 }
 
 .sb-section-label {
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.09em;
   text-transform: uppercase;
@@ -171,8 +171,8 @@ body {
 }
 
 .sb-tag {
-  font-size: 11px;
-  font-weight: 300;
+  font-size: 12.5px;
+  font-weight: 400;
   background: var(--color-tag-bg);
   color: var(--color-ink-4);
   padding: 4px 10px;
@@ -227,8 +227,8 @@ body {
 }
 
 .sb-toc-link {
-  font-size: 10.5px;
-  font-weight: 300;
+  font-size: 12px;
+  font-weight: 400;
   color: var(--color-ink-5);
   line-height: 1.4;
   text-decoration: none;
@@ -266,20 +266,20 @@ body {
 .feed-title {
   font-family: var(--font-display);
   font-weight: 400;
-  font-size: 22px;
+  font-size: 26px;
   color: var(--color-ink);
   letter-spacing: -0.4px;
 }
 
 .feed-count {
-  font-size: 11px;
-  font-weight: 300;
+  font-size: 12.5px;
+  font-weight: 400;
   color: var(--color-ink-5);
 }
 
 .feed-disclaimer {
-  font-size: 11px;
-  font-weight: 300;
+  font-size: 12.5px;
+  font-weight: 400;
   color: var(--color-ink-5);
   margin-bottom: 28px;
 }
@@ -336,7 +336,7 @@ body {
 }
 
 .post-topic {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -344,8 +344,8 @@ body {
 }
 
 .post-series-label {
-  font-size: 10px;
-  font-weight: 300;
+  font-size: 11px;
+  font-weight: 400;
   color: var(--color-ink-5);
 }
 
@@ -358,7 +358,7 @@ body {
 .post-title {
   font-family: var(--font-display);
   font-weight: 400;
-  font-size: 17.5px;
+  font-size: 19px;
   color: var(--color-ink);
   letter-spacing: -0.2px;
   line-height: 1.3;
@@ -369,16 +369,16 @@ body {
 .post-item:hover .post-title { color: #000; }
 
 .post-desc {
-  font-size: 12.5px;
-  font-weight: 300;
+  font-size: 14px;
+  font-weight: 400;
   color: var(--color-ink-3);
   line-height: 1.65;
   margin-bottom: 11px;
 }
 
 .post-meta {
-  font-size: 11px;
-  font-weight: 300;
+  font-size: 12.5px;
+  font-weight: 400;
   color: var(--color-ink-5);
   display: flex;
   align-items: center;
@@ -396,8 +396,8 @@ body {
 
 .post-list-empty {
   padding: 48px 0;
-  font-size: 13px;
-  font-weight: 300;
+  font-size: 14.5px;
+  font-weight: 400;
   color: var(--color-ink-5);
 }
 
@@ -426,8 +426,8 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 12px;
-  font-weight: 300;
+  font-size: 13.5px;
+  font-weight: 400;
   color: var(--color-ink-4);
   text-decoration: none;
   transition: color 0.15s;
@@ -459,15 +459,15 @@ body {
 }
 
 .resume-updated {
-  font-size: 11px;
-  font-weight: 300;
+  font-size: 12.5px;
+  font-weight: 400;
   color: var(--color-ink-5);
   font-family: var(--font-sans);
 }
 
 .resume-download {
-  font-size: 12px;
-  font-weight: 300;
+  font-size: 13.5px;
+  font-weight: 400;
   color: var(--color-ink-4);
   text-decoration: none;
   transition: color 0.15s;
@@ -483,7 +483,7 @@ body {
 .article-top + .prose { margin-top: 32px; }
 
 .article-series {
-  font-size: 10.5px;
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -495,7 +495,7 @@ body {
 .article-title {
   font-family: var(--font-display);
   font-weight: 400;
-  font-size: 38px;
+  font-size: 40px;
   color: var(--color-ink);
   letter-spacing: -0.8px;
   line-height: 1.12;
@@ -508,8 +508,8 @@ body {
 }
 
 .article-meta {
-  font-size: 12px;
-  font-weight: 300;
+  font-size: 13.5px;
+  font-weight: 400;
   color: var(--color-ink-4);
   display: flex;
   align-items: center;
@@ -517,7 +517,7 @@ body {
 }
 
 .article-wip {
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -532,16 +532,16 @@ body {
 
 .prose {
   font-family: var(--font-sans);
-  font-size: 15px;
-  font-weight: 300;
-  line-height: 1.78;
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1.7;
   color: var(--color-ink-2);
 }
 
 .prose h2 {
   font-family: var(--font-display);
   font-weight: 400;
-  font-size: 26px;
+  font-size: 28px;
   color: var(--color-ink);
   letter-spacing: -0.3px;
   margin-top: 52px;
@@ -552,7 +552,7 @@ body {
 .prose h3 {
   font-family: var(--font-display);
   font-weight: 400;
-  font-size: 20px;
+  font-size: 22px;
   color: var(--color-ink);
   letter-spacing: -0.2px;
   margin-top: 40px;
@@ -592,7 +592,7 @@ a.external-link::after {
 
 .prose code {
   font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
-  font-size: 12.5px;
+  font-size: 14px;
   background: var(--color-tag-bg);
   padding: 2px 5px;
   border-radius: 3px;
@@ -611,7 +611,7 @@ a.external-link::after {
 .prose pre code {
   background: none;
   padding: 0;
-  font-size: 13px;
+  font-size: 14.5px;
   line-height: 1.65;
   color: var(--color-ink-2);
 }
@@ -648,7 +648,7 @@ a.external-link::after {
 }
 
 .prose .essay-preface {
-  font-size: 13.5px;
+  font-size: 15px;
   line-height: 1.55;
   color: var(--color-ink-3);
   margin: 0 0 6px;
@@ -673,7 +673,7 @@ a.external-link::after {
   margin: 36px auto 30px;
   max-width: 320px;
   color: var(--color-ink-3);
-  font-size: 17px;
+  font-size: 18.5px;
   letter-spacing: 0.55em;
   text-indent: 0.55em;
   line-height: 1;
@@ -763,12 +763,12 @@ body:has(.essay-hero) {
 }
 
 .prose .post-references {
-  font-size: 12px;
+  font-size: 13.5px;
   line-height: 1.7;
   color: var(--color-ink-4);
 }
 .prose .post-references h2 {
-  font-size: 13px;
+  font-size: 14.5px;
   font-weight: 500;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -777,7 +777,7 @@ body:has(.essay-hero) {
   margin-bottom: 10px;
 }
 .prose .post-references h3 {
-  font-size: 11px;
+  font-size: 12.5px;
   font-weight: 500;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -796,13 +796,13 @@ body:has(.essay-hero) {
   width: 100%;
   border-collapse: collapse;
   margin: 28px 0 32px;
-  font-size: 13px;
+  font-size: 14.5px;
   line-height: 1.4;
 }
 
 .prose th {
   font-family: 'SF Mono', 'Fira Code', ui-monospace, monospace;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -827,7 +827,7 @@ body:has(.essay-hero) {
 
 .prose td:first-child {
   font-family: 'SF Mono', 'Fira Code', ui-monospace, monospace;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -915,8 +915,8 @@ body:has(.essay-hero) {
 }
 
 .topic-tab {
-  font-size: 12px;
-  font-weight: 300;
+  font-size: 13.5px;
+  font-weight: 400;
   color: var(--color-ink-4);
   padding: 15px 14px 14px;
   border-bottom: 1.5px solid transparent;
@@ -947,7 +947,7 @@ body:has(.essay-hero) {
 .topic-section[data-hidden="true"] { display: none; }
 
 .topic-section-head {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -962,8 +962,8 @@ body:has(.essay-hero) {
 .series-block { margin-bottom: 8px; }
 
 .series-label {
-  font-size: 11px;
-  font-weight: 300;
+  font-size: 12.5px;
+  font-weight: 400;
   color: var(--color-ink-4);
   padding: 12px 0 8px 21px;
   letter-spacing: 0.01em;
@@ -1004,8 +1004,8 @@ body:has(.essay-hero) {
 .series-post:hover::before { background: var(--color-ink-3); }
 
 .series-post-part {
-  font-size: 10px;
-  font-weight: 300;
+  font-size: 11px;
+  font-weight: 400;
   color: var(--color-ink-5);
   margin-bottom: 5px;
 }
@@ -1013,7 +1013,7 @@ body:has(.essay-hero) {
 .series-post-title {
   font-family: var(--font-display);
   font-weight: 400;
-  font-size: 17px;
+  font-size: 18.5px;
   color: var(--color-ink);
   letter-spacing: -0.2px;
   line-height: 1.3;
@@ -1024,16 +1024,16 @@ body:has(.essay-hero) {
 .series-post:hover .series-post-title { color: #000; }
 
 .series-post-desc {
-  font-size: 12.5px;
-  font-weight: 300;
+  font-size: 14px;
+  font-weight: 400;
   color: var(--color-ink-3);
   line-height: 1.6;
   margin-bottom: 8px;
 }
 
 .series-post-meta {
-  font-size: 11px;
-  font-weight: 300;
+  font-size: 12.5px;
+  font-weight: 400;
   color: var(--color-ink-5);
   display: flex;
   align-items: center;
@@ -1088,7 +1088,7 @@ body:has(.essay-hero) {
   background: none;
   border: none;
   padding: 0 2px;
-  font-size: 15px;
+  font-size: 17px;
   color: var(--color-ink-5);
   cursor: pointer;
   transition: color 0.12s;
@@ -1142,8 +1142,8 @@ body:has(.essay-hero) {
 
 .klein-poem {
   font-family: var(--font-display);
-  font-size: 13px;
-  font-weight: 300;
+  font-size: 14.5px;
+  font-weight: 400;
   font-style: italic;
   color: var(--color-ink-3);
   line-height: 1.8;
@@ -1155,8 +1155,8 @@ body:has(.essay-hero) {
 }
 
 .klein-attr {
-  font-size: 11.5px;
-  font-weight: 300;
+  font-size: 13px;
+  font-weight: 400;
   color: var(--color-ink-5);
   margin-top: 6px;
   font-family: var(--font-display);
@@ -1166,8 +1166,8 @@ body:has(.essay-hero) {
 
 .shape-caption-note {
   font-family: var(--font-display);
-  font-size: 12px;
-  font-weight: 300;
+  font-size: 13.5px;
+  font-weight: 400;
   font-style: italic;
   color: var(--color-ink-4);
   line-height: 1.6;
@@ -1176,8 +1176,9 @@ body:has(.essay-hero) {
 
 .klein-verse a {
   margin-top: 0;
-  font-size: 11px;
-  font-weight: 300;
+  font-size: 12.5px;
+  font-weight: 400;
+  white-space: nowrap;
   color: var(--color-ink-5);
   text-decoration: underline;
   text-decoration-color: var(--color-ink-6);
@@ -1198,15 +1199,15 @@ body:has(.essay-hero) {
 }
 
 .klein-meta-sep {
-  font-size: 11px;
+  font-size: 12.5px;
   color: var(--color-ink-6);
   user-select: none;
 }
 
 .klein-source-btn {
   margin-top: 0;
-  font-size: 11px;
-  font-weight: 300;
+  font-size: 12.5px;
+  font-weight: 400;
   color: var(--color-ink-5);
   text-decoration: underline;
   text-decoration-color: var(--color-ink-6);
@@ -1277,7 +1278,7 @@ body:has(.essay-hero) {
 .klein-dialog-section:last-child { margin-bottom: 0; }
 
 .klein-dialog-label {
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.09em;
   text-transform: uppercase;
@@ -1287,8 +1288,8 @@ body:has(.essay-hero) {
 }
 
 .klein-dialog-desc {
-  font-size: 12px;
-  font-weight: 300;
+  font-size: 13.5px;
+  font-weight: 400;
   color: var(--color-ink-4);
   margin: 0 0 12px;
   font-family: var(--font-sans);
@@ -1322,7 +1323,7 @@ body:has(.essay-hero) {
 .klein-dialog-code pre {
   margin: 0;
   padding: 16px 20px;
-  font-size: 12px;
+  font-size: 13.5px;
   line-height: 1.7;
   overflow-x: auto;
   background: transparent !important;
@@ -1339,8 +1340,8 @@ body:has(.essay-hero) {
 
 .home-intro p {
   font-family: var(--font-display);
-  font-size: 15px;
-  font-weight: 300;
+  font-size: 17px;
+  font-weight: 400;
   color: var(--color-ink-2);
   line-height: 1.72;
   font-optical-sizing: auto;
@@ -1388,7 +1389,7 @@ body:has(.essay-hero) {
 
 .home-link-label {
   font-family: var(--font-display);
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 400;
   color: var(--color-ink-2);
   letter-spacing: -0.1px;
@@ -1402,8 +1403,8 @@ body:has(.essay-hero) {
 }
 
 .home-link-desc {
-  font-size: 11.5px;
-  font-weight: 300;
+  font-size: 13px;
+  font-weight: 400;
   color: var(--color-ink-5);
   flex: 1;
   transition: color 0.12s;
@@ -1414,7 +1415,7 @@ body:has(.essay-hero) {
 }
 
 .home-link-arrow {
-  font-size: 11px;
+  font-size: 12.5px;
   color: var(--color-ink-6);
   flex-shrink: 0;
   transition: color 0.12s, transform 0.18s ease;
@@ -1440,7 +1441,7 @@ body:has(.essay-hero) {
 }
 
 .resume-section-title {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -1479,7 +1480,7 @@ body:has(.essay-hero) {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--color-ink-4);
   flex-shrink: 0;
@@ -1491,14 +1492,14 @@ body:has(.essay-hero) {
 .company-name {
   font-family: var(--font-display);
   font-weight: 400;
-  font-size: 17px;
+  font-size: 18.5px;
   color: var(--color-ink);
   letter-spacing: -0.2px;
 }
 
 .company-tenure {
-  font-size: 11px;
-  font-weight: 300;
+  font-size: 12.5px;
+  font-weight: 400;
   color: var(--color-ink-4);
   flex-shrink: 0;
 }
@@ -1548,21 +1549,21 @@ body:has(.essay-hero) {
 
 .role-title {
   flex: 0 0 100%;
-  font-size: 13px;
+  font-size: 14.5px;
   font-weight: 400;
   color: var(--color-ink-2);
   letter-spacing: -0.1px;
 }
 
 .role-dept {
-  font-size: 11.5px;
-  font-weight: 300;
+  font-size: 13px;
+  font-weight: 400;
   color: var(--color-ink-4);
   letter-spacing: 0;
 }
 
-.role-dates { font-size: 11px; font-weight: 300; color: var(--color-ink-5); }
-.role-duration { font-size: 10.5px; font-weight: 300; color: var(--color-ink-6); }
+.role-dates { font-size: 12.5px; font-weight: 400; color: var(--color-ink-5); }
+.role-duration { font-size: 12px; font-weight: 400; color: var(--color-ink-6); }
 
 @keyframes dot-pulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(52, 199, 89, 0.4); }
@@ -1586,13 +1587,13 @@ body:has(.essay-hero) {
 
 .exp-dash {
   color: var(--color-ink-6);
-  font-size: 11px;
+  font-size: 12.5px;
   flex-shrink: 0;
   transition: color 0.15s ease;
 }
 .exp-text {
-  font-size: 12.5px;
-  font-weight: 300;
+  font-size: 14px;
+  font-weight: 400;
   color: var(--color-ink-2);
   line-height: 1.45;
   transition: color 0.15s ease;
@@ -1649,8 +1650,8 @@ body:has(.essay-hero) {
 }
 
 .pn-value {
-  font-size: 11px;
-  font-weight: 300;
+  font-size: 12.5px;
+  font-weight: 400;
   color: var(--color-ink-4);
   line-height: 1.35;
   white-space: nowrap;
@@ -1663,8 +1664,8 @@ body:has(.essay-hero) {
 
 .exp-lede {
   font-family: var(--font-display);
-  font-size: 13px;
-  font-weight: 300;
+  font-size: 14.5px;
+  font-weight: 400;
   font-style: italic;
   color: var(--color-ink-4);
   line-height: 1.6;
@@ -1689,7 +1690,7 @@ body:has(.essay-hero) {
 
 .seg-btn {
   font-family: var(--font-sans);
-  font-size: 11px;
+  font-size: 12.5px;
   font-weight: 400;
   padding: 5px 13px;
   border-radius: 6px;
@@ -1711,7 +1712,7 @@ body:has(.essay-hero) {
 /* ── Role team label ── */
 
 .role-team-label {
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -1740,11 +1741,11 @@ body:has(.essay-hero) {
 }
 
 .role-annotation-glyph {
-  font-size: 14px;
+  font-size: 16px;
   color: #34c759;
   line-height: 1.3;
   flex-shrink: 0;
-  font-weight: 300;
+  font-weight: 400;
   user-select: none;
   animation: glyph-breathe 3.5s ease-in-out infinite;
 }
@@ -1756,8 +1757,8 @@ body:has(.essay-hero) {
 }
 
 .role-annotation-text {
-  font-size: 12px;
-  font-weight: 300;
+  font-size: 13.5px;
+  font-weight: 400;
   font-style: italic;
   color: var(--color-ink-2);
   font-family: var(--font-display);
@@ -1781,7 +1782,7 @@ body:has(.essay-hero) {
 .edu-school {
   font-family: var(--font-display);
   font-weight: 400;
-  font-size: 15px;
+  font-size: 17px;
   color: var(--color-ink);
   letter-spacing: -0.15px;
   margin-bottom: 3px;
@@ -1800,14 +1801,14 @@ body:has(.essay-hero) {
 }
 
 .edu-degree {
-  font-size: 12px;
-  font-weight: 300;
+  font-size: 13.5px;
+  font-weight: 400;
   color: var(--color-ink-4);
 }
 
 .edu-year {
-  font-size: 11.5px;
-  font-weight: 300;
+  font-size: 13px;
+  font-weight: 400;
   color: var(--color-ink-5);
   flex-shrink: 0;
 }
@@ -1823,8 +1824,8 @@ body:has(.essay-hero) {
 }
 
 .skills-group-label {
-  font-size: 11px;
-  font-weight: 300;
+  font-size: 12.5px;
+  font-weight: 400;
   color: var(--color-ink-4);
   margin-bottom: 9px;
 }
@@ -1836,8 +1837,8 @@ body:has(.essay-hero) {
 }
 
 .skill-pill {
-  font-size: 11.5px;
-  font-weight: 300;
+  font-size: 13px;
+  font-weight: 400;
   padding: 5px 12px;
   border-radius: 20px;
   background: var(--color-tag-bg);
@@ -1870,8 +1871,8 @@ body:has(.essay-hero) {
 
 .prose-2col p {
   font-family: var(--font-sans);
-  font-size: 14px;
-  font-weight: 300;
+  font-size: 16px;
+  font-weight: 400;
   line-height: 1.72;
   color: var(--color-ink-2);
   margin-bottom: 16px;
@@ -1926,7 +1927,7 @@ body:has(.essay-hero) {
 
 .concept-map-heading {
   font-family: var(--font-sans);
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -1945,7 +1946,7 @@ body:has(.essay-hero) {
 
 .concept-map-list li {
   font-family: var(--font-display);
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 400;
   color: var(--color-ink-3);
   padding-left: 14px;
@@ -1981,7 +1982,7 @@ body:has(.essay-hero) {
 
 .toc-card-heading {
   font-family: var(--font-sans);
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -2002,8 +2003,8 @@ body:has(.essay-hero) {
   display: flex;
   align-items: baseline;
   gap: 10px;
-  font-size: 13px;
-  font-weight: 300;
+  font-size: 14.5px;
+  font-weight: 400;
   color: var(--color-ink-3);
   text-decoration: none;
   line-height: 1.45;
@@ -2013,7 +2014,7 @@ body:has(.essay-hero) {
 .toc-card-item:hover { color: var(--color-ink); }
 
 .toc-n {
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--color-ink-6);
   flex-shrink: 0;
@@ -2035,7 +2036,7 @@ body:has(.essay-hero) {
 }
 
 .intuition-label {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -2044,7 +2045,7 @@ body:has(.essay-hero) {
 }
 
 .intuition-text {
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.6;
   color: var(--color-ink-3);
   margin: 0 0 16px;
@@ -2076,7 +2077,7 @@ body:has(.essay-hero) {
 }
 
 .intuition-fig figcaption {
-  font-size: 11.5px;
+  font-size: 13px;
   color: var(--color-ink-5);
   text-align: center;
   line-height: 1.4;
@@ -2094,7 +2095,7 @@ body:has(.essay-hero) {
 }
 
 .note-label {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -2103,7 +2104,7 @@ body:has(.essay-hero) {
 }
 
 .note-text {
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.65;
   color: var(--color-ink-3);
   margin: 0;
@@ -2123,7 +2124,7 @@ body:has(.essay-hero) {
 }
 
 .summary-label {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -2141,7 +2142,7 @@ body:has(.essay-hero) {
 }
 
 .summary-list li {
-  font-size: 13.5px;
+  font-size: 15px;
   line-height: 1.55;
   color: var(--color-ink-3);
 }
@@ -2172,8 +2173,8 @@ body:has(.essay-hero) {
 
 .sphere-section-prose p {
   font-family: var(--font-sans);
-  font-size: 14px;
-  font-weight: 300;
+  font-size: 16px;
+  font-weight: 400;
   line-height: 1.72;
   color: var(--color-ink-2);
   margin-bottom: 16px;
@@ -2182,7 +2183,7 @@ body:has(.essay-hero) {
 .sphere-section-prose h2 {
   font-family: var(--font-display);
   font-weight: 400;
-  font-size: 20px;
+  font-size: 22px;
   color: var(--color-ink);
   letter-spacing: -0.3px;
   margin-top: 0;
@@ -2222,8 +2223,8 @@ body:has(.essay-hero) {
 
 .lab-aside-text {
   font-family: var(--font-sans);
-  font-size: 14px;
-  font-weight: 300;
+  font-size: 16px;
+  font-weight: 400;
   line-height: 1.72;
   color: var(--color-ink-2);
 }
@@ -2259,7 +2260,7 @@ body:has(.essay-hero) {
 }
 
 .math-card-label {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -2288,7 +2289,7 @@ body:has(.essay-hero) {
     padding: 24px 20px 20px;
   }
 
-  .sb-name { font-size: 17px; margin-bottom: 3px; }
+  .sb-name { font-size: 18.5px; margin-bottom: 3px; }
   .sb-role { margin-bottom: 10px; }
 
   .sb-bio {
@@ -2330,7 +2331,7 @@ body:has(.essay-hero) {
 
   .feed .article-back { margin-bottom: 24px; }
 
-  .prose { font-size: 14.5px; }
+  .prose { font-size: 16px; }
 
   /* Resume: hide tree panel on mobile */
   .exp-bullet { width: 100%; }
