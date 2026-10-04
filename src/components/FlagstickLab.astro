@@ -4,27 +4,6 @@ import { PINS } from '../lib/flagstick';
 ---
 
 <div class="fsl">
-  <div class="fsl-body">
-    <div class="fsl-pane">
-      <div class="fsl-pane-title">The cup</div>
-      <canvas class="fsl-cup"></canvas>
-      <div class="fsl-hint">drag to orbit</div>
-      <div class="fsl-outcome" aria-live="polite"></div>
-    </div>
-    <div class="fsl-pane">
-      <div class="fsl-pane-title">Where the ball crosses the cup</div>
-      <canvas class="fsl-chart"></canvas>
-      <div class="fsl-verdict">
-        <div class="fsl-verdict-head">
-          <span>Glancing blows holed</span>
-          <span class="fsl-verdict-key"><i class="fsl-key-bar"></i>model <i class="fsl-key-mase"></i>Mase, 90 putts</span>
-        </div>
-        <div class="fsl-verdict-rows"></div>
-        <div class="fsl-verdict-note">Mase measured at 4.5 ft past. Set pace to 4.5 to compare.</div>
-      </div>
-    </div>
-  </div>
-
   <div class="fsl-controls">
     <div class="fsl-pins" role="radiogroup" aria-label="Flagstick">
       {PINS.map((p, i) => (
@@ -57,6 +36,27 @@ import { PINS } from '../lib/flagstick';
       <button class="fsl-btn" data-action="1000">Run 1,000</button>
       <button class="fsl-btn" data-action="all">Run all pins</button>
       <button class="fsl-btn fsl-btn-quiet" data-action="clear">Clear</button>
+    </div>
+  </div>
+
+  <div class="fsl-body">
+    <div class="fsl-pane">
+      <div class="fsl-pane-title">The cup</div>
+      <canvas class="fsl-cup"></canvas>
+      <div class="fsl-hint">drag to orbit</div>
+      <div class="fsl-outcome" aria-live="polite"></div>
+    </div>
+    <div class="fsl-pane">
+      <div class="fsl-pane-title">Where the ball crosses the cup</div>
+      <canvas class="fsl-chart"></canvas>
+      <div class="fsl-verdict">
+        <div class="fsl-verdict-head">
+          <span>Glancing blows holed</span>
+          <span class="fsl-verdict-key"><i class="fsl-key-bar"></i>model <i class="fsl-key-mase"></i>Mase, 90 putts</span>
+        </div>
+        <div class="fsl-verdict-rows"></div>
+        <div class="fsl-verdict-note">Mase measured at 4.5 ft past. Set pace to 4.5 to compare.</div>
+      </div>
     </div>
   </div>
 
