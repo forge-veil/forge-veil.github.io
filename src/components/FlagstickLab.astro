@@ -65,13 +65,18 @@ import { PINS } from '../lib/flagstick';
       <tr>
         <th>Flagstick</th>
         <th>Putts</th>
-        <th>Holed</th>
-        <th title="Lines that strike the stick off-center">Glancing holed</th>
-        <th title="Tom Mase, 90 putts at 4.5 ft past">Mase measured</th>
+        <th>Holed, all lines</th>
+        <th>Holed, glancing</th>
+        <th>Mase, glancing</th>
       </tr>
     </thead>
     <tbody></tbody>
   </table>
+  <dl class="fsl-table-note">
+    <div><dt>All lines</dt><dd>every simulated putt, aimed anywhere across the cup.</dd></div>
+    <div><dt>Glancing</dt><dd>only putts whose line clips the side of the stick (with the pin out, the same lines with nothing in the way). This is what Mase tested.</dd></div>
+    <div><dt>Mase</dt><dd>his real result for those putts, 90 per stick at 4.5 ft of pace.</dd></div>
+  </dl>
 
   <details class="fsl-tune">
     <summary>Model tuning</summary>
@@ -80,10 +85,10 @@ import { PINS } from '../lib/flagstick';
       <label>Bounce (gentle) <span data-out="restitution"></span><input type="range" data-tune="restitution" min="0" max="1" step="0.05" /></label>
       <label>Bounce falloff speed <span data-out="softSpeed"></span><input type="range" data-tune="softSpeed" min="10" max="200" step="5" /></label>
       <label>Glancing loss <span data-out="tangentialLoss"></span><input type="range" data-tune="tangentialLoss" min="0" max="0.6" step="0.05" /></label>
-      <label>Rim speed kept <span data-out="rimLoss"></span><input type="range" data-tune="rimLoss" min="0.3" max="1" step="0.05" /></label>
+      <label>Lip bounce <span data-out="lipBounce"></span><input type="range" data-tune="lipBounce" min="0" max="0.8" step="0.05" /></label>
       <label>Pin-out center limit <span data-out="captureFeet"></span><input type="range" data-tune="captureFeet" min="5" max="12" step="0.5" /></label>
     </div>
-    <p class="fsl-tune-note">Pin settings apply to the selected stick and clear its results. Rim and limit settings apply to all sticks.</p>
+    <p class="fsl-tune-note">Pin settings apply to the selected stick and clear its results. Lip and limit settings apply to all sticks.</p>
   </details>
 </div>
 
@@ -391,6 +396,18 @@ import { PINS } from '../lib/flagstick';
     margin-right: 8px;
   }
 
+  .fsl-table-note {
+    margin: 0;
+    padding: 8px 16px 12px;
+    font-size: var(--fsl-small);
+    line-height: 1.5;
+    color: var(--color-ink-5);
+  }
+  .fsl-table-note div { display: flex; gap: 6px; }
+  .fsl-table-note dt { flex-shrink: 0; font-weight: 500; color: var(--color-ink-3); }
+  .fsl-table-note dt::after { content: ':'; }
+  .fsl-table-note dd { margin: 0; }
+
   .fsl-tune {
     border-top: 0.5px solid var(--color-border);
     padding: 10px 16px;
@@ -429,6 +446,9 @@ import { PINS } from '../lib/flagstick';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { Line2 } from 'three/addons/lines/Line2.js';
+import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
+import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import {
   PINS,
   CUP_RADIUS,
@@ -436,7 +456,8 @@ import {
   G,
   simulate,
   speedForOverrun,
-  captureDepthFor,
+  spinGripFor,
+  DEFAULT_LIP_BOUNCE,
   offCenterBand,
   gaussian,
   MASE_OFF_CENTER,
@@ -461,6 +482,7 @@ const BATCH_PLAYBACK = 1; // batch balls roll in real time
 const POOL = 240; // max batch balls in flight at once
 const REST_POINTS = 30; // a stopped ball lingers 150 ms before it is cleared
 const CUP_DEPTH = 4;
+const BLADE_TOP = 0.16; // lines drawn on the green sit just above the tallest blades
 const ADDRESS_Z = 30; // ball starts where Mase's ramp sat, 2.5 ft out (lib START_Y)
 const EASE = 0.14; // per-frame approach for chart tweens
 
@@ -532,32 +554,172 @@ function canvasTexture(w: number, h: number, draw: (g: CanvasRenderingContext2D)
   return t;
 }
 
-/** Turf tile covering 40 in: two mowing stripes plus thousands of blade flecks. */
-function grassTexture(): THREE.CanvasTexture {
-  const S = 1024;
-  const t = canvasTexture(S, S, (g) => {
-    g.fillStyle = '#4a7a38';
-    g.fillRect(0, 0, S / 2, S);
-    g.fillStyle = '#578a43';
-    g.fillRect(S / 2, 0, S / 2, S);
-    for (let i = 0; i < 45000; i++) {
-      const x = Math.random() * S;
-      const y = Math.random() * S;
-      const len = 2 + Math.random() * 5;
-      const light = Math.random() < 0.5;
-      g.strokeStyle = light
-        ? `rgba(196,224,160,${0.05 + Math.random() * 0.12})`
-        : `rgba(32,62,26,${0.06 + Math.random() * 0.14})`;
-      g.lineWidth = 1;
-      g.beginPath();
-      g.moveTo(x, y);
-      g.lineTo(x + (Math.random() - 0.5) * 2, y - len);
-      g.stroke();
+const GREEN_TILE = 16; // inches of green covered by one grain tile
+// The way the grass leans, in the ground plane (world x, z): toward the hole from the ball
+const GRAIN = new THREE.Vector2(0, -1);
+const MACRO_TILE = 180; // inches covered by one mottling tile
+
+/**
+ * Putting-green turf, built procedurally: a tileable height field of short
+ * blades leaning with the grain, turned into a colour map and a normal map.
+ * Greens are mown uniformly short, so there are no stripes.
+ */
+function greenTextures(): { map: THREE.CanvasTexture; normalMap: THREE.CanvasTexture; macro: THREE.CanvasTexture } {
+  const S = 1024; // power of two, so & (S - 1) wraps coordinates and the tile seams vanish
+  const M = S - 1;
+  const H = new Float32Array(S * S);
+  for (let i = 0; i < H.length; i++) H[i] = 0.12 + 0.12 * Math.random(); // shade between blades
+
+  // Blades: short strokes leaning toward the hole (the grain), tips catching more light
+  for (let n = 0; n < 120000; n++) {
+    const x = Math.random() * S;
+    const y = Math.random() * S;
+    const a = -Math.PI / 2 + (Math.random() - 0.5) * 0.9;
+    const dx = Math.cos(a);
+    const dy = Math.sin(a);
+    const len = 2 + Math.random() * 4;
+    const h = 0.45 + Math.random() * 0.55;
+    for (let t = 0; t < len; t += 0.6) {
+      const idx = (((y + dy * t) | 0) & M) * S + (((x + dx * t) | 0) & M);
+      H[idx] = Math.max(H[idx], h * (0.55 + 0.45 * (t / len)));
     }
+  }
+
+  const color = document.createElement('canvas');
+  const normal = document.createElement('canvas');
+  color.width = color.height = normal.width = normal.height = S;
+  const cg = color.getContext('2d')!;
+  const ng = normal.getContext('2d')!;
+  const cImg = cg.createImageData(S, S);
+  const nImg = ng.createImageData(S, S);
+  const dark = [44, 84, 34];
+  const light = [118, 168, 84];
+  const STRENGTH = 3.2;
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      const i = y * S + x;
+      const h = H[i];
+      const tint = 0.94 + 0.12 * Math.random();
+      const warm = (Math.random() - 0.5) * 10; // slight yellow/blue drift per blade
+      const o = i * 4;
+      cImg.data[o] = Math.min(255, (dark[0] + (light[0] - dark[0]) * h) * tint + warm);
+      cImg.data[o + 1] = Math.min(255, (dark[1] + (light[1] - dark[1]) * h) * tint);
+      cImg.data[o + 2] = Math.min(255, (dark[2] + (light[2] - dark[2]) * h) * tint - warm * 0.5);
+      cImg.data[o + 3] = 255;
+      const hx = H[y * S + ((x + 1) & M)] - H[y * S + ((x - 1) & M)];
+      const hy = H[((y + 1) & M) * S + x] - H[((y - 1) & M) * S + x];
+      const nx = -hx * STRENGTH;
+      const ny = -hy * STRENGTH;
+      const inv = 1 / Math.hypot(nx, ny, 1);
+      nImg.data[o] = (nx * inv * 0.5 + 0.5) * 255;
+      nImg.data[o + 1] = (ny * inv * 0.5 + 0.5) * 255;
+      nImg.data[o + 2] = (inv * 0.5 + 0.5) * 255;
+      nImg.data[o + 3] = 255;
+    }
+  }
+  cg.putImageData(cImg, 0, 0);
+  ng.putImageData(nImg, 0, 0);
+
+  const map = new THREE.CanvasTexture(color);
+  map.colorSpace = THREE.SRGBColorSpace;
+  const normalMap = new THREE.CanvasTexture(normal);
+  for (const t of [map, normalMap]) {
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(1 / GREEN_TILE, 1 / GREEN_TILE); // ShapeGeometry UVs are in inches
+  }
+
+  // Mottling: big soft light and dark patches around mid-grey, multiplied in by
+  // the shader at a much larger scale so the grain tile never visibly repeats
+  const macro = canvasTexture(256, 256, (g) => {
+    g.fillStyle = 'rgb(128,128,128)';
+    g.fillRect(0, 0, 256, 256);
+    for (let n = 0; n < 70; n++) {
+      const x = Math.random() * 256;
+      const y = Math.random() * 256;
+      const r = 20 + Math.random() * 60;
+      const v = Math.random() < 0.5 ? 255 : 0;
+      for (const ox of [-256, 0, 256]) {
+        for (const oy of [-256, 0, 256]) {
+          const grad = g.createRadialGradient(x + ox, y + oy, 0, x + ox, y + oy, r);
+          grad.addColorStop(0, `rgba(${v},${v},${v},0.07)`);
+          grad.addColorStop(1, `rgba(${v},${v},${v},0)`);
+          g.fillStyle = grad;
+          g.fillRect(x + ox - r, y + oy - r, r * 2, r * 2);
+        }
+      }
+    }
+  }, false);
+  macro.wrapS = macro.wrapT = THREE.RepeatWrapping;
+  return { map, normalMap, macro };
+}
+
+/** Lighter, thinner turf where players stand and the hole is cut. `inner` is the cup radius as a fraction of the decal. */
+function wornRingTexture(inner: number): THREE.CanvasTexture {
+  const S = 512;
+  return canvasTexture(S, S, (g) => {
+    const c = S / 2;
+    const grad = g.createRadialGradient(c, c, inner * S, c, c, c);
+    grad.addColorStop(0, 'rgba(184,200,120,0.11)');
+    grad.addColorStop(0.35, 'rgba(184,200,120,0.05)');
+    grad.addColorStop(1, 'rgba(184,200,120,0)');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, S, S);
+    // Patchy wear: flecks thinning out with distance
+    for (let i = 0; i < 4000; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const r = inner * S + Math.pow(Math.random(), 2) * (c - inner * S);
+      g.fillStyle = `rgba(176,186,116,${0.06 * Math.random() * (1 - r / c)})`;
+      g.fillRect(c + Math.cos(a) * r, c + Math.sin(a) * r, 1 + Math.random() * 2, 1 + Math.random() * 2);
+    }
+    // Punch out the cup so the decal never films over the hole
+    g.globalCompositeOperation = 'destination-out';
+    g.beginPath();
+    g.arc(c, c, inner * S, 0, Math.PI * 2);
+    g.fill();
   });
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.repeat.set(1 / 40, 1 / 40); // ShapeGeometry UVs are in inches
-  return t;
+}
+
+/** A filled old hole: a faint circular seam and a slightly different shade inside. */
+function oldPlugTexture(): THREE.CanvasTexture {
+  const S = 256;
+  const r = (CUP_RADIUS / 5) * S; // decal is 5 in across
+  return canvasTexture(S, S, (g) => {
+    const c = S / 2;
+    g.fillStyle = 'rgba(190,206,130,0.10)';
+    g.beginPath();
+    g.arc(c, c, r, 0, Math.PI * 2);
+    g.fill();
+    g.strokeStyle = 'rgba(40,52,24,0.35)';
+    g.lineWidth = 1.5;
+    g.beginPath();
+    for (let k = 0; k <= 64; k++) {
+      const a = (k / 64) * Math.PI * 2;
+      const rr = r + (Math.random() - 0.5) * 2; // hand-cut seam
+      k ? g.lineTo(c + Math.cos(a) * rr, c + Math.sin(a) * rr) : g.moveTo(c + Math.cos(a) * rr, c + Math.sin(a) * rr);
+    }
+    g.stroke();
+  });
+}
+
+/** A repaired ball mark: a small scuffed dent with a lighter halo. */
+function ballMarkTexture(): THREE.CanvasTexture {
+  const S = 128;
+  return canvasTexture(S, S, (g) => {
+    const c = S / 2;
+    const halo = g.createRadialGradient(c, c, 8, c, c, c);
+    halo.addColorStop(0, 'rgba(214,222,160,0.28)');
+    halo.addColorStop(1, 'rgba(214,222,160,0)');
+    g.fillStyle = halo;
+    g.fillRect(0, 0, S, S);
+    g.fillStyle = 'rgba(74,64,36,0.45)';
+    g.beginPath();
+    for (let k = 0; k <= 14; k++) {
+      const a = (k / 14) * Math.PI * 2;
+      const rr = 10 + Math.random() * 9;
+      k ? g.lineTo(c + Math.cos(a) * rr * 1.3, c + Math.sin(a) * rr) : g.moveTo(c + Math.cos(a) * rr * 1.3, c + Math.sin(a) * rr);
+    }
+    g.fill();
+  });
 }
 
 function soilTexture(): THREE.CanvasTexture {
@@ -645,8 +807,8 @@ function initLab(root: HTMLElement): void {
   // ── State ──────────────────────────────────────────────────────────────
   const pins: Pin[] = PINS.map((p) => ({ ...p }));
   let pin = pins[0];
-  const model = { rimLoss: 0.7, captureFeet: 8.5 };
-  let captureDepth = captureDepthFor(model.captureFeet);
+  const model = { lipBounce: DEFAULT_LIP_BOUNCE, captureFeet: 8.5 };
+  let spinGrip = spinGripFor(model.captureFeet);
   const samples: Record<string, Sample[]> = Object.fromEntries(pins.map((p) => [p.id, []]));
   let shot: Shot | null = null;
   let queue: Pin[] = []; // one entry per pending simulated putt
@@ -673,15 +835,29 @@ function initLab(root: HTMLElement): void {
 
   const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 600);
   camera.position.set(12, 34, 70);
+  // A plain wheel scrolls the page. Zoom takes ⌘/Ctrl + wheel, which is also
+  // what a trackpad pinch sends. Registered before OrbitControls so it runs first.
+  cup.addEventListener('wheel', (e) => {
+    if (!e.ctrlKey && !e.metaKey) e.stopImmediatePropagation();
+  }, { capture: true });
   const controls = new OrbitControls(camera, cup);
   controls.target.set(0, -1, 9);
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
-  controls.enableZoom = false;
+  controls.enableZoom = true;
+  controls.zoomToCursor = true; // dive toward whatever is under the pointer
+  controls.minDistance = 5;
+  controls.maxDistance = 150;
   controls.enablePan = false;
   controls.minPolarAngle = 0.12;
   controls.maxPolarAngle = 1.42;
   controls.update();
+  controls.saveState();
+  cup.addEventListener('dblclick', () => controls.reset());
+  const isMac = /Mac|iPhone|iPad/.test(navigator.userAgent);
+  root.querySelector<HTMLElement>('.fsl-hint')!.textContent = matchMedia('(pointer: coarse)').matches
+    ? 'drag to orbit · pinch to zoom'
+    : `drag to orbit · ${isMac ? '⌘' : 'ctrl'} + scroll or pinch to zoom · double-click to reset`;
 
   scene.add(new THREE.HemisphereLight(0xf4f8ff, 0x55704a, 0.7));
   const sun = new THREE.DirectionalLight(0xfff6e8, 2.6);
@@ -707,15 +883,125 @@ function initLab(root: HTMLElement): void {
   const green = new THREE.Mesh(
     new THREE.ShapeGeometry(greenShape, 96),
     (() => {
-      const map = grassTexture();
-      map.anisotropy = renderer.capabilities.getMaxAnisotropy();
-      return new THREE.MeshStandardMaterial({ map, bumpMap: map, bumpScale: 0.6, roughness: 0.95 });
+      const { map, normalMap, macro } = greenTextures();
+      map.anisotropy = normalMap.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      const mat = new THREE.MeshStandardMaterial({
+        map,
+        normalMap,
+        normalScale: new THREE.Vector2(0.55, 0.55),
+        roughness: 0.82,
+      });
+      mat.onBeforeCompile = (shader) => {
+        shader.uniforms.macroMap = { value: macro };
+        shader.uniforms.grainDir = { value: GRAIN };
+        shader.vertexShader = 'varying vec3 vGrainWorld;\n' + shader.vertexShader.replace(
+          '#include <begin_vertex>',
+          `#include <begin_vertex>
+          vGrainWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;`,
+        );
+        shader.fragmentShader = 'uniform sampler2D macroMap;\nuniform vec2 grainDir;\nvarying vec3 vGrainWorld;\n' + shader.fragmentShader
+          .replace(
+            '#include <map_fragment>',
+            `#include <map_fragment>
+            diffuseColor.rgb *= 2.0 * texture2D(macroMap, vMapUv * ${(GREEN_TILE / MACRO_TILE).toFixed(4)}).rgb;
+            // Grain: looking the way the blades lean shows their lit sides
+            vec3 toEye = cameraPosition - vGrainWorld;
+            float grain = dot(normalize(-toEye.xz), grainDir);
+            diffuseColor.rgb *= 1.0 + 0.14 * grain;`,
+          )
+          .replace(
+            '#include <roughnessmap_fragment>',
+            `#include <roughnessmap_fragment>
+            roughnessFactor *= 1.0 - 0.18 * max(grain, 0.0);`,
+          );
+      };
+      return mat;
     })(),
   );
   green.rotation.x = -Math.PI / 2;
   green.receiveShadow = true;
   green.castShadow = true; // shades the inside of the cup
   scene.add(green);
+
+  // Real blades near the cup, where the camera gets close. About 1/8" tall,
+  // leaning with the grain; along the cut edge they flop over the hole. From
+  // far away they are sub-pixel and shimmer, so they grow in only as you zoom.
+  const bladeScale = { value: 0 };
+  let blades: THREE.InstancedMesh;
+  {
+    const w = 0.018;
+    const bladeGeo = new THREE.BufferGeometry();
+    bladeGeo.setAttribute('position', new THREE.Float32BufferAttribute(
+      [-w, 0, 0, w, 0, 0, -w * 0.6, 0.55, 0.02, w * 0.6, 0.55, 0.02, 0, 1, 0.07], 3));
+    bladeGeo.setAttribute('color', new THREE.Float32BufferAttribute(
+      [0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.85, 0.85, 0.85, 0.85, 0.85, 0.85, 1, 1, 1], 3)); // darker root, light tip
+    bladeGeo.setIndex([0, 1, 2, 2, 1, 3, 2, 3, 4]);
+    bladeGeo.computeVertexNormals();
+    const COUNT = 60000;
+    const R_MAX = 14;
+    const bladeMat = new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: 0.85, envMapIntensity: 0.35 });
+    bladeMat.onBeforeCompile = (shader) => {
+      shader.uniforms.bladeScale = bladeScale;
+      shader.vertexShader = 'uniform float bladeScale;\n' + shader.vertexShader.replace(
+        '#include <begin_vertex>',
+        `#include <begin_vertex>
+        transformed.y *= bladeScale;`,
+      );
+    };
+    blades = new THREE.InstancedMesh(bladeGeo, bladeMat, COUNT);
+    blades.receiveShadow = true;
+    blades.frustumCulled = false;
+    const m = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const e = new THREE.Euler(0, 0, 0, 'YXZ');
+    const pos = new THREE.Vector3();
+    const scl = new THREE.Vector3();
+    const c = new THREE.Color();
+    const grainYaw = Math.atan2(-GRAIN.x, -GRAIN.y); // yaw that points a blade's lean along the grain
+    for (let i = 0; i < COUNT; i++) {
+      const r = CUP_RADIUS - 0.03 + (R_MAX - CUP_RADIUS) * Math.pow(Math.random(), 1.6); // densest at the cup
+      const a = Math.random() * Math.PI * 2;
+      const x = Math.cos(a) * r;
+      const z = Math.sin(a) * r;
+      const atEdge = r < CUP_RADIUS + 0.2;
+      // Edge blades lean into the hole; the rest lean with the grain
+      e.set(atEdge ? -(0.6 + Math.random() * 0.5) : -(0.2 + Math.random() * 0.45),
+        atEdge ? Math.atan2(x, z) : grainYaw + (Math.random() - 0.5) * 1.1, 0);
+      q.setFromEuler(e);
+      // Taper to nothing at the patch edge so it melts into the texture
+      const fade = 1 - THREE.MathUtils.smoothstep(r / R_MAX, 0.55, 1);
+      const h = (0.08 + Math.random() * 0.09) * fade;
+      m.compose(pos.set(x, 0, z), q, scl.set(0.8 + Math.random() * 0.5, h, 1));
+      blades.setMatrixAt(i, m);
+      blades.setColorAt(i, c.setHSL(0.27 + (Math.random() - 0.5) * 0.04, 0.42 + Math.random() * 0.12, 0.27 + Math.random() * 0.07)); // averages out to the turf texture
+    }
+    scene.add(blades);
+  }
+
+  // Wear and marks around the hole, as decals just above the turf
+  function decal(map: THREE.Texture, size: number, x: number, z: number) {
+    const mesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(size, size),
+      new THREE.MeshStandardMaterial({
+        map,
+        transparent: true,
+        depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -2,
+        roughness: 0.9,
+      }),
+    );
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.position.set(x, 0.01, z);
+    mesh.receiveShadow = true;
+    scene.add(mesh);
+  }
+  const WEAR = 16; // inches of worn turf around the cup
+  decal(wornRingTexture(CUP_RADIUS / (2 * WEAR)), WEAR * 2, 0, 0);
+  decal(oldPlugTexture(), 5, -13, 16); // where a previous day's hole was plugged
+  decal(ballMarkTexture(), 1.3, 9, 20);
+  decal(ballMarkTexture(), 1.3, -7, -9);
+  decal(ballMarkTexture(), 1.3, 15, 3);
 
   // Cup: an inch of soil and turf root, then the white plastic liner, then the floor
   const soilGeo = new THREE.CylinderGeometry(CUP_RADIUS, CUP_RADIUS, 1, 96, 1, true);
@@ -770,7 +1056,11 @@ function initLab(root: HTMLElement): void {
   });
   const ball = new THREE.Mesh(ballGeo, ballMat);
   ball.castShadow = true;
-  ball.rotation.y = Math.PI / 2; // alignment line points down the target line
+  // The texture's stripe is the sphere's equator. A quarter-turn about the
+  // view axis stands it up in the vertical plane of the putt, so the line
+  // points at the hole and rolls end over end.
+  const ALIGNED = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, Math.PI / 2));
+  ball.quaternion.copy(ALIGNED);
   scene.add(ball);
   const prevBall = new THREE.Vector3();
   const tmpV = new THREE.Vector3();
@@ -779,6 +1069,7 @@ function initLab(root: HTMLElement): void {
 
   function placeAtAddress() {
     ball.position.set(offset(), BALL_RADIUS, ADDRESS_Z);
+    ball.quaternion.copy(ALIGNED); // every putt starts lined up
     prevBall.copy(ball.position);
   }
 
@@ -810,16 +1101,25 @@ function initLab(root: HTMLElement): void {
   scene.add(pool);
   const poolMatrix = new THREE.Matrix4();
   const ONE = new THREE.Vector3(1, 1, 1);
-  const startQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI / 2, 0));
+  const startQ = ALIGNED;
 
   // Aim line
-  const aimMat = new THREE.LineDashedMaterial({ color: 0x1c1c1e, transparent: true, opacity: 0.35, dashSize: 0.5, gapSize: 0.45 });
-  const aimGeo = new THREE.BufferGeometry();
-  const aim = new THREE.Line(aimGeo, aimMat);
+  // Plain WebGL lines are always 1px; Line2 draws at a real pixel width
+  const aimMat = new LineMaterial({
+    color: 0xffffff,
+    linewidth: 3,
+    dashed: true,
+    dashSize: 1.1,
+    gapSize: 0.7,
+    transparent: true,
+    opacity: 0.9,
+  });
+  const aim = new Line2(new LineGeometry(), aimMat);
   scene.add(aim);
   function syncAim() {
     const x = offset();
-    aimGeo.setFromPoints([new THREE.Vector3(x, 0.02, ADDRESS_Z), new THREE.Vector3(x, 0.02, -CUP_RADIUS * 2.2)]);
+    aim.geometry.dispose();
+    aim.geometry = new LineGeometry().setPositions([x, BLADE_TOP, ADDRESS_Z, x, BLADE_TOP, -CUP_RADIUS * 2.2]);
     aim.computeLineDistances();
   }
 
@@ -829,7 +1129,8 @@ function initLab(root: HTMLElement): void {
   const madeMat = new THREE.LineBasicMaterial({ color: 0x1c1c1e, transparent: true, opacity: 0.16, depthWrite: false });
   const missMat = new THREE.LineBasicMaterial({ color: MISS, transparent: true, opacity: 0.4, depthWrite: false });
   function trailPoints(path: PathPoint[]): THREE.Vector3[] {
-    return path.map((p) => new THREE.Vector3(p.x, Math.max(p.z, -CUP_DEPTH) + 0.04, -p.y));
+    // Ride just above the grass on the green; follow the ball down inside the cup
+    return path.map((p) => new THREE.Vector3(p.x, p.z > -0.01 ? BLADE_TOP : Math.max(p.z, -CUP_DEPTH) + 0.04, -p.y));
   }
   function addTrail(path: PathPoint[], made: boolean) {
     const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(trailPoints(path)), made ? madeMat : missMat);
@@ -848,10 +1149,20 @@ function initLab(root: HTMLElement): void {
   }
 
   // Live trail behind the animated ball
-  const liveGeo = new THREE.BufferGeometry();
-  const liveMat = new THREE.LineBasicMaterial({ color: 0x1c1c1e, transparent: true, opacity: 0.6 });
-  const live = new THREE.Line(liveGeo, liveMat);
+  // The single putt's path, drawn bold; it stays after the putt until the next action
+  const liveMat = new LineMaterial({ color: 0x1c1c1e, linewidth: 3.5, transparent: true, opacity: 0.85 });
+  const live = new Line2(new LineGeometry(), liveMat);
+  live.visible = false;
   scene.add(live);
+  function setLive(path: PathPoint[] | null) {
+    live.geometry.dispose();
+    live.geometry = new LineGeometry();
+    live.visible = !!path && path.length > 1;
+    if (path && path.length > 1) {
+      live.geometry.setPositions(trailPoints(path).flatMap((v) => [v.x, v.y, v.z]));
+      live.geometry.instanceCount = 0;
+    }
+  }
 
   function resize3d() {
     const w = cup.clientWidth;
@@ -869,7 +1180,7 @@ function initLab(root: HTMLElement): void {
 
   function shoot(p: Pin, line: number) {
     const speed = Math.max(1, speedForOverrun(overrun()) * (1 + 0.04 * gaussian(Math.random)));
-    return simulate({ offset: line, speed, pin: p, captureDepth, rimLoss: model.rimLoss, record: true });
+    return simulate({ offset: line, speed, pin: p, spinGrip, lipBounce: model.lipBounce, record: true });
   }
 
   /** Results count when the ball finishes, so the chart keeps pace with the scene. */
@@ -885,8 +1196,7 @@ function initLab(root: HTMLElement): void {
     const r = shoot(pin, line);
     const path = r.made ? settle(r.path) : withRest(r.path);
     shot = { pin, line, path, times: timeline(path), made: r.made, hitPin: r.hitPin, exit: r.exit, start: performance.now() };
-    liveGeo.setFromPoints(trailPoints(path));
-    liveGeo.setDrawRange(0, 0);
+    setLive(path);
     liveMat.color.set(r.made ? 0x1c1c1e : MISS);
     shotIndex = 0;
     placeAtAddress();
@@ -896,7 +1206,7 @@ function initLab(root: HTMLElement): void {
 
   function run(list: Pin[], n: number) {
     shot = null;
-    liveGeo.setDrawRange(0, 0);
+    setLive(null);
     hideOutcome();
     // Each run starts its sticks' curves from scratch
     queue = [];
@@ -934,10 +1244,9 @@ function initLab(root: HTMLElement): void {
     while (i < times.length - 1 && times[i + 1] <= elapsed) i++;
     shotIndex = i;
     moveBall(shot.path[i]);
-    liveGeo.setDrawRange(0, i + 1);
+    live.geometry.instanceCount = i; // segments revealed so far
     if (i === shot.path.length - 1) {
       finish(shot);
-      liveGeo.setDrawRange(0, 0);
       showOutcome(shot);
       shot = null;
     }
@@ -1287,7 +1596,7 @@ function initLab(root: HTMLElement): void {
     restitution: (v) => v.toFixed(2),
     softSpeed: (v) => `${v} in/s`,
     tangentialLoss: (v) => `${Math.round(v * 100)}%`,
-    rimLoss: (v) => `${Math.round(v * 100)}%`,
+    lipBounce: (v) => v.toFixed(2),
     captureFeet: (v) => `${v} ft past`,
   };
   function syncTune() {
@@ -1304,9 +1613,9 @@ function initLab(root: HTMLElement): void {
     inp.addEventListener('input', () => {
       const k = inp.dataset.tune!;
       const v = parseFloat(inp.value);
-      if (k === 'rimLoss' || k === 'captureFeet') {
+      if (k === 'lipBounce' || k === 'captureFeet') {
         (model as any)[k] = v;
-        captureDepth = captureDepthFor(model.captureFeet);
+        spinGrip = spinGripFor(model.captureFeet);
         clearAll();
       } else {
         (pin as any)[k] = v;
@@ -1347,7 +1656,7 @@ function initLab(root: HTMLElement): void {
     stopBatch();
     focusPin(pins.find((p) => p.id === id)!);
     shot = null;
-    liveGeo.setDrawRange(0, 0);
+    setLive(null);
     clearTrails();
     placeAtAddress();
     hideOutcome();
@@ -1361,7 +1670,7 @@ function initLab(root: HTMLElement): void {
     shot = null;
     for (const p of pins) { samples[p.id] = []; resetView(p.id); }
     clearTrails();
-    liveGeo.setDrawRange(0, 0);
+    setLive(null);
     placeAtAddress();
     hideOutcome();
     setBusy(false);
@@ -1405,6 +1714,9 @@ function initLab(root: HTMLElement): void {
     stepShot(now);
     if (tableDirty) { renderTable(); tableDirty = false; }
     controls.update();
+    const camDist = camera.position.length(); // the cup is at the origin
+    bladeScale.value = 1 - THREE.MathUtils.smoothstep(camDist, 20, 34);
+    blades.visible = bladeScale.value > 0.02;
     renderer.render(scene, camera);
     if (tweenChart(now) || chartDirty) {
       drawChart(now);

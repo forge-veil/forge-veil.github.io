@@ -20,7 +20,7 @@ Each putt below starts 2.5 feet out and is paced to roll 4.5 feet past if it mis
 
 - **Cup view:** drag to orbit. Each miss is labeled: lipped out, over the back edge, or off the stick.
 - **Chart:** the cup as the ball sees it. Each dot is a putt, holed (top) or missed (bottom), at the point it crossed the cup.
-- **Bars:** simulated glancing-blow make rate against Mase's measurements.
+- **Bars and table:** "glancing" means putts whose line clips the side of the stick, the case Mase tested. Each bar is the simulator's make rate for those putts; the red tick is Mase's real result.
 
 ---
 
@@ -53,7 +53,7 @@ A glancing blow sends the ball sideways, the shortest way out of a 4.25-inch cup
 
 ## About the simulator
 
-The physics is simple: the ball rolls, pivots on the lip, falls, and bounces off a cylinder. Two values are tuned to Mase's data: how far the ball must drop to stay in, and each stick's diameter and bounce. His dead-center results then fall out on their own. The model holes every pin-out putt on those lines where Mase holed 90%, likely rig noise (his rounds went 22, 29, then 30 of 30).
+The ball is a 3D point ball rolling on the green. The cup's edge is a real ring it can roll over, pivot on, and bounce off, which is what flings a lipped-out putt across the hole. Three things are tuned to Mase's data: how much a rolling ball's topspin makes it climb the back lip (so dead-center putts pop out at 9+ feet of pace with the pin out, as he saw), and each stick's diameter and bounce. With those set, the simulator lands within a few points of his glancing-blow results for all four setups.
 
 ---
 

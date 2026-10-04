@@ -26,9 +26,10 @@ export interface Pin {
 // off-centre make rates land near Mase's measurements.
 export const PINS: Pin[] = [
   { id: 'out', label: 'Pin out', diameter: 0, restitution: 0, tangentialLoss: 0 },
-  { id: 'fiberglass', label: 'Fiberglass', diameter: 0.5, restitution: 0.75, softSpeed: 60, tangentialLoss: 0 },
-  { id: 'tapered', label: 'Tapered aluminum', diameter: 0.75, restitution: 0.8, softSpeed: 60, tangentialLoss: 0 },
-  { id: 'dual', label: 'Dual-diameter aluminum', diameter: 0.7, restitution: 0.8, softSpeed: 60, tangentialLoss: 0 },
+  // Fiberglass flexes: a gentle bounce that dies quickly on harder hits
+  { id: 'fiberglass', label: 'Fiberglass', diameter: 0.5, restitution: 0.36, softSpeed: 30, tangentialLoss: 0 },
+  { id: 'tapered', label: 'Tapered aluminum', diameter: 0.75, restitution: 0.55, softSpeed: 30, tangentialLoss: 0 },
+  { id: 'dual', label: 'Dual-diameter aluminum', diameter: 0.7, restitution: 0.6, softSpeed: 30, tangentialLoss: 0 },
 ];
 
 export interface SimParams {
@@ -36,7 +37,8 @@ export interface SimParams {
   speed: number; // ball speed as it reaches the front edge of the cup, in/s
   pin: Pin;
   captureDepth?: number;
-  rimLoss?: number; // speed retained after popping out over the far rim
+  lipBounce?: number; // restitution of the ball off the cup's edge
+  spinGrip?: number; // how strongly topspin makes a ball climb the lip it hits
   record?: boolean;
 }
 
@@ -60,7 +62,8 @@ const START_Y = -30; // Mase's ramp sat 2.5 ft short of the hole
 const DT = 0.0002;
 const MAX_T = 6;
 const RECORD_EVERY = 25; // one point per 5 ms
-const ROLL = 5 / 7; // a rolling ball accelerates at 5/7 of a sliding one
+const WALL_BOUNCE = 0.3; // restitution off the cup wall below the lip
+const MAX_HOP = 0.12; // inches: the most a lip contact can pop the ball above the green
 
 /** Ball speed at the hole for a putt that would roll `feet` past it. */
 export function speedForOverrun(feet: number): number {
@@ -69,146 +72,199 @@ export function speedForOverrun(feet: number): number {
 
 export function simulate(p: SimParams): SimResult {
   const captureDepth = p.captureDepth ?? DEFAULT_CAPTURE_DEPTH;
-  const rimLoss = p.rimLoss ?? 0.7;
-  const pinR = p.pin.diameter / 2;
-  const contactR = pinR + BALL_RADIUS;
+  const lipBounce = p.lipBounce ?? DEFAULT_LIP_BOUNCE;
+  const spinGrip = p.spinGrip ?? DEFAULT_SPIN_GRIP;
+  const R = CUP_RADIUS;
   const r = BALL_RADIUS;
+  const pinR = p.pin.diameter / 2;
+  const contactR = pinR + r;
 
+  // Full 3D point-ball model. Z is the height of the ball's centre above the
+  // green surface, so a ball resting on the green has Z = r. The cup's edge is
+  // a ring of radius R at Z = 0: the ball rolls over it, pivots on it, and
+  // bounces off it along the line from the contact point to its centre. That
+  // is what turns a ball that catches the lip, sometimes sharply.
   let x = p.offset;
   let y = START_Y;
-  let z = 0;
+  let Z = r;
+  let vx = 0;
   let vz = 0;
   // Back-solve the starting speed so the ball arrives at the cup at p.speed
-  const runUp = -Math.sqrt(Math.max(CUP_RADIUS ** 2 - x * x, 0)) - START_Y;
-  let vx = 0;
+  const runUp = -Math.sqrt(Math.max(R * R - x * x, 0)) - START_Y;
   let vy = Math.sqrt(p.speed ** 2 + 2 * GREEN_DECEL * Math.max(runUp, 0));
 
-  // green: rolling on the surface. edge: centre over the hole, ball pivoting
-  // on the lip. air: falling free inside the cup.
-  let phase: 'green' | 'edge' | 'air' = 'green';
+  // Topspin axis, fixed by the direction the ball was rolling on the green
+  let spinX = 0;
+  let spinY = 1;
   let hitPin = false;
+  let touchedLip = false;
+  let overCup = false;
   let exit: Exit | null = null;
   const path: PathPoint[] = [];
   const done = (made: boolean): SimResult => {
-    if (p.record) path.push({ x, y, z });
+    if (p.record) path.push({ x, y, z: Z - r });
     return { made, hitPin, exit: made ? null : exit, path };
   };
 
   for (let step = 0, t = 0; t < MAX_T; step++, t += DT) {
-    if (p.record && step % RECORD_EVERY === 0) path.push({ x, y, z });
+    if (p.record && step % RECORD_EVERY === 0) path.push({ x, y, z: Z - r });
 
-    if (phase !== 'air') {
+    const d0 = Math.hypot(x, y);
+    const onGreen = d0 >= R && Z <= r + 1e-4;
+    if (onGreen) {
+      // Rolling on the green: constant deceleration, no vertical motion
       const sp = Math.hypot(vx, vy);
       if (sp <= GREEN_DECEL * DT) break; // stopped
+      spinX = vx / sp;
+      spinY = vy / sp;
       const k = (sp - GREEN_DECEL * DT) / sp;
       vx *= k;
       vy *= k;
-    }
-
-    if (phase === 'green') {
-      x += vx * DT;
-      y += vy * DT;
-      if (Math.hypot(x, y) < CUP_RADIUS) phase = 'edge';
-      if (y > 90 || Math.abs(x) > 90) break;
-      continue;
-    }
-
-    if (phase === 'edge') {
-      // The ball pivots on the lip at the point nearest its centre. Gravity's
-      // torque about that point pulls it toward the middle of the hole, which
-      // bends a glancing ball's path around the edge.
-      const d = Math.hypot(x, y);
-      const s = CUP_RADIUS - d; // how far the centre is inside the lip
-      const nx = x / d;
-      const ny = y / d;
-      if (s <= 0) {
-        // Back over the lip onto the green: a lip-out
-        phase = 'green';
-        z = 0;
-        exit = 'lip';
-        continue;
-      }
-      const sinT = Math.min(s / r, 0.999);
-      const cosT = Math.sqrt(1 - sinT * sinT);
-      const vIn = -(vx * nx + vy * ny); // speed toward the hole centre
-      // It leaves the lip once the edge can no longer hold it on its arc
-      if (sinT > 0.95 || (vIn > 0 && vIn * vIn >= G * r * cosT)) {
-        phase = 'air';
-        vz = -vIn * (sinT / cosT);
-        continue;
-      }
-      const aIn = ROLL * G * sinT * cosT;
-      vx -= nx * aIn * DT;
-      vy -= ny * aIn * DT;
-      x += vx * DT;
-      y += vy * DT;
-      z = r * cosT - r;
-      continue;
-    }
-
-    // In the air over the cup: free fall, straight-line horizontal motion
-    vz -= G * DT;
-    z += vz * DT;
-    if (z <= -captureDepth) return done(true);
-
-    const d = Math.hypot(x, y);
-    if (pinR > 0 && d <= contactR && vx * x + vy * y < 0) {
-      hitPin = true;
-      const nx = x / d;
-      const ny = y / d;
-      const vn = vx * nx + vy * ny;
-      const tx = vx - vn * nx;
-      const ty = vy - vn * ny;
-      const keep = 1 - p.pin.tangentialLoss;
-      const e = Math.min(
-        0.95,
-        p.pin.softSpeed ? p.pin.restitution / (1 + Math.abs(vn) / p.pin.softSpeed) : p.pin.restitution,
-      );
-      vx = tx * keep - e * vn * nx;
-      vy = ty * keep - e * vn * ny;
-      x = nx * contactR;
-      y = ny * contactR;
+      if (vz < 0) vz = 0;
+    } else {
+      vz -= G * DT;
     }
 
     x += vx * DT;
     y += vy * DT;
+    Z += vz * DT;
+    if (y > 90 || Math.abs(x) > 90) break;
 
-    if (Math.hypot(x, y) >= CUP_RADIUS && vx * x + vy * y > 0) {
-      // At the far wall. It escapes only if, after the rim takes its share, it
-      // still has the energy to lift its centre back up by the drop so far.
-      const vh2 = (vx * vx + vy * vy) * rimLoss * rimLoss;
-      if (vh2 < 2 * G * -z) {
-        z = -captureDepth;
-        return done(true);
+    const d = Math.hypot(x, y) || 1e-9;
+    const ux = x / d;
+    const uy = y / d;
+
+    if (d < R) {
+      overCup = true;
+      if (Z - r <= -captureDepth) return done(true);
+    }
+
+    // Cup wall below the lip keeps a dropped ball inside
+    if (Z < 0 && d > R - r) {
+      x = ux * (R - r);
+      y = uy * (R - r);
+      const vr = vx * ux + vy * uy;
+      if (vr > 0) {
+        vx -= (1 + WALL_BOUNCE) * vr * ux;
+        vy -= (1 + WALL_BOUNCE) * vr * uy;
       }
-      phase = 'green';
-      exit = 'back';
-      z = 0;
-      vx *= rimLoss;
-      vy *= rimLoss;
+    }
+
+    // The lip: nearest point of the rim ring to the ball's centre
+    const ex = ux * R;
+    const ey = uy * R;
+    const Dx = x - ex;
+    const Dy = y - ey;
+    const dist = Math.hypot(Dx, Dy, Z);
+    if (dist < r && Z > -r) {
+      const nx = Dx / dist;
+      const ny = Dy / dist;
+      const nz = Z / dist;
+      x = ex + nx * r;
+      y = ey + ny * r;
+      Z = nz * r;
+      const vn = vx * nx + vy * ny + vz * nz;
+      // Topspin only drives the ball into the lip it is rolling toward; after a
+      // bounce back across the cup the same spin is backspin and holds it in.
+      const fx = spinX;
+      const fy = spinY;
+      const rollingOut = fx * ux + fy * uy > 0 && vx * fx + vy * fy > 0;
+      if (vn < 0) {
+        const j = (1 + lipBounce) * vn;
+        vx -= j * nx;
+        vy -= j * ny;
+        vz -= j * nz;
+        touchedLip = true;
+        // Topspin: a ball rolling into the lip grips it and climbs over it in
+        // the direction it was travelling. This is what pops firm putts out.
+        if (rollingOut) {
+          const fn = fx * nx + fy * ny; // travel direction projected onto the contact surface
+          const tx = fx - fn * nx;
+          const ty = fy - fn * ny;
+          const tz = -fn * nz;
+          const tl = Math.hypot(tx, ty, tz);
+          if (tl > 1e-6 && tz > 0) {
+            // Grip works when the ball meets the lip high (contact under it). A
+            // ball that has already sunk meets the wall side-on and stays in.
+            const climb = (spinGrip * -vn * nz * nz) / tl;
+            vx += climb * tx;
+            vy += climb * ty;
+            vz += climb * tz;
+          }
+        }
+        // A putt never leaves the ground off the lip: it climbs only as far as
+        // the green plus a small hop. The rest of the kick goes sideways, in
+        // the direction the lip shoves it, which is what makes a lip-out turn.
+        const vzMax = Math.sqrt(2 * G * Math.max(r - Z + MAX_HOP, 0));
+        if (vz > vzMax) {
+          const excess = vz - vzMax;
+          vz = vzMax;
+          const hl = Math.hypot(nx, ny);
+          if (hl > 1e-6) {
+            vx += (excess * nx) / hl;
+            vy += (excess * ny) / hl;
+          }
+        }
+      }
+    } else if (Math.hypot(x, y) >= R && Z < r) {
+      // Beyond the lip the green carries the ball
+      Z = r;
+      if (vz < 0) vz = 0;
+    }
+
+    // Flagstick: a vertical cylinder at the centre of the cup
+    if (pinR > 0) {
+      const dp = Math.hypot(x, y);
+      if (dp <= contactR && vx * x + vy * y < 0) {
+        hitPin = true;
+        const nx = x / dp;
+        const ny = y / dp;
+        const vn = vx * nx + vy * ny;
+        const tx = vx - vn * nx;
+        const ty = vy - vn * ny;
+        const keep = 1 - p.pin.tangentialLoss;
+        const e = Math.min(
+          0.95,
+          p.pin.softSpeed ? p.pin.restitution / (1 + Math.abs(vn) / p.pin.softSpeed) : p.pin.restitution,
+        );
+        vx = tx * keep - e * vn * nx;
+        vy = ty * keep - e * vn * ny;
+        x = nx * contactR;
+        y = ny * contactR;
+      }
+    }
+
+    // Back out on the green after being over the cup: classify how it left
+    if (overCup && exit === null && Math.hypot(x, y) > R + r && Z >= r - 1e-4) {
+      const turn = Math.abs(Math.atan2(vx, vy)) * (180 / Math.PI);
+      exit = touchedLip && turn > 12 ? 'lip' : 'back';
     }
   }
 
   return done(false);
 }
 
+export const DEFAULT_LIP_BOUNCE = 0.35;
+let DEFAULT_SPIN_GRIP = 0; // set once spinGripFor is defined, below
+
+/** A ball this far below rest is inside the cup's walls and cannot get out. */
+export const DEFAULT_CAPTURE_DEPTH = 1.6;
+
 /**
- * Drop needed to hold the ball, chosen so a dead-centre putt with the pin out
- * stays in up to `limitFeet` of overrun (Mase: in at 8 ft, out at 9+).
+ * Spin grip chosen so a dead-centre putt with the pin out stays in up to
+ * `limitFeet` of overrun and pops out beyond it (Mase: in at 8 ft, out at 9+).
  */
-export function captureDepthFor(limitFeet = 8.5): number {
+export function spinGripFor(limitFeet = 8.5): number {
   const speed = speedForOverrun(limitFeet);
-  let lo = 0.05;
-  let hi = 3;
-  for (let i = 0; i < 30; i++) {
+  let lo = 0;
+  let hi = 12;
+  for (let i = 0; i < 34; i++) {
     const mid = (lo + hi) / 2;
-    if (simulate({ offset: 0, speed, pin: PINS[0], captureDepth: mid }).made) lo = mid;
+    if (simulate({ offset: 0, speed, pin: PINS[0], spinGrip: mid }).made) lo = mid;
     else hi = mid;
   }
-  return lo;
+  return hi;
 }
-
-export const DEFAULT_CAPTURE_DEPTH = captureDepthFor();
 
 /** Deterministic PRNG so batches are reproducible in tests. */
 export function mulberry32(seed: number): () => number {
@@ -277,3 +333,6 @@ export const MASE_OFF_CENTER: Record<string, number> = {
   tapered: 32 / 90,
   dual: 34 / 90,
 };
+
+DEFAULT_SPIN_GRIP = spinGripFor();
+export { DEFAULT_SPIN_GRIP };
