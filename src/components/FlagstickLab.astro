@@ -45,6 +45,7 @@ import { PINS } from '../lib/flagstick';
       <canvas class="fsl-cup"></canvas>
       <div class="fsl-hint">drag to orbit</div>
       <div class="fsl-outcome" aria-live="polite"></div>
+      <div class="fsl-speed"></div>
     </div>
     <div class="fsl-pane">
       <div class="fsl-pane-title">Where the ball crosses the cup</div>
@@ -257,6 +258,22 @@ import { PINS } from '../lib/flagstick';
     transition: opacity 0.25s, transform 0.25s;
   }
   .fsl-outcome.show { opacity: 1; transform: none; }
+  .fsl-speed {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    font-size: var(--fsl-small);
+    font-weight: 500;
+    color: var(--color-ink-3);
+    background: rgba(255, 255, 255, 0.78);
+    border-radius: 5px;
+    padding: 2px 7px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .fsl-speed.show { opacity: 1; }
+  .fsl-speed.slow { color: var(--color-ink); background: rgba(255, 255, 255, 0.92); }
 
   .fsl-controls {
     padding: 14px 16px;
@@ -795,6 +812,7 @@ function initLab(root: HTMLElement): void {
   const cup = root.querySelector<HTMLCanvasElement>('.fsl-cup')!;
   const chart = root.querySelector<HTMLCanvasElement>('.fsl-chart')!;
   const outcomeEl = root.querySelector<HTMLElement>('.fsl-outcome')!;
+  const speedEl = root.querySelector<HTMLElement>('.fsl-speed')!;
   const offsetIn = root.querySelector<HTMLInputElement>('.fsl-offset')!;
   const overrunIn = root.querySelector<HTMLInputElement>('.fsl-overrun')!;
   const offsetVal = root.querySelector<HTMLElement>('.fsl-offset-val')!;
@@ -1237,6 +1255,24 @@ function initLab(root: HTMLElement): void {
     const path = r.made ? settle(r.path) : withRest(r.path);
     const prev = ballWorld(path[0], new THREE.Vector3());
     flyers.push({ pin: p, line, path, made: r.made, hitPin: r.hitPin, exit: r.exit, start: now, q: startQ.clone(), prev });
+  }
+
+  /** Tell readers when they are watching slow motion and when real speed. */
+  let speedText = '';
+  function updateSpeedLabel() {
+    let text = '';
+    if (shot) {
+      const p = shot.path[shotIndex];
+      const slow = Math.hypot(p.x, p.y) < 9; // matches the slow-motion zone in timeline()
+      text = slow ? 'Slow motion · ⅕ speed' : 'Real speed';
+    } else if (queue.length || flyers.length) {
+      text = 'Real speed';
+    }
+    if (text === speedText) return;
+    speedText = text;
+    if (text) speedEl.textContent = text;
+    speedEl.classList.toggle('show', !!text);
+    speedEl.classList.toggle('slow', text.startsWith('Slow'));
   }
 
   function stepShot(now: number) {
@@ -1715,6 +1751,7 @@ function initLab(root: HTMLElement): void {
     lastNow = now;
     stepBatch(now, dt);
     stepShot(now);
+    updateSpeedLabel();
     if (tableDirty) { renderTable(); tableDirty = false; }
     controls.update();
     const camDist = camera.position.length(); // the cup is at the origin
