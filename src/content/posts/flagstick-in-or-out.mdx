@@ -1,0 +1,79 @@
+---
+title: "Flagstick In or Out? What Happens When a Putt Hits the Pin"
+seoTitle: "Should You Leave the Flagstick In? The Physics of Putting With the Pin"
+description: "Since 2019 golfers can putt with the flagstick in. A Cal Poly engineer tested what that does to a putt, and the answer is clear: pull it. Here is the physics, and a simulator you can putt with."
+topic: golf
+postLayout: longform
+ogMotif: golf-arc
+tags: [golf, putting, physics, flagstick, monte-carlo]
+publishedAt: 2026-10-03
+published: true
+---
+
+import FlagstickLab from '../../components/FlagstickLab.astro';
+
+In 2019 the [Rules of Golf](https://www.usga.org/content/dam/usga/images/rules/rules-modernization/golf-new-rules/Rules%20of%20Golf%20for%202019%20(Final).pdf) stopped penalizing a putt that hits the flagstick (Rule 13.2a). Is the pin a backstop or an obstacle? Golf Digest asked Cal Poly engineer Tom Mase to find out.
+
+Each putt below starts 2.5 feet out and is paced to roll 4.5 feet past if it misses, matching his test. Hit one to watch it in slow motion, or run a thousand and watch the make rate fill in across the cup.
+
+<FlagstickLab />
+
+- **Cup view:** drag to orbit. Each miss is labeled: lipped out, over the back edge, or off the stick.
+- **Chart:** the cup as the ball sees it. Each dot is a putt, holed (top) or missed (bottom), at the point it crossed the cup.
+- **Bars:** simulated glancing-blow make rate against Mase's measurements.
+
+---
+
+## The experiment
+
+Mase rolled putts off a Perfect Putter ramp set 2.5 feet from the hole, so every putt left at the same speed. He varied:
+
+- **The flagstick:** none, fiberglass, tapered aluminum, dual-diameter aluminum.
+- **Contact:** dead center, or a glancing blow off the side.
+- **Pace:** enough to roll 2.5, 4.5, 8, 9, or 10+ feet past if it missed. A "4.5-foot putt" means that pace, not that distance.
+
+---
+
+## What he found
+
+**Dead center, the pin barely matters.** Every putt dropped at 2.5, 4.5, and 8 feet of pace, pin in or out. The stick only saved putts struck hard enough to roll 9+ feet past.
+
+**Glancing blows, the pin knocks the ball out.** Only about 28% of pin strikes are dead center. At 4.5 feet of pace, off-center contact:
+
+| Flagstick | Holed |
+|---|---|
+| Pin out | 81/90 (90%) |
+| Fiberglass | 55/90 (61%) |
+| Tapered aluminum | 32/90 (36%) |
+| Dual-diameter aluminum | 34/90 (38%) |
+
+A glancing blow sends the ball sideways, the shortest way out of a 4.25-inch cup, before it has dropped far enough to stay in. Stiff aluminum kicks it harder than flexible fiberglass.
+
+---
+
+## About the simulator
+
+The physics is simple: the ball rolls, pivots on the lip, falls, and bounces off a cylinder. Two values are tuned to Mase's data: how far the ball must drop to stay in, and each stick's diameter and bounce. His dead-center results then fall out on their own. The model holes every pin-out putt on those lines where Mase holed 90%, likely rig noise (his rounds went 22, 29, then 30 of 30).
+
+---
+
+## Where 99.9% comes from
+
+The pin helps only on a dead-center hit (about 28% of pin strikes) from a putt struck to roll 9+ feet past (under 1% of putts). Multiply those out and the stick saves roughly one putt in a thousand.
+
+A separate test with college golfers found no real difference in distance control with the pin in, though players putted a bit more boldly with it.
+
+---
+
+## Verdict
+
+Pull the flagstick. Dead-center putts drop either way. Glancing ones drop about half as often with the stick in.
+
+<div class="post-references">
+
+## Sources
+
+- Golf Digest. "The science behind why the flagstick should be pulled 99.9 percent of the time." [Golf Digest](https://www.golfdigest.com/story/the-science-behind-why-the-flagstick-should-be-pulled-999-percent-of-the-time) · [Australian Golf Digest reprint](https://www.australiangolfdigest.com.au/the-science-behind-why-the-flagstick-should-be-pulled-99-9-percent-of-the-time/)
+- USGA and R&A. *The Rules of Golf* (2019), Rule 13.2a: the flagstick. [USGA (PDF)](https://www.usga.org/content/dam/usga/images/rules/rules-modernization/golf-new-rules/Rules%20of%20Golf%20for%202019%20(Final).pdf)
+
+</div>

@@ -1,0 +1,1431 @@
+---
+// No props — self-contained. Physics lives in src/lib/flagstick.ts
+import { PINS } from '../lib/flagstick';
+---
+
+<div class="fsl">
+  <div class="fsl-body">
+    <div class="fsl-pane">
+      <div class="fsl-pane-title">The cup</div>
+      <canvas class="fsl-cup"></canvas>
+      <div class="fsl-hint">drag to orbit</div>
+      <div class="fsl-outcome" aria-live="polite"></div>
+    </div>
+    <div class="fsl-pane">
+      <div class="fsl-pane-title">Where the ball crosses the cup</div>
+      <canvas class="fsl-chart"></canvas>
+      <div class="fsl-verdict">
+        <div class="fsl-verdict-head">
+          <span>Glancing blows holed</span>
+          <span class="fsl-verdict-key"><i class="fsl-key-bar"></i>model <i class="fsl-key-mase"></i>Mase, 90 putts</span>
+        </div>
+        <div class="fsl-verdict-rows"></div>
+        <div class="fsl-verdict-note">Mase measured at 4.5 ft past. Set pace to 4.5 to compare.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fsl-controls">
+    <div class="fsl-pins" role="radiogroup" aria-label="Flagstick">
+      {PINS.map((p, i) => (
+        <button class:list={['fsl-pin', { active: i === 0 }]} data-pin={p.id} role="radio" aria-checked={i === 0 ? 'true' : 'false'}>
+          <span class="fsl-swatch" data-pin={p.id}></span>{p.label}
+        </button>
+      ))}
+    </div>
+
+    <div class="fsl-sliders">
+      <label class="fsl-slider">
+        <span class="fsl-slider-head">
+          <span>Line</span>
+          <span class="fsl-offset-val">0.60 in right of center</span>
+        </span>
+        <input type="range" class="fsl-offset" min="0" max="2.1" step="0.01" value="0.6" />
+      </label>
+      <label class="fsl-slider">
+        <span class="fsl-slider-head">
+          <span>Pace</span>
+          <span class="fsl-overrun-val">would roll 4.5 ft past</span>
+        </span>
+        <input type="range" class="fsl-overrun" min="1" max="12" step="0.5" value="4.5" />
+      </label>
+    </div>
+
+    <div class="fsl-actions">
+      <button class="fsl-btn fsl-btn-primary" data-action="one">Hit one</button>
+      <button class="fsl-btn" data-action="100">Run 100</button>
+      <button class="fsl-btn" data-action="1000">Run 1,000</button>
+      <button class="fsl-btn" data-action="all">Run all pins</button>
+      <button class="fsl-btn fsl-btn-quiet" data-action="clear">Clear</button>
+    </div>
+  </div>
+
+  <table class="fsl-table">
+    <thead>
+      <tr>
+        <th>Flagstick</th>
+        <th>Putts</th>
+        <th>Holed</th>
+        <th title="Lines that strike the stick off-center">Glancing holed</th>
+        <th title="Tom Mase, 90 putts at 4.5 ft past">Mase measured</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <details class="fsl-tune">
+    <summary>Model tuning</summary>
+    <div class="fsl-tune-grid">
+      <label>Pin diameter <span data-out="diameter"></span><input type="range" data-tune="diameter" min="0.3" max="1.2" step="0.05" /></label>
+      <label>Bounce (gentle) <span data-out="restitution"></span><input type="range" data-tune="restitution" min="0" max="1" step="0.05" /></label>
+      <label>Bounce falloff speed <span data-out="softSpeed"></span><input type="range" data-tune="softSpeed" min="10" max="200" step="5" /></label>
+      <label>Glancing loss <span data-out="tangentialLoss"></span><input type="range" data-tune="tangentialLoss" min="0" max="0.6" step="0.05" /></label>
+      <label>Rim speed kept <span data-out="rimLoss"></span><input type="range" data-tune="rimLoss" min="0.3" max="1" step="0.05" /></label>
+      <label>Pin-out center limit <span data-out="captureFeet"></span><input type="range" data-tune="captureFeet" min="5" max="12" step="0.5" /></label>
+    </div>
+    <p class="fsl-tune-note">Pin settings apply to the selected stick and clear its results. Rim and limit settings apply to all sticks.</p>
+  </details>
+</div>
+
+<style>
+  /* Type scale: 11px for labels, captions and chart annotations (overlines
+     at 500 / 0.06em, like .post-topic); 13px for all controls and data. */
+  .fsl {
+    --fsl-small: 11px;
+    --fsl-ui: 13px;
+    --fsl-track: 0.06em;
+    border: 0.5px solid var(--color-border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 2rem 0;
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+    background: var(--color-panel);
+  }
+
+  .fsl-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    border-bottom: 0.5px solid var(--color-border);
+  }
+  .fsl-pane {
+    position: relative;
+    min-width: 0;
+  }
+  .fsl-pane + .fsl-pane { border-left: 0.5px solid var(--color-border); }
+  .fsl-pane-title {
+    position: absolute;
+    top: 10px;
+    left: 14px;
+    font-size: var(--fsl-small);
+    font-weight: 500;
+    letter-spacing: var(--fsl-track);
+    text-transform: uppercase;
+    color: var(--color-ink-5);
+    pointer-events: none;
+  }
+  .fsl-cup,
+  .fsl-chart {
+    display: block;
+    width: 100%;
+    height: 420px;
+  }
+  .fsl-chart { height: 300px; }
+
+  .fsl-verdict {
+    padding: 10px 14px 12px;
+    border-top: 0.5px solid var(--color-border-soft);
+  }
+  .fsl-verdict-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: var(--fsl-small);
+    font-weight: 500;
+    letter-spacing: var(--fsl-track);
+    text-transform: uppercase;
+    color: var(--color-ink-5);
+    margin-bottom: 6px;
+  }
+  .fsl-verdict-key {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .fsl-key-bar {
+    display: inline-block;
+    width: 14px;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--color-ink-4);
+  }
+  .fsl-key-mase {
+    display: inline-block;
+    width: 2px;
+    height: 11px;
+    margin-left: 8px;
+    background: #c0645a;
+  }
+  .fsl-verdict-rows :global(.fsl-vrow) {
+    display: grid;
+    grid-template-columns: 172px 1fr 74px;
+    white-space: nowrap;
+    align-items: center;
+    gap: 10px;
+    height: 21px;
+    font-size: var(--fsl-ui);
+    color: var(--color-ink-3);
+  }
+  .fsl-verdict-rows :global(.fsl-vrow.active) { color: var(--color-ink); font-weight: 500; }
+  .fsl-verdict-rows :global(.fsl-swatch) { display: inline-block; margin-right: 8px; }
+  .fsl-verdict-rows :global(.fsl-vtrack) {
+    position: relative;
+    height: 7px;
+    border-radius: 4px;
+    background: var(--color-tag-bg);
+  }
+  .fsl-verdict-rows :global(.fsl-vbar) {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 0;
+    border-radius: 4px;
+    transition: width 0.5s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  .fsl-verdict-rows :global(.fsl-vmase) {
+    position: absolute;
+    top: -3px;
+    bottom: -3px;
+    width: 2px;
+    margin-left: -1px;
+    background: #c0645a;
+    transition: opacity 0.3s;
+  }
+  .fsl-verdict-rows :global(.fsl-vval) {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .fsl-verdict-note {
+    margin-top: 4px;
+    font-size: var(--fsl-small);
+    color: var(--color-ink-5);
+    min-height: 15px;
+    transition: opacity 0.3s;
+  }
+  .fsl-cup { cursor: grab; touch-action: pan-y; }
+  .fsl-cup:active { cursor: grabbing; }
+  .fsl-hint {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    font-size: var(--fsl-small);
+    color: var(--color-ink-3);
+    background: rgba(255, 255, 255, 0.78);
+    border-radius: 5px;
+    padding: 2px 7px;
+    pointer-events: none;
+  }
+  .fsl-pane:first-child .fsl-pane-title {
+    top: 8px;
+    left: 12px;
+    color: var(--color-ink-3);
+    background: rgba(255, 255, 255, 0.78);
+    border-radius: 5px;
+    padding: 2px 7px;
+    z-index: 1;
+  }
+  .fsl-outcome {
+    position: absolute;
+    left: 14px;
+    bottom: 12px;
+    font-size: var(--fsl-ui);
+    font-weight: 500;
+    color: var(--color-ink);
+    background: rgba(255, 255, 255, 0.85);
+    border-radius: 6px;
+    padding: 4px 10px;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.25s, transform 0.25s;
+  }
+  .fsl-outcome.show { opacity: 1; transform: none; }
+
+  .fsl-controls {
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    border-bottom: 0.5px solid var(--color-border);
+  }
+  .fsl-pins {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .fsl-pin {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-family: var(--font-sans);
+    font-size: var(--fsl-ui);
+    padding: 5px 11px;
+    border-radius: 6px;
+    border: 0.5px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-ink-3);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .fsl-pin.active {
+    background: var(--color-ink);
+    border-color: var(--color-ink);
+    color: var(--color-panel);
+  }
+  .fsl :global(.fsl-swatch) {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .fsl-pin.active .fsl-swatch { box-shadow: 0 0 0 1.5px var(--color-panel); }
+
+  .fsl-sliders {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+  .fsl-slider {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .fsl-slider-head {
+    display: flex;
+    justify-content: space-between;
+    font-size: var(--fsl-ui);
+    color: var(--color-ink-4);
+  }
+  .fsl-slider-head span:last-child {
+    color: var(--color-ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .fsl input[type='range'] {
+    width: 100%;
+    accent-color: var(--color-ink);
+  }
+
+  .fsl-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .fsl-btn {
+    font-family: var(--font-sans);
+    font-size: var(--fsl-ui);
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: 0.5px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-ink-2);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .fsl-btn:hover { background: var(--color-tag-bg); }
+  .fsl-btn:disabled { opacity: 0.45; cursor: default; }
+  .fsl-btn-primary {
+    background: var(--color-ink);
+    border-color: var(--color-ink);
+    color: var(--color-panel);
+  }
+  .fsl-btn-primary:hover { background: var(--color-ink-2); }
+  .fsl-btn-quiet {
+    margin-left: auto;
+    background: none;
+    color: var(--color-ink-5);
+  }
+
+  /* Selectors carry .fsl so they outrank the global .prose table styles */
+  .fsl .fsl-table {
+    width: 100%;
+    margin: 0;
+    border-collapse: collapse;
+    font-size: var(--fsl-ui);
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+  }
+  .fsl .fsl-table th {
+    font-family: var(--font-sans);
+    text-align: right;
+    font-weight: 500;
+    font-size: var(--fsl-small);
+    letter-spacing: var(--fsl-track);
+    text-transform: uppercase;
+    color: var(--color-ink-5);
+    background: none;
+    border: none;
+    padding: 10px 16px 6px;
+  }
+  .fsl .fsl-table :global(td) {
+    font-family: var(--font-sans);
+    font-size: var(--fsl-ui);
+    font-weight: 400;
+    letter-spacing: normal;
+    text-transform: none;
+    text-align: right;
+    background: none;
+    border: none;
+    border-top: 0.5px solid var(--color-border-soft);
+    padding: 7px 16px;
+    color: var(--color-ink-3);
+  }
+  .fsl .fsl-table th:first-child,
+  .fsl .fsl-table :global(td:first-child) { text-align: left; }
+  .fsl .fsl-table :global(tr.active td) { color: var(--color-ink); font-weight: 500; }
+  .fsl .fsl-table :global(tbody tr) { cursor: pointer; }
+  .fsl .fsl-table :global(tbody tr:hover td) { background: var(--color-hover-bg); }
+  .fsl .fsl-table :global(.fsl-swatch) {
+    display: inline-block;
+    margin-right: 8px;
+  }
+
+  .fsl-tune {
+    border-top: 0.5px solid var(--color-border);
+    padding: 10px 16px;
+    font-size: var(--fsl-ui);
+    color: var(--color-ink-4);
+  }
+  .fsl-tune summary { cursor: pointer; }
+  .fsl-tune-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px 18px;
+    margin-top: 10px;
+  }
+  .fsl-tune-grid label {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .fsl-tune-grid span { color: var(--color-ink-2); font-variant-numeric: tabular-nums; }
+  .fsl-tune-note { margin: 8px 0 2px; font-size: var(--fsl-small); color: var(--color-ink-5); }
+
+  @media (max-width: 720px) {
+    .fsl-body { grid-template-columns: 1fr; }
+    .fsl-pane + .fsl-pane { border-left: none; border-top: 0.5px solid var(--color-border); }
+    .fsl-cup { height: 340px; }
+    .fsl-chart { height: 290px; }
+    .fsl-verdict-rows :global(.fsl-vrow) { grid-template-columns: 150px 1fr 66px; }
+    .fsl-verdict-rows :global(.fsl-vrow > span:first-child) { overflow: hidden; text-overflow: ellipsis; }
+    .fsl-sliders { grid-template-columns: 1fr; }
+    .fsl-tune-grid { grid-template-columns: 1fr 1fr; }
+    .fsl .fsl-table th, .fsl .fsl-table :global(td) { padding-left: 10px; padding-right: 10px; }
+  }
+</style>
+
+<script>
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import {
+  PINS,
+  CUP_RADIUS,
+  BALL_RADIUS,
+  G,
+  simulate,
+  speedForOverrun,
+  captureDepthFor,
+  offCenterBand,
+  gaussian,
+  MASE_OFF_CENTER,
+  type Pin,
+  type PathPoint,
+  type Exit,
+} from '../lib/flagstick';
+
+const COLORS: Record<string, string> = {
+  out: '#1c1c1e',
+  fiberglass: '#5f8a6a',
+  tapered: '#6f86a8',
+  dual: '#b0875a',
+};
+const MISS = '#c0645a';
+const BIN = 0.125;
+const NBINS = Math.ceil(CUP_RADIUS / BIN);
+const SLOWMO = 0.2; // single putts play at 1/5 speed around the cup, real speed elsewhere
+const POINT_MS = 5; // simulate() records one point per 5 ms
+const MAX_TRAILS = 120;
+const BATCH_PLAYBACK = 1; // batch balls roll in real time
+const POOL = 240; // max batch balls in flight at once
+const REST_POINTS = 30; // a stopped ball lingers 150 ms before it is cleared
+const CUP_DEPTH = 4;
+const ADDRESS_Z = 30; // ball starts where Mase's ramp sat, 2.5 ft out (lib START_Y)
+const EASE = 0.14; // per-frame approach for chart tweens
+
+interface Sample { a: number; x: number; made: boolean; born: number }
+interface Shot {
+  pin: Pin;
+  line: number;
+  path: PathPoint[];
+  times?: number[]; // playback time of each path point, ms
+  made: boolean;
+  hitPin: boolean;
+  exit: Exit | null;
+  start: number;
+}
+interface Flyer extends Shot { q: THREE.Quaternion; prev: THREE.Vector3 }
+
+// Physics frame (x right, y toward the hole, z drop) to world (y up, -z forward)
+function ballWorld(p: PathPoint, out: THREE.Vector3): THREE.Vector3 {
+  let { x, y } = p;
+  // Once below the rim, keep the drawn ball inside the cup wall
+  if (p.z < -0.3) {
+    const d = Math.hypot(x, y);
+    const max = CUP_RADIUS - BALL_RADIUS;
+    if (d > max) { x *= max / d; y *= max / d; }
+  }
+  return out.set(x, BALL_RADIUS + p.z, -y);
+}
+
+/** For holed putts, let the ball finish falling to the bottom of the cup. */
+function settle(path: PathPoint[]): PathPoint[] {
+  const out = path.slice();
+  const last = path[path.length - 1];
+  let z = last.z;
+  let vz = -Math.sqrt(2 * G * Math.max(0.01, -last.z));
+  const dt = POINT_MS / 1000;
+  while (z > -CUP_DEPTH) {
+    vz -= G * dt;
+    z = Math.max(-CUP_DEPTH, z + vz * dt);
+    out.push({ x: last.x, y: last.y, z });
+  }
+  for (let i = 0; i < 20; i++) out.push({ x: last.x, y: last.y, z }); // brief rest
+  return out;
+}
+
+/** Playback clock for a single putt: slow motion near the cup, real time elsewhere. */
+function timeline(path: PathPoint[]): number[] {
+  const t = [0];
+  for (let i = 1; i < path.length; i++) {
+    const d = Math.hypot(path[i].x, path[i].y);
+    const near = Math.min(1, Math.max(0, (9 - d) / 5)); // 1 within 4 in of centre, 0 beyond 9 in
+    const rate = 1 + (SLOWMO - 1) * near;
+    t.push(t[i - 1] + POINT_MS / rate);
+  }
+  return t;
+}
+
+function withRest(path: PathPoint[]): PathPoint[] {
+  const last = path[path.length - 1];
+  return path.concat(Array.from({ length: REST_POINTS }, () => ({ ...last })));
+}
+
+function canvasTexture(w: number, h: number, draw: (g: CanvasRenderingContext2D) => void, srgb = true) {
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  draw(c.getContext('2d')!);
+  const t = new THREE.CanvasTexture(c);
+  if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+/** Turf tile covering 40 in: two mowing stripes plus thousands of blade flecks. */
+function grassTexture(): THREE.CanvasTexture {
+  const S = 1024;
+  const t = canvasTexture(S, S, (g) => {
+    g.fillStyle = '#4a7a38';
+    g.fillRect(0, 0, S / 2, S);
+    g.fillStyle = '#578a43';
+    g.fillRect(S / 2, 0, S / 2, S);
+    for (let i = 0; i < 45000; i++) {
+      const x = Math.random() * S;
+      const y = Math.random() * S;
+      const len = 2 + Math.random() * 5;
+      const light = Math.random() < 0.5;
+      g.strokeStyle = light
+        ? `rgba(196,224,160,${0.05 + Math.random() * 0.12})`
+        : `rgba(32,62,26,${0.06 + Math.random() * 0.14})`;
+      g.lineWidth = 1;
+      g.beginPath();
+      g.moveTo(x, y);
+      g.lineTo(x + (Math.random() - 0.5) * 2, y - len);
+      g.stroke();
+    }
+  });
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(1 / 40, 1 / 40); // ShapeGeometry UVs are in inches
+  return t;
+}
+
+function soilTexture(): THREE.CanvasTexture {
+  const t = canvasTexture(512, 64, (g) => {
+    g.fillStyle = '#5b4632';
+    g.fillRect(0, 0, 512, 64);
+    for (let i = 0; i < 5000; i++) {
+      const v = Math.random();
+      g.fillStyle = v < 0.5 ? `rgba(30,20,12,${0.3 * Math.random()})` : `rgba(140,112,80,${0.3 * Math.random()})`;
+      g.fillRect(Math.random() * 512, Math.random() * 64, 1 + Math.random() * 2, 1 + Math.random() * 2);
+    }
+    // turf roots along the top edge
+    g.fillStyle = 'rgba(70,95,50,0.8)';
+    g.fillRect(0, 0, 512, 6);
+  });
+  t.wrapS = THREE.RepeatWrapping;
+  t.repeat.set(3, 1);
+  return t;
+}
+
+function ballColorTexture(): THREE.CanvasTexture {
+  // Alignment line around the ball so its roll is visible
+  return canvasTexture(1024, 512, (g) => {
+    g.fillStyle = '#f7f7f5';
+    g.fillRect(0, 0, 1024, 512);
+    g.fillStyle = '#222224';
+    g.fillRect(0, 248, 1024, 16);
+    g.fillRect(470, 90, 84, 26);
+  });
+}
+
+/** Height map of ~350 dimples in an equirectangular layout, used as a bump map. */
+function dimpleTexture(): THREE.CanvasTexture {
+  const W = 1024;
+  const H = 512;
+  const rows = 22;
+  return canvasTexture(W, H, (g) => {
+    g.fillStyle = 'rgb(150,150,150)';
+    g.fillRect(0, 0, W, H);
+    for (let j = 0; j < rows; j++) {
+      const v = (j + 0.5) / rows;
+      const lat = (v - 0.5) * Math.PI;
+      const c = Math.max(Math.cos(lat), 0.12);
+      const n = Math.max(3, Math.round(44 * Math.cos(lat)));
+      const ry = (H / rows) * 0.44;
+      const rx = Math.min(W / n * 0.44, ry / c);
+      for (let k = 0; k < n; k++) {
+        const x = ((k + (j % 2) * 0.5) / n) * W;
+        const y = v * H;
+        for (const dx of [-W, 0, W]) {
+          g.save();
+          g.translate(x + dx, y);
+          g.scale(rx / ry, 1);
+          const grad = g.createRadialGradient(0, 0, 0, 0, 0, ry);
+          grad.addColorStop(0, 'rgb(60,60,60)');
+          grad.addColorStop(0.75, 'rgb(120,120,120)');
+          grad.addColorStop(1, 'rgb(150,150,150)');
+          g.fillStyle = grad;
+          g.beginPath();
+          g.arc(0, 0, ry, 0, Math.PI * 2);
+          g.fill();
+          g.restore();
+        }
+      }
+    }
+  }, false);
+}
+
+function initLab(root: HTMLElement): void {
+  const cup = root.querySelector<HTMLCanvasElement>('.fsl-cup')!;
+  const chart = root.querySelector<HTMLCanvasElement>('.fsl-chart')!;
+  const outcomeEl = root.querySelector<HTMLElement>('.fsl-outcome')!;
+  const offsetIn = root.querySelector<HTMLInputElement>('.fsl-offset')!;
+  const overrunIn = root.querySelector<HTMLInputElement>('.fsl-overrun')!;
+  const offsetVal = root.querySelector<HTMLElement>('.fsl-offset-val')!;
+  const overrunVal = root.querySelector<HTMLElement>('.fsl-overrun-val')!;
+  const tbody = root.querySelector<HTMLElement>('.fsl-table tbody')!;
+  const pinBtns = [...root.querySelectorAll<HTMLButtonElement>('.fsl-pin')];
+  const actionBtns = [...root.querySelectorAll<HTMLButtonElement>('[data-action]')];
+
+  root.querySelectorAll<HTMLElement>('.fsl-swatch').forEach((s) => {
+    s.style.background = COLORS[s.dataset.pin!];
+  });
+
+  // ── State ──────────────────────────────────────────────────────────────
+  const pins: Pin[] = PINS.map((p) => ({ ...p }));
+  let pin = pins[0];
+  const model = { rimLoss: 0.7, captureFeet: 8.5 };
+  let captureDepth = captureDepthFor(model.captureFeet);
+  const samples: Record<string, Sample[]> = Object.fromEntries(pins.map((p) => [p.id, []]));
+  let shot: Shot | null = null;
+  let queue: Pin[] = []; // one entry per pending simulated putt
+
+  const offset = () => parseFloat(offsetIn.value);
+  const overrun = () => parseFloat(overrunIn.value);
+
+  // ── 3D scene ───────────────────────────────────────────────────────────
+  const renderer = new THREE.WebGLRenderer({ canvas: cup, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.0;
+
+  const scene = new THREE.Scene();
+  const BG = 0xdfe6dc;
+  scene.background = new THREE.Color(BG);
+  scene.fog = new THREE.Fog(BG, 140, 380);
+  // Soft studio reflections on the ball and stick
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  scene.environmentIntensity = 0.55;
+
+  const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 600);
+  camera.position.set(12, 34, 70);
+  const controls = new OrbitControls(camera, cup);
+  controls.target.set(0, -1, 9);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.enableZoom = false;
+  controls.enablePan = false;
+  controls.minPolarAngle = 0.12;
+  controls.maxPolarAngle = 1.42;
+  controls.update();
+
+  scene.add(new THREE.HemisphereLight(0xf4f8ff, 0x55704a, 0.7));
+  const sun = new THREE.DirectionalLight(0xfff6e8, 2.6);
+  sun.position.set(-30, 70, 20);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  Object.assign(sun.shadow.camera, { left: -45, right: 45, top: 50, bottom: -65, near: 10, far: 200 });
+  sun.shadow.bias = -0.0004;
+  sun.shadow.normalBias = 0.02;
+  sun.shadow.radius = 3;
+  scene.add(sun);
+
+  // Green with a 4.25" hole cut through it
+  const greenShape = new THREE.Shape();
+  greenShape.moveTo(-160, -160);
+  greenShape.lineTo(160, -160);
+  greenShape.lineTo(160, 160);
+  greenShape.lineTo(-160, 160);
+  greenShape.closePath();
+  const hole = new THREE.Path();
+  hole.absarc(0, 0, CUP_RADIUS, 0, Math.PI * 2, true);
+  greenShape.holes.push(hole);
+  const green = new THREE.Mesh(
+    new THREE.ShapeGeometry(greenShape, 96),
+    (() => {
+      const map = grassTexture();
+      map.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      return new THREE.MeshStandardMaterial({ map, bumpMap: map, bumpScale: 0.6, roughness: 0.95 });
+    })(),
+  );
+  green.rotation.x = -Math.PI / 2;
+  green.receiveShadow = true;
+  green.castShadow = true; // shades the inside of the cup
+  scene.add(green);
+
+  // Cup: an inch of soil and turf root, then the white plastic liner, then the floor
+  const soilGeo = new THREE.CylinderGeometry(CUP_RADIUS, CUP_RADIUS, 1, 96, 1, true);
+  soilGeo.translate(0, -0.5, 0);
+  const soil = new THREE.Mesh(soilGeo, new THREE.MeshStandardMaterial({ map: soilTexture(), side: THREE.BackSide, roughness: 1 }));
+  soil.receiveShadow = true;
+  scene.add(soil);
+  const linerGeo = new THREE.CylinderGeometry(CUP_RADIUS, CUP_RADIUS, CUP_DEPTH - 1, 96, 1, true);
+  linerGeo.translate(0, -1 - (CUP_DEPTH - 1) / 2, 0);
+  const liner = new THREE.Mesh(linerGeo, new THREE.MeshStandardMaterial({ color: 0xecece6, side: THREE.BackSide, roughness: 0.55 }));
+  liner.receiveShadow = true;
+  scene.add(liner);
+  const floor = new THREE.Mesh(
+    new THREE.RingGeometry(0.42, CUP_RADIUS, 96),
+    new THREE.MeshStandardMaterial({ color: 0xdedcd4, roughness: 0.6 }),
+  );
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.y = -CUP_DEPTH;
+  floor.receiveShadow = true;
+  scene.add(floor);
+  // Ferrule socket in the floor
+  const socket = new THREE.Mesh(new THREE.CircleGeometry(0.42, 48), new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 1 }));
+  socket.rotation.x = -Math.PI / 2;
+  socket.position.y = -CUP_DEPTH + 0.01;
+  scene.add(socket);
+
+  // Flagstick: unit cylinder scaled to the selected stick
+  const PIN_H = 120;
+  const pinMat = new THREE.MeshPhysicalMaterial({ roughness: 0.35, clearcoat: 0.6, clearcoatRoughness: 0.2 });
+  const pinMesh = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 1, 40), pinMat);
+  pinMesh.castShadow = true;
+  scene.add(pinMesh);
+  function syncPinMesh() {
+    pinMesh.visible = pin.diameter > 0;
+    const r = pin.diameter / 2;
+    pinMesh.scale.set(r, PIN_H, r);
+    pinMesh.position.y = PIN_H / 2 - CUP_DEPTH;
+    pinMat.color.set(COLORS[pin.id]);
+    pinMat.metalness = pin.id === 'fiberglass' ? 0 : 0.6;
+    pinMat.roughness = pin.id === 'fiberglass' ? 0.4 : 0.3;
+  }
+
+  // Ball
+  const ballGeo = new THREE.SphereGeometry(BALL_RADIUS, 48, 32);
+  const ballMat = new THREE.MeshPhysicalMaterial({
+    map: ballColorTexture(),
+    bumpMap: dimpleTexture(),
+    bumpScale: 1.2,
+    roughness: 0.42,
+    clearcoat: 1,
+    clearcoatRoughness: 0.12,
+  });
+  const ball = new THREE.Mesh(ballGeo, ballMat);
+  ball.castShadow = true;
+  ball.rotation.y = Math.PI / 2; // alignment line points down the target line
+  scene.add(ball);
+  const prevBall = new THREE.Vector3();
+  const tmpV = new THREE.Vector3();
+  const rollQ = new THREE.Quaternion();
+  const UP = new THREE.Vector3(0, 1, 0);
+
+  function placeAtAddress() {
+    ball.position.set(offset(), BALL_RADIUS, ADDRESS_Z);
+    prevBall.copy(ball.position);
+  }
+
+  const rollAxis = new THREE.Vector3();
+  /** Roll without slipping from prev to next: rotate about the horizontal axis normal to travel. */
+  function roll(q: THREE.Quaternion, prev: THREE.Vector3, next: THREE.Vector3) {
+    const dx = next.x - prev.x;
+    const dz = next.z - prev.z;
+    const dist = Math.hypot(dx, dz);
+    if (dist > 1e-5) {
+      rollAxis.set(dx, 0, dz).cross(UP).negate().normalize();
+      rollQ.setFromAxisAngle(rollAxis, dist / BALL_RADIUS);
+      q.premultiply(rollQ);
+    }
+    prev.copy(next);
+  }
+
+  function moveBall(p: PathPoint) {
+    ballWorld(p, tmpV);
+    roll(ball.quaternion, prevBall, tmpV);
+    ball.position.copy(tmpV);
+  }
+
+  // Batch balls: one instanced mesh, a fresh ball launched as fast as the rate allows
+  const pool = new THREE.InstancedMesh(ballGeo, ballMat, POOL);
+  pool.castShadow = true;
+  pool.count = 0;
+  pool.frustumCulled = false;
+  scene.add(pool);
+  const poolMatrix = new THREE.Matrix4();
+  const ONE = new THREE.Vector3(1, 1, 1);
+  const startQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI / 2, 0));
+
+  // Aim line
+  const aimMat = new THREE.LineDashedMaterial({ color: 0x1c1c1e, transparent: true, opacity: 0.35, dashSize: 0.5, gapSize: 0.45 });
+  const aimGeo = new THREE.BufferGeometry();
+  const aim = new THREE.Line(aimGeo, aimMat);
+  scene.add(aim);
+  function syncAim() {
+    const x = offset();
+    aimGeo.setFromPoints([new THREE.Vector3(x, 0.02, ADDRESS_Z), new THREE.Vector3(x, 0.02, -CUP_RADIUS * 2.2)]);
+    aim.computeLineDistances();
+  }
+
+  // Trails: where the bottom of the ball travelled
+  const trailGroup = new THREE.Group();
+  scene.add(trailGroup);
+  const madeMat = new THREE.LineBasicMaterial({ color: 0x1c1c1e, transparent: true, opacity: 0.16, depthWrite: false });
+  const missMat = new THREE.LineBasicMaterial({ color: MISS, transparent: true, opacity: 0.4, depthWrite: false });
+  function trailPoints(path: PathPoint[]): THREE.Vector3[] {
+    return path.map((p) => new THREE.Vector3(p.x, Math.max(p.z, -CUP_DEPTH) + 0.04, -p.y));
+  }
+  function addTrail(path: PathPoint[], made: boolean) {
+    const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(trailPoints(path)), made ? madeMat : missMat);
+    trailGroup.add(line);
+    while (trailGroup.children.length > MAX_TRAILS) {
+      const old = trailGroup.children[0] as THREE.Line;
+      old.geometry.dispose();
+      trailGroup.remove(old);
+    }
+  }
+  function clearTrails() {
+    for (const c of [...trailGroup.children]) {
+      (c as THREE.Line).geometry.dispose();
+      trailGroup.remove(c);
+    }
+  }
+
+  // Live trail behind the animated ball
+  const liveGeo = new THREE.BufferGeometry();
+  const liveMat = new THREE.LineBasicMaterial({ color: 0x1c1c1e, transparent: true, opacity: 0.6 });
+  const live = new THREE.Line(liveGeo, liveMat);
+  scene.add(live);
+
+  function resize3d() {
+    const w = cup.clientWidth;
+    const h = cup.clientHeight;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+
+  // ── Simulation ─────────────────────────────────────────────────────────
+  let flyers: Flyer[] = [];
+  let shotIndex = 0;
+  let launchRate = 0; // balls per ms
+  let launchCredit = 0;
+
+  function shoot(p: Pin, line: number) {
+    const speed = Math.max(1, speedForOverrun(overrun()) * (1 + 0.04 * gaussian(Math.random)));
+    return simulate({ offset: line, speed, pin: p, captureDepth, rimLoss: model.rimLoss, record: true });
+  }
+
+  /** Results count when the ball finishes, so the chart keeps pace with the scene. */
+  function finish(s: Shot) {
+    samples[s.pin.id].push({ a: Math.abs(s.line), x: s.line, made: s.made, born: performance.now() });
+    if (s.pin === pin) addTrail(s.path, s.made);
+    tableDirty = true;
+  }
+
+  function hitOne() {
+    queue = [];
+    const line = Math.min(CUP_RADIUS - 0.01, Math.max(0, offset() + 0.03 * gaussian(Math.random)));
+    const r = shoot(pin, line);
+    const path = r.made ? settle(r.path) : withRest(r.path);
+    shot = { pin, line, path, times: timeline(path), made: r.made, hitPin: r.hitPin, exit: r.exit, start: performance.now() };
+    liveGeo.setFromPoints(trailPoints(path));
+    liveGeo.setDrawRange(0, 0);
+    liveMat.color.set(r.made ? 0x1c1c1e : MISS);
+    shotIndex = 0;
+    placeAtAddress();
+    ball.visible = true;
+    hideOutcome();
+  }
+
+  function run(list: Pin[], n: number) {
+    shot = null;
+    liveGeo.setDrawRange(0, 0);
+    hideOutcome();
+    // Each run starts its sticks' curves from scratch
+    queue = [];
+    for (const p of list) {
+      samples[p.id] = [];
+      resetView(p.id);
+      for (let i = 0; i < n; i++) queue.push(p);
+    }
+    clearTrails();
+    // ~5 s for 100 putts, ~16 s for 1,000, ~32 s for all four sticks
+    launchRate = (2 * Math.sqrt(queue.length)) / 1000;
+    launchCredit = 1;
+    ball.visible = false;
+    focusPin(queue[0]);
+    renderTable();
+    setBusy(true);
+  }
+
+  function launch(p: Pin, now: number) {
+    if (p !== pin) focusPin(p);
+    // Lines spread uniformly across the cup, both sides
+    const line = (Math.random() * 2 - 1) * CUP_RADIUS;
+    const r = shoot(p, line);
+    // Every ball rolls its whole line: from the ramp until it drops or stops
+    const path = r.made ? settle(r.path) : withRest(r.path);
+    const prev = ballWorld(path[0], new THREE.Vector3());
+    flyers.push({ pin: p, line, path, made: r.made, hitPin: r.hitPin, exit: r.exit, start: now, q: startQ.clone(), prev });
+  }
+
+  function stepShot(now: number) {
+    if (!shot) return;
+    const elapsed = now - shot.start;
+    const times = shot.times!;
+    let i = shotIndex;
+    while (i < times.length - 1 && times[i + 1] <= elapsed) i++;
+    shotIndex = i;
+    moveBall(shot.path[i]);
+    liveGeo.setDrawRange(0, i + 1);
+    if (i === shot.path.length - 1) {
+      finish(shot);
+      liveGeo.setDrawRange(0, 0);
+      showOutcome(shot);
+      shot = null;
+    }
+  }
+
+  function stepBatch(now: number, dt: number) {
+    if (queue.length) {
+      launchCredit += dt * launchRate;
+      while (launchCredit >= 1 && queue.length && flyers.length < POOL) {
+        launch(queue.shift()!, now);
+        launchCredit -= 1;
+      }
+    }
+    if (!flyers.length && !pool.count) return;
+
+    let n = 0;
+    flyers = flyers.filter((f) => {
+      const i = Math.floor(((now - f.start) * BATCH_PLAYBACK) / POINT_MS);
+      if (i >= f.path.length - 1) { finish(f); return false; }
+      ballWorld(f.path[i], tmpV);
+      roll(f.q, f.prev, tmpV);
+      poolMatrix.compose(tmpV, f.q, ONE);
+      pool.setMatrixAt(n++, poolMatrix);
+      return true;
+    });
+    pool.count = n;
+    pool.instanceMatrix.needsUpdate = true;
+
+    if (!queue.length && !flyers.length) {
+      setBusy(false);
+      placeAtAddress();
+      ball.visible = true;
+    }
+  }
+
+  function showOutcome(s: Shot) {
+    outcomeEl.textContent = s.made
+      ? s.hitPin ? 'Holed, off the stick' : 'Holed'
+      : s.hitPin ? 'Ricocheted off the stick'
+      : s.exit === 'lip' ? 'Lipped out'
+      : s.exit === 'back' ? 'Popped out over the back edge'
+      : 'Missed the cup';
+    outcomeEl.classList.add('show');
+  }
+  function hideOutcome() {
+    outcomeEl.classList.remove('show');
+  }
+
+  function setBusy(busy: boolean) {
+    actionBtns.forEach((b) => { if (b.dataset.action !== 'clear') b.disabled = busy; });
+  }
+
+  // ── Chart: the cup as the ball sees it (drawn from tweened values) ─────
+  // x is where the ball's centre crosses the cup, left to right. Every putt
+  // lands as a dot in the holed lane (top) or missed lane (bottom); each
+  // curve is the make rate at that crossing point, mirrored across centre.
+  interface CurveView { v: number[]; seen: boolean[]; alpha: number }
+  const views: Record<string, CurveView> = {};
+  function resetView(id: string) {
+    views[id] = { v: new Array(NBINS).fill(0), seen: new Array(NBINS).fill(false), alpha: 0 };
+  }
+  pins.forEach((p) => resetView(p.id));
+  const band0 = offCenterBand(pin);
+  const bandView = pin.diameter > 0
+    ? { lo: band0[0], hi: band0[1], stick: pin.diameter }
+    : { lo: 0, hi: 0, stick: 0 };
+  const DOT_MS = 450; // how long a new dot takes to settle into its lane
+  const MAX_DOTS = 1500;
+  const X_MAX = 2.45; // inches either side of centre shown on the chart
+
+  function bins(list: Sample[]) {
+    const out = Array.from({ length: NBINS }, () => ({ n: 0, made: 0 }));
+    for (const smp of list) {
+      const b = out[Math.min(NBINS - 1, Math.floor(smp.a / BIN))];
+      b.n++;
+      if (smp.made) b.made++;
+    }
+    return out;
+  }
+
+  let moving = false;
+  function approach(cur: number, target: number): number {
+    const d = target - cur;
+    if (Math.abs(d) < 5e-4) return target;
+    moving = true;
+    return cur + d * EASE;
+  }
+
+  /** Advance every tween one frame; returns whether anything is still moving. */
+  function tweenChart(now: number): boolean {
+    moving = false;
+    for (const p of pins) {
+      const st = views[p.id];
+      const bs = bins(samples[p.id]);
+      const any = bs.some((b) => b.n > 0);
+      st.alpha = approach(st.alpha, any ? (p === pin ? 1 : 0.3) : 0);
+      bs.forEach((b, i) => {
+        if (!b.n) return;
+        if (!st.seen[i]) { st.seen[i] = true; st.v[i] = 0; } // grow up from 0%
+        st.v[i] = approach(st.v[i], b.made / b.n);
+      });
+    }
+    const [lo, hi] = offCenterBand(pin);
+    bandView.lo = approach(bandView.lo, pin.diameter > 0 ? lo : 0);
+    bandView.hi = approach(bandView.hi, pin.diameter > 0 ? hi : 0);
+    bandView.stick = approach(bandView.stick, pin.diameter);
+    const list = samples[pin.id];
+    if (list.length && now - list[list.length - 1].born < DOT_MS) moving = true;
+    return moving;
+  }
+
+  const rootStyle = getComputedStyle(root);
+  const fontStack = rootStyle.fontFamily;
+  const token = (name: string, fallback: string) => rootStyle.getPropertyValue(name).trim() || fallback;
+  const INK = token('--color-ink', '#1c1c1e');
+  const INK_4 = token('--color-ink-4', '#6e6e73');
+  const INK_5 = token('--color-ink-5', '#7c7c81');
+  const TEXT = `400 11px ${fontStack}`;
+  const TEXT_EMPH = `500 11px ${fontStack}`;
+  const ease = (t: number) => 1 - Math.pow(1 - t, 3);
+
+  function drawChart(now: number) {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = chart.clientWidth;
+    const h = chart.clientHeight;
+    if (chart.width !== Math.round(w * dpr) || chart.height !== Math.round(h * dpr)) {
+      chart.width = Math.round(w * dpr);
+      chart.height = Math.round(h * dpr);
+    }
+    const ctx = chart.getContext('2d')!;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    ctx.font = TEXT;
+
+    const padL = 52;
+    const padR = 16;
+    const sc = (w - padL - padR) / (2 * X_MAX); // px per inch
+    const X = (x: number) => padL + (x + X_MAX) * sc;
+    const lane = 14;
+    const holed = { y0: 36, y1: 36 + lane };
+    const plot = { t: holed.y1 + 6, b: h - 108 };
+    const missed = { y0: plot.b + 6, y1: plot.b + 6 + lane };
+    const tickY = missed.y1 + 15;
+    const ground = tickY + 14;
+    const depth = 30;
+    const zoneY = ground + depth + 14;
+    const Y = (v: number) => plot.b - v * (plot.b - plot.t);
+    const { lo, hi, stick } = bandView;
+    const R = CUP_RADIUS;
+    const ink = (a: number) => `rgba(28,28,30,${a})`;
+
+    // Glancing zone, faintly, through the plot
+    if (hi > 0.01) {
+      ctx.fillStyle = ink(0.045);
+      ctx.fillRect(X(-hi), plot.t, X(-lo) - X(-hi), plot.b - plot.t);
+      ctx.fillRect(X(lo), plot.t, X(hi) - X(lo), plot.b - plot.t);
+    }
+    // Cup edges, through everything
+    ctx.strokeStyle = ink(0.18);
+    ctx.setLineDash([2, 3]);
+    for (const x of [-R, R]) {
+      ctx.beginPath();
+      ctx.moveTo(X(x), holed.y0);
+      ctx.lineTo(X(x), ground);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+
+    // Lanes and grid
+    ctx.fillStyle = ink(0.03);
+    ctx.fillRect(X(-R), holed.y0, X(R) - X(-R), lane);
+    ctx.fillRect(X(-R), missed.y0, X(R) - X(-R), lane);
+    ctx.fillStyle = INK_4;
+    ctx.textAlign = 'right';
+    ctx.fillText('holed', padL - 8, holed.y1 - 3);
+    ctx.fillText('missed', padL - 8, missed.y1 - 3);
+    ctx.strokeStyle = ink(0.07);
+    for (const v of [0, 0.5, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(X(-R), Y(v));
+      ctx.lineTo(X(R), Y(v));
+      ctx.stroke();
+    }
+    // The lanes stand in for 100% and 0%; only the midline needs a number
+    ctx.fillStyle = INK_5;
+    ctx.fillText('50%', padL - 8, Y(0.5) + 4);
+
+    // Dots: one per putt for the selected stick, dropping into their lane
+    const list = samples[pin.id];
+    const mid = (plot.t + plot.b) / 2;
+    for (let i = Math.max(0, list.length - MAX_DOTS); i < list.length; i++) {
+      const smp = list[i];
+      const t = ease(Math.min(1, (now - smp.born) / DOT_MS));
+      const laneBox = smp.made ? holed : missed;
+      // Stable per-dot jitter inside the lane
+      const j = ((i * 2654435761) % 1000) / 1000;
+      const yEnd = laneBox.y0 + 3 + j * (lane - 6);
+      ctx.globalAlpha = 0.15 + 0.4 * t;
+      ctx.fillStyle = smp.made ? COLORS[pin.id] : MISS;
+      ctx.beginPath();
+      ctx.arc(X(smp.x), mid + (yEnd - mid) * t, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // Curves, mirrored across centre; selected stick on top
+    const order = [...pins.filter((p) => p !== pin), pin];
+    for (const p of order) {
+      const st = views[p.id];
+      if (st.alpha < 0.01) continue;
+      ctx.globalAlpha = st.alpha;
+      ctx.strokeStyle = COLORS[p.id];
+      ctx.lineWidth = p === pin ? 2.25 : 1.25;
+      const pts: [number, number][] = [];
+      for (let i = NBINS - 1; i >= 0; i--) if (st.seen[i]) pts.push([-(i + 0.5) * BIN, st.v[i]]);
+      for (let i = 0; i < NBINS; i++) if (st.seen[i]) pts.push([(i + 0.5) * BIN, st.v[i]]);
+      ctx.beginPath();
+      pts.forEach(([x, v], k) => (k ? ctx.lineTo(X(x), Y(v)) : ctx.moveTo(X(x), Y(v))));
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 1;
+
+    // Your line
+    const ox = offset();
+    ctx.strokeStyle = ink(0.55);
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath();
+    ctx.moveTo(X(ox), holed.y0 - 4);
+    ctx.lineTo(X(ox), ground);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = INK;
+    ctx.font = TEXT_EMPH;
+    ctx.textAlign = 'center';
+    ctx.fillText('your line', Math.min(X(ox), w - padR - 24), holed.y0 - 9);
+    ctx.font = TEXT;
+
+    // X ticks
+    ctx.fillStyle = INK_5;
+    for (const x of [-2, -1, 0, 1, 2]) {
+      ctx.fillText(x === 0 ? 'center' : `${Math.abs(x)}″ ${x < 0 ? 'left' : 'right'}`, X(x), tickY);
+    }
+
+    // The cup in cross-section, to the same scale
+    ctx.fillStyle = '#578a43';
+    ctx.fillRect(X(-X_MAX), ground - 3, X(-R) - X(-X_MAX), 4);
+    ctx.fillRect(X(R), ground - 3, X(X_MAX) - X(R), 4);
+    const g = ctx.createLinearGradient(0, ground, 0, ground + depth);
+    g.addColorStop(0, '#5b4632');
+    g.addColorStop(0.25, '#d9d8d1');
+    g.addColorStop(1, 'rgba(217,216,209,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(X(-R), ground, X(R) - X(-R), depth);
+    ctx.strokeStyle = ink(0.25);
+    ctx.beginPath();
+    ctx.moveTo(X(-R), ground - 3);
+    ctx.lineTo(X(-R), ground + depth);
+    ctx.moveTo(X(R), ground - 3);
+    ctx.lineTo(X(R), ground + depth);
+    ctx.stroke();
+    if (stick > 0.01) {
+      ctx.fillStyle = COLORS[pin.id];
+      ctx.globalAlpha = Math.min(1, stick / 0.3);
+      ctx.fillRect(X(-stick / 2), ground - 12, stick * sc, depth + 12);
+      ctx.globalAlpha = 1;
+    }
+
+    // Zone labels: which part of the stick a ball on that line strikes
+    const zone = (text: string, short: string, a: number, b: number) => {
+      const room = (b - a) * sc - 4;
+      const label = ctx.measureText(text).width <= room ? text : ctx.measureText(short).width <= room ? short : '';
+      if (label) ctx.fillText(label, X((a + b) / 2), zoneY);
+    };
+    ctx.fillStyle = INK_4;
+    ctx.textAlign = 'center';
+    if (hi > 0.05) {
+      zone('dead center', 'center', -lo, lo);
+      zone('glancing', 'glance', lo, hi);
+      zone('glancing', 'glance', -hi, -lo);
+      zone('clears stick', 'clear', hi, R);
+      zone('clears stick', 'clear', -R, -hi);
+      ctx.strokeStyle = ink(0.3);
+      for (const x of [-hi, -lo, lo, hi]) {
+        ctx.beginPath();
+        ctx.moveTo(X(x), zoneY - 10);
+        ctx.lineTo(X(x), zoneY + 2);
+        ctx.stroke();
+      }
+    } else {
+      ctx.fillText('open cup', X(0), zoneY);
+    }
+  }
+
+  // ── Verdict bars: glancing-blow make rate, model vs Mase ──────────────
+  const verdictRows = root.querySelector<HTMLElement>('.fsl-verdict-rows')!;
+  const verdictNote = root.querySelector<HTMLElement>('.fsl-verdict-note')!;
+  verdictRows.innerHTML = pins.map((p) => `
+    <div class="fsl-vrow" data-pin="${p.id}">
+      <span><span class="fsl-swatch" style="background:${COLORS[p.id]}"></span>${p.label}</span>
+      <span class="fsl-vtrack"><span class="fsl-vbar" style="background:${COLORS[p.id]}"></span><span class="fsl-vmase"></span></span>
+      <span class="fsl-vval"></span>
+    </div>`).join('');
+
+  function renderVerdict() {
+    const atMase = Math.abs(overrun() - 4.5) < 0.01;
+    verdictNote.style.opacity = atMase ? '0' : '1';
+    for (const p of pins) {
+      const row = verdictRows.querySelector<HTMLElement>(`[data-pin="${p.id}"]`)!;
+      const band = offCenterBand(p);
+      const off = samples[p.id].filter((s) => s.a >= band[0] && s.a < band[1]);
+      const rate = off.length ? off.filter((s) => s.made).length / off.length : null;
+      const mase = MASE_OFF_CENTER[p.id];
+      row.classList.toggle('active', p === pin);
+      row.querySelector<HTMLElement>('.fsl-vbar')!.style.width = `${(rate ?? 0) * 100}%`;
+      const tick = row.querySelector<HTMLElement>('.fsl-vmase')!;
+      tick.style.left = `${mase * 100}%`;
+      tick.style.opacity = atMase ? '1' : '0.25';
+      row.querySelector<HTMLElement>('.fsl-vval')!.textContent =
+        `${rate === null ? '–' : `${Math.round(rate * 100)}%`} · ${Math.round(mase * 100)}%`;
+    }
+  }
+
+  // ── Table ──────────────────────────────────────────────────────────────
+  function renderTable() {
+    renderVerdict();
+    const pct = (num: number, den: number) => (den ? `${Math.round((num / den) * 100)}%` : '–');
+    tbody.innerHTML = pins.map((p) => {
+      const list = samples[p.id];
+      const band = offCenterBand(p);
+      const off = list.filter((s) => s.a >= band[0] && s.a < band[1]);
+      const mase = MASE_OFF_CENTER[p.id];
+      return `<tr data-pin="${p.id}" class="${p === pin ? 'active' : ''}">
+        <td><span class="fsl-swatch" style="background:${COLORS[p.id]}"></span>${p.label}</td>
+        <td>${list.length.toLocaleString()}</td>
+        <td>${pct(list.filter((s) => s.made).length, list.length)}</td>
+        <td>${pct(off.filter((s) => s.made).length, off.length)}</td>
+        <td>${mase !== undefined ? `${Math.round(mase * 100)}%` : '–'}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── Tuning panel ───────────────────────────────────────────────────────
+  const tuneInputs = [...root.querySelectorAll<HTMLInputElement>('[data-tune]')];
+  const fmt: Record<string, (v: number) => string> = {
+    diameter: (v) => `${v.toFixed(2)} in`,
+    restitution: (v) => v.toFixed(2),
+    softSpeed: (v) => `${v} in/s`,
+    tangentialLoss: (v) => `${Math.round(v * 100)}%`,
+    rimLoss: (v) => `${Math.round(v * 100)}%`,
+    captureFeet: (v) => `${v} ft past`,
+  };
+  function syncTune() {
+    for (const inp of tuneInputs) {
+      const k = inp.dataset.tune!;
+      const isPinKey = k in pin && k !== 'id' && k !== 'label';
+      const v = isPinKey ? (pin as any)[k] ?? 0 : (model as any)[k];
+      inp.value = String(v);
+      inp.disabled = isPinKey && pin.id === 'out';
+      root.querySelector<HTMLElement>(`[data-out="${k}"]`)!.textContent = inp.disabled ? 'n/a' : fmt[k](v);
+    }
+  }
+  for (const inp of tuneInputs) {
+    inp.addEventListener('input', () => {
+      const k = inp.dataset.tune!;
+      const v = parseFloat(inp.value);
+      if (k === 'rimLoss' || k === 'captureFeet') {
+        (model as any)[k] = v;
+        captureDepth = captureDepthFor(model.captureFeet);
+        clearAll();
+      } else {
+        (pin as any)[k] = v;
+        samples[pin.id] = [];
+        resetView(pin.id);
+        clearTrails();
+        syncPinMesh();
+        renderTable();
+      }
+      syncTune();
+    });
+  }
+
+  // ── Wiring ─────────────────────────────────────────────────────────────
+  /** Show a stick in the scene, buttons, chart and table without touching results. */
+  function focusPin(p: Pin) {
+    pin = p;
+    pinBtns.forEach((b) => {
+      const on = b.dataset.pin === p.id;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-checked', String(on));
+    });
+    clearTrails();
+    syncPinMesh();
+    syncTune();
+    tableDirty = true;
+  }
+
+  function stopBatch() {
+    queue = [];
+    flyers = [];
+    pool.count = 0;
+    setBusy(false);
+    ball.visible = true;
+  }
+
+  function selectPin(id: string) {
+    stopBatch();
+    focusPin(pins.find((p) => p.id === id)!);
+    shot = null;
+    liveGeo.setDrawRange(0, 0);
+    clearTrails();
+    placeAtAddress();
+    hideOutcome();
+    syncPinMesh();
+    syncTune();
+    renderTable();
+  }
+
+  function clearAll() {
+    stopBatch();
+    shot = null;
+    for (const p of pins) { samples[p.id] = []; resetView(p.id); }
+    clearTrails();
+    liveGeo.setDrawRange(0, 0);
+    placeAtAddress();
+    hideOutcome();
+    setBusy(false);
+    renderTable();
+  }
+
+  pinBtns.forEach((b) => b.addEventListener('click', () => selectPin(b.dataset.pin!)));
+  tbody.addEventListener('click', (e) => {
+    const row = (e.target as HTMLElement).closest<HTMLElement>('tr[data-pin]');
+    if (row) selectPin(row.dataset.pin!);
+  });
+
+  root.querySelector('[data-action="one"]')!.addEventListener('click', hitOne);
+  root.querySelector('[data-action="100"]')!.addEventListener('click', () => run([pin], 100));
+  root.querySelector('[data-action="1000"]')!.addEventListener('click', () => run([pin], 1000));
+  root.querySelector('[data-action="all"]')!.addEventListener('click', () => run(pins, 1000));
+  root.querySelector('[data-action="clear"]')!.addEventListener('click', clearAll);
+
+  offsetIn.addEventListener('input', () => {
+    const v = offset();
+    offsetVal.textContent = v < 0.005 ? 'dead center' : `${v.toFixed(2)} in right of center`;
+    syncAim();
+    chartDirty = true;
+    if (!shot) placeAtAddress();
+  });
+  overrunIn.addEventListener('input', () => {
+    overrunVal.textContent = `would roll ${overrun()} ft past`;
+    clearAll(); // results at different paces don't belong on one curve
+  });
+
+  // ── Frame loop, paused while off-screen ────────────────────────────────
+  let rafId = 0;
+  let chartDirty = true;
+  let tableDirty = false;
+  let lastNow = 0;
+  function frame(now: number) {
+    rafId = requestAnimationFrame(frame);
+    const dt = lastNow ? Math.min(now - lastNow, 100) : 16;
+    lastNow = now;
+    stepBatch(now, dt);
+    stepShot(now);
+    if (tableDirty) { renderTable(); tableDirty = false; }
+    controls.update();
+    renderer.render(scene, camera);
+    if (tweenChart(now) || chartDirty) {
+      drawChart(now);
+      chartDirty = false;
+    }
+  }
+  new IntersectionObserver(([entry]) => {
+    if (entry.isIntersecting && !rafId) rafId = requestAnimationFrame(frame);
+    if (!entry.isIntersecting && rafId) { cancelAnimationFrame(rafId); rafId = 0; lastNow = 0; }
+  }).observe(root);
+
+  new ResizeObserver(() => { resize3d(); chartDirty = true; }).observe(root);
+  document.fonts?.ready.then(() => { chartDirty = true; });
+
+  resize3d();
+  syncPinMesh();
+  syncAim();
+  placeAtAddress();
+  syncTune();
+  renderTable();
+}
+
+document.querySelectorAll<HTMLElement>('.fsl').forEach(initLab);
+</script>
