@@ -27,9 +27,9 @@ export interface Pin {
 export const PINS: Pin[] = [
   { id: 'out', label: 'Pin out', diameter: 0, restitution: 0, tangentialLoss: 0 },
   // Fiberglass flexes: a gentle bounce that dies quickly on harder hits
-  { id: 'fiberglass', label: 'Fiberglass', diameter: 0.5, restitution: 0.36, softSpeed: 30, tangentialLoss: 0 },
-  { id: 'tapered', label: 'Tapered aluminum', diameter: 0.75, restitution: 0.55, softSpeed: 30, tangentialLoss: 0 },
-  { id: 'dual', label: 'Dual-diameter aluminum', diameter: 0.7, restitution: 0.6, softSpeed: 30, tangentialLoss: 0 },
+  { id: 'fiberglass', label: 'Fiberglass', diameter: 0.5, restitution: 0.57, softSpeed: 30, tangentialLoss: 0 },
+  { id: 'tapered', label: 'Tapered aluminum', diameter: 0.75, restitution: 0.68, softSpeed: 30, tangentialLoss: 0 },
+  { id: 'dual', label: 'Dual-diameter aluminum', diameter: 0.7, restitution: 0.72, softSpeed: 30, tangentialLoss: 0 },
 ];
 
 export interface SimParams {
@@ -64,6 +64,7 @@ const MAX_T = 6;
 const RECORD_EVERY = 25; // one point per 5 ms
 const WALL_BOUNCE = 0.3; // restitution off the cup wall below the lip
 const MAX_HOP = 0.12; // inches: the most a lip contact can pop the ball above the green
+const LIP_KEEP = 0.85; // a lip contact can turn the ball but always costs it speed
 
 /** Ball speed at the hole for a putt that would roll `feet` past it. */
 export function speedForOverrun(feet: number): number {
@@ -98,6 +99,7 @@ export function simulate(p: SimParams): SimResult {
   let spinY = 1;
   let hitPin = false;
   let touchedLip = false;
+  let lipEntrySpeed = -1; // horizontal speed when the current lip contact began; -1 = not touching
   let overCup = false;
   let exit: Exit | null = null;
   const path: PathPoint[] = [];
@@ -156,6 +158,7 @@ export function simulate(p: SimParams): SimResult {
     const Dx = x - ex;
     const Dy = y - ey;
     const dist = Math.hypot(Dx, Dy, Z);
+    if (dist > r * 1.15) lipEntrySpeed = -1; // clearly off the lip: the next touch is a new contact
     if (dist < r && Z > -r) {
       const nx = Dx / dist;
       const ny = Dy / dist;
@@ -164,6 +167,7 @@ export function simulate(p: SimParams): SimResult {
       y = ey + ny * r;
       Z = nz * r;
       const vn = vx * nx + vy * ny + vz * nz;
+      if (lipEntrySpeed < 0) lipEntrySpeed = Math.hypot(vx, vy);
       // Topspin only drives the ball into the lip it is rolling toward; after a
       // bounce back across the cup the same spin is backspin and holds it in.
       const fx = spinX;
@@ -204,6 +208,15 @@ export function simulate(p: SimParams): SimResult {
             vx += (excess * nx) / hl;
             vy += (excess * ny) / hl;
           }
+        }
+        // Energy: whatever the lip does to its direction, the ball rolls away
+        // slower than it arrived. Measured per contact, not per step, so a
+        // ball rolling over the lip is not drained on every step.
+        const hOut = Math.hypot(vx, vy);
+        const cap = lipEntrySpeed * LIP_KEEP;
+        if (hOut > cap) {
+          vx *= cap / hOut;
+          vy *= cap / hOut;
         }
       }
     } else if (Math.hypot(x, y) >= R && Z < r) {
